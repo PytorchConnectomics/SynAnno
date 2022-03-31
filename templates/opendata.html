@@ -1,0 +1,42 @@
+{% extends "templatebase.html" %}
+{% block content %}
+
+    <div class="px-4 py-3 my-3 text-center">
+        <h2 class="mb-3"> Welcome to SynAnno Annotation Tool</h2>
+        <p>This tool aims to help to annotate large datasets.<b> To start, load the .h5 file of the original and ground truth data. If you have a previous json file exported by this tool, you can load it too.</b></p>
+    </div>
+
+    <div class="mb-3">
+        <form method="POST" for="{{ modeform }}" action="{{ url_for('upload_file') }}" enctype="multipart/form-data">
+            <label for="formFileMultiple" class="form-label">Original .h5 data next.</label>
+            <p><input class="form-control" type="file" id="originalFile" name="file_original"></p>
+            <label for="formFileMultiple" class="form-label">Ground Truth .h5 data next.</label>
+            <p><input class="form-control" type="file" id="gtFile" name="file_gt"></p>
+            <label for="formFileMultiple" class="form-label">add a JSON file previously exported by this tool.</label>
+            <p><input class="form-control" type="file" id="formFile" name="file_json"></p>
+            <label for="formGroupExampleInput" class="form-label">Patch Size (square)</label>
+            <p><input type="text" class="form-control" id="patchsize" placeholder="142" name="patchsize" ></p>
+            <p class="mt-4">
+                <input id="processData" type="submit" class="btn btn-secondary {{ modecurrent }}" value="Submit" >
+                <a type="button" class="btn btn-primary {{ modenext }}" href="{{ url_for('set_data', data_name=filename) }}">Start data proofread</a>
+            </p>
+        </form>
+    </div>
+
+    <!-- Modal with progress bar -->
+    <div class="modal fade" id="progressModal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="exampleModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-body">
+            <div class="progress">
+              <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="0 " aria-valuemin="0" aria-valuemax="94" ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Script to update the progress bar -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.1/moment.min.js"></script>
+    <script src="{{ url_for('static', filename='progressbar.js') }}"></script>
+
+{% endblock %}

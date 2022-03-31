@@ -1,0 +1,60 @@
+.correct {
+  background: #abebc6;
+}
+
+.annotate-item{
+  width: 20%;
+  text-align: center;
+}
+
+.card > .correct {
+  background: #abebc6;
+}
+
+.incorrect {
+  background: #f08080;
+}
+.card > .incorrect {
+  background: #f08080;
+}
+
+.unsure {
+  background: #d7dbdd;
+}
+.card > .unsure {
+  background: #d7dbdd;
+}
+.card {
+  border: none;
+}
+
+.card > #main-image > img {
+  width: 100%;
+  height: 100%;
+}
+
+.card-group {
+  justify-content: center;
+}
+
+.legend {
+  position: sticky;
+  top: 0;
+  z-index: 900;
+  display: flex;
+  gap: 1rem;
+  background-color: white;
+  padding: 1rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend > .legend-item > .color-block {
+  width: 20px;
+  height: 1rem;
+  display: inline-block;
+}

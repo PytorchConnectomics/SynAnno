@@ -37,6 +37,7 @@ import imageio
 import warnings
 import itertools
 import numpy as np
+from PIL import Image
 from scipy import stats
 from skimage.morphology import binary_dilation, remove_small_objects
 from skimage.measure import label as label_cc
@@ -179,23 +180,29 @@ def visualize(syn, seg, img, sz, return_data=False):
         
         temp = (seg == idx) # binary mask of the current synapse
         bbox = bbox2_ND(temp)
-        
-        z_mid = (bbox[0] + bbox[1]) // 2 # middle slice in 3D volume
-        item["Middle_Slice"] = str(z_mid)
-        item["Original_Bbox"] = [int(u) for u in list(bbox)]
+                
+        # find the most centric slice that contains True values
+        idx_t = np.unique(np.where(temp==True)[0]) # index of slices containing True values
+        z_mid_total = min(idx_t, key=lambda x : abs(max(((bbox[1]-bbox[0]) // 2) + bbox[0], 0) - x)) # c-slice relative to volume
+        z_mid_relative = min(idx_t - bbox[0], key=lambda x : abs(max((bbox[1]-bbox[0]) // 2, 0) - x)) # c-slice relative to sub-volume
 
-        temp_2d = temp[z_mid]      
+        item["Middle_Slice"] = str(z_mid_total)
+        item["Original_Bbox"] = [int(u) for u in list(bbox)]
+        
+        temp_2d = temp[z_mid_total]    
+
         bbox_2d = bbox2_ND(temp_2d)    
 
         y1, y2 = adjust_bbox(bbox_2d[0], bbox_2d[1], crop_size)
         x1, x2 = adjust_bbox(bbox_2d[2], bbox_2d[3], crop_size)
         crop_2d = [y1, y2, x1, x2]
 
-        cropped_syn, syn_bbox, padding = crop_pad_data(syn, z_mid, crop_2d, mask=temp, return_box=True)
-        cropped_img = crop_pad_data(img, z_mid, crop_2d, pad_val=128)
+        cropped_syn, syn_bbox, padding = crop_pad_data(syn, z_mid_total, crop_2d, mask=temp, return_box=True)
+        cropped_img = crop_pad_data(img, z_mid_total, crop_2d, pad_val=128)
 
         # calculate the padding for frontend display, later used for unpadding.
         item["Adjusted_Bbox"] = [bbox[0], bbox[1]] + syn_bbox
+
         item["Padding"] = padding
 
         # calculate and save the angle of rotation.
@@ -212,7 +219,7 @@ def visualize(syn, seg, img, sz, return_data=False):
 
         image_list, label_list = [], []
         for z_index in range(bbox[0], bbox[1]+1):
-            if z_index == z_mid:
+            if z_index == z_mid_total:
                 image_list.append(rotate_img_zmid)
                 label_list.append(rotate_syn_zmid)
                 continue
@@ -227,12 +234,21 @@ def visualize(syn, seg, img, sz, return_data=False):
 
         vis_image = np.stack(image_list, 0)
         vis_label = syn2rgb(np.stack(label_list, 0)) # z, y, x, c
+
         data_dict[idx] = [vis_image, vis_label]
 
         if not return_data:
+
             imageio.volwrite(os.path.join(img_all, "image.tif"), vis_image)
+            # save center slice
+            img_c = Image.fromarray(vis_image[z_mid_relative,:,:])
+            img_c.save(os.path.join(img_all,str(item["Middle_Slice"])+".png"))
+
             imageio.volwrite(os.path.join(syn_all, "label.tif"), vis_label)
-        
+            # save center slice
+            lab_c = Image.fromarray(vis_label[z_mid_relative,:,:,:])
+            lab_c.save(os.path.join(syn_all,str(item["Middle_Slice"])+".png"))
+
     if return_data:
         return data_dict
 
@@ -259,11 +275,14 @@ def load_3d_files(im_file, gt_file, patch_size=142):
 
     # Processing the 3D volume to get 2D patches.
     syn, seg = process_syn(gt)
-    visualize(syn, seg, im, sz=patch_size, rgb=True)
+
+    # creates a json file
+    visualize(syn, seg, im, sz=patch_size)
     
     synanno_json = os.path.join('.', 'synAnno.json')
     if os.path.isfile(synanno_json):
         return synanno_json
     else:
+        # the json file should have been created by the visualize function
         raise FileNotFoundError(
             errno.ENOENT, os.strerror(errno.ENOENT), 'synAnno.json')

@@ -21,12 +21,13 @@
                      <div id="id{{loop.index}}" class="card border-0 p-2 {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}">
                          <!---<img id="imgOriginal-{{loop.index}}" class="card-img-top mb-1" src="{{ image.EM +'/'~ image.Middle_Slice}}">!--->
                          <div id="main-image" style="position: relative;">
-                             <img id="imgEM-GT-{{loop.index}}" src="{{ '/static/Images/Transp_Syn/' ~ image.Image_Index ~'/'~ image.Middle_Slice}}"  width="64px" height="64px" style="position: absolute; opacity: 0.5; ">
-                             <img id="imgGT-{{loop.index}}" src="{{ image.EM +'/'~ image.Middle_Slice}}"  width="64px" height="64px" style="position: initial;">
+                             <img id="imgEM-GT-{{loop.index}}" src="{{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}}"  width="64px" height="64px" style="position: absolute; opacity: 0.5; ">
+                             <img id="imgGT-{{loop.index}}" src="{{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}}"  width="64px" height="64px" style="position: initial;">
+                             {{ mdebug('path used by jinja: ' ~ image.EM ~ '/' ~ image.Middle_Slice) }}
                          </div>
                          <a id="id-a-{{loop.index}}" class="stretched-link image-card-btn" page="{{page}}" data_id="{{ loop.index }}" label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}"></a>
                      </div>
-                     <span>{{image.Bounding_Boxes|length}} slices</span>
+                     <span>{{image.Adjusted_Bbox[1]-image.Adjusted_Bbox[0]}} slices</span>
                 </div>
         {% endfor %}
         </div>
@@ -48,7 +49,7 @@
       </ul>
     </nav>
 
-    <!-- Modal for synapse slyce-->
+    <!-- Modal for synapse slice-->
     <div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
       <div class="modal-dialog">
         <div class="modal-content">

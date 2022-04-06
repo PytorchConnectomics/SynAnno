@@ -28,71 +28,55 @@ def open_data():
     return render_template("opendata.html", modenext="disabled")
 
 
-#opening json for now
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_file():
-    #Check if files folder exists, if not create.
+    #Check if files folder exists, if not create it
     if os.path.exists('./files'):
         pass
     else:
         os.mkdir('./files')
         
+    # retrive the file paths from the coresponding html fields
     file_original = request.files['file_original']
     file_gt = request.files['file_gt']
     file_json = request.files['file_json']
 
+    # update the patch size if provided
     if request.form.get('patchsize'):
         patch_size = int(request.form.get('patchsize'))
     else:
         patch_size = 142 # default patch size
 
-    # Check if there is files
-    if file_original.filename == '' and file_gt.filename == '':
-        flash("Please upload the original and ground truth .h5 files at least!")
+    # check if the path to the required files (source and target) are not None 
+    if file_original.filename and file_gt.filename:
 
-    # If there is files the basic required files, start the process.
-    if file_original.filename != '' and file_gt.filename != '':
-        # Open gt and em
         original_name = save_file(file_original, file_original.filename)
         gt_name = save_file(file_gt, file_gt.filename)
-        if original_name!="error" and gt_name!="error":
-            final_json_path = ip.load_3d_files(
-                os.path.join(app.config['UPLOAD_FOLDER'], file_original.filename), 
-                os.path.join(app.config['UPLOAD_FOLDER'], file_gt.filename), 
-                patch_size)
-            final_json = json.load(open(final_json_path))
 
-            # Check if there is a json file with previous annotations
-            if file_json.filename != '':
-                ## If file exists, delete it ##
-                if os.path.isfile(os.path.join(".", "synAnno.json")):
-                    os.remove(os.path.join(".", "synAnno.json"))
+        # if the source and target path are valid
+        if original_name and gt_name:
+
+            # if a json got provided save it locally
+            if file_json.filename:
                 filename_json = save_file(file_json, "synAnno.json", ".")
-
-                if filename_json != "error":
-                    # Verify if the json is valid
-                    f = open(filename_json)
-                    final_json = json.load(f)
-                    if validate_json(final_json) == False:
-                        print("JSON has not the correct format")
-                        flash("Something is wrong with the loaded data! Check the data and load again.")
-                        return render_template("opendata.html", modenext="disabled")
+            # else compute the bb information and dump them to a json
             else:
-                filename_json = os.path.join('.', 'synAnno.json')
+                filename_json = ip.load_3d_files(
+                    os.path.join(app.config['UPLOAD_FOLDER'], file_original.filename), 
+                    os.path.join(app.config['UPLOAD_FOLDER'], file_gt.filename), 
+                    patch_size)
 
-            # Verify if the json is valid
-            if validate_json(final_json):
-                with open(filename_json, 'w') as f:
-                    json.dump(final_json, f)
+            # test if the created or provided json is valid by loading it
+            try:
+                with open(filename_json, 'r') as f:
+                    json.load(f)
                 flash("Data ready!")
                 return render_template("opendata.html", filename=filename_json, modecurrent="disabled", modeform="formFileDisabled")
-            else:
-                print("JSON has not the correct format")
-                flash("Something is wrong with the loaded data! Check the data and load again.")
+            except ValueError as e:
+                flash("Something is wrong with the loaded JSON!")
                 return render_template("opendata.html", modenext="disabled")
-
-
-    return render_template("opendata.html", modenext="disabled")
+        else:
+            flash("Please provide at least the paths to valiud source and target .h5 files!")
 
 
 @app.route('/set-data/<data_name>')
@@ -114,6 +98,7 @@ def set_data(data_name='synAnno.json'):
 
     # calculate the number of pages (based on 100 per page) and save it to the session
     number_images = len(data['Data'])
+
     if number_images == 0:
         print("No images found")
         flash("No synapses found in this data. Try another one.")
@@ -124,6 +109,8 @@ def set_data(data_name='synAnno.json'):
     if not session.get('n_pages'):
         session['n_pages'] = number_pages
 
+    print(session.get('data'))
+    
     return render_template("annotation.html", images=session.get('data')[0], page=0, n_pages=session.get('n_pages'))
 
 
@@ -201,7 +188,6 @@ def update_card():
         data[page][index]['Label'] = 'Incorrect'
 
     session['data'] = data
-    print(data[page][index]['Label'])
 
     return jsonify({'result':'success', 'label': data[page][index]['Label']})
 
@@ -228,7 +214,7 @@ def save_slices():
 
     data = session.get('data')
     slices_len = len(os.listdir('.' + data[page][index]['EM']+'/'))
-    half_len = int(data[page][index]['Middle_Slice'].replace('.png', ''))
+    half_len = int(data[page][index]['Middle_Slice_Relative'].replace('.png', ''))
     if(slices_len % 2 == 0):
         range_min = half_len - (slices_len/2)+1
     else:
@@ -238,27 +224,39 @@ def save_slices():
 
     return final_json
 
+@app.context_processor
+def utility_functions():
+    # function used for debugging on html level 
+    # add {{ variable }} any where in the html file 
+    def print_in_console(message):
+        print(str(message))
+    return dict(mdebug=print_in_console)
 
 def save_file(file, filename, path=app.config['UPLOAD_FOLDER']):
     filename = secure_filename(filename)
     file_ext = os.path.splitext(filename)[1]
     if file_ext not in app.config['UPLOAD_EXTENSIONS']:
-        print('incorrect format')
         flash("Incorrect file format! Load again.")
         render_template("opendata.html", modenext="disabled")
-        return("error")
+        return 0
     else:
         file.save(os.path.join(path, filename))
-        print("saved file successfully")
         return(filename)
-    return("ok")
 
 
 def validate_json(json_data):
     f = open("static/json_schema.json")
+
     json_schema = json.load(f)
-    print("Json schema size")
-    print(sys.getsizeof(json_schema))
+
+    #validator = jsonschema.Draft7Validator(json_schema)
+
+    #errors = validator.iter_errors(json_data)  # get all validation errors
+
+    #for error in errors:
+    #    print(error)
+    #    print('------')
+
     try:
         validate(instance=json_data, schema=json_schema)
     except jsonschema.exceptions.ValidationError as err:

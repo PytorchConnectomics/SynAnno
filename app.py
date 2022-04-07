@@ -56,9 +56,14 @@ def upload_file():
         # if the source and target path are valid
         if original_name and gt_name:
 
+            # remove existing json file 
+            if os.path.isfile(os.path.join(".", "synAnno.json")):
+                    os.remove(os.path.join(".", "synAnno.json"))
+
             # if a json got provided save it locally
             if file_json.filename:
                 filename_json = save_file(file_json, "synAnno.json", ".")
+
             # else compute the bb information and dump them to a json
             else:
                 filename_json = ip.load_3d_files(
@@ -108,8 +113,6 @@ def set_data(data_name='synAnno.json'):
         number_pages = number_pages + 1
     if not session.get('n_pages'):
         session['n_pages'] = number_pages
-
-    print(session.get('data'))
     
     return render_template("annotation.html", images=session.get('data')[0], page=0, n_pages=session.get('n_pages'))
 
@@ -214,7 +217,7 @@ def save_slices():
 
     data = session.get('data')
     slices_len = len(os.listdir('.' + data[page][index]['EM']+'/'))
-    half_len = int(data[page][index]['Middle_Slice_Relative'].replace('.png', ''))
+    half_len = int(data[page][index]['Middle_Slice'].replace('.png', ''))
     if(slices_len % 2 == 0):
         range_min = half_len - (slices_len/2)+1
     else:

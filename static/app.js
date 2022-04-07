@@ -55,7 +55,7 @@ $(document).ready(function() {
 
             $('#imgDetails-EM').addClass(label.toLowerCase());
             $('#imgDetails-EM').attr("src", data.data.EM +'/'+ data.data.Middle_Slice);
-            $('#imgDetails-GT').attr("src", '/static/Images/Transp_Syn/' + data.data.Image_Index +'/'+ data.data.Middle_Slice);
+            $('#imgDetails-GT').attr("src", data.data.GT +'/'+ data.data.Middle_Slice);
             // $('#value-opacity').attr("value", defaultOpacity);
             // $('#imgDetails-GT').css("opacity", defaultOpacity);
             $('#detailsModal').modal("show");
@@ -77,7 +77,7 @@ $(document).ready(function() {
 
         req.done(function (data){
             $('#imgDetails-EM').attr("src",  data.data.EM +'/'+ rangeValue + '.png');
-            $('#imgDetails-GT').attr("src",  '/static/Images/Transp_Syn/' + data.data.Image_Index +'/'+ rangeValue + '.png');
+            $('#imgDetails-GT').attr("src",  data.data.GT +'/'+ rangeValue + '.png');
         });
     })
 

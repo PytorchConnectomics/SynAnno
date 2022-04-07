@@ -23,7 +23,6 @@
                          <div id="main-image" style="position: relative;">
                              <img id="imgEM-GT-{{loop.index}}" src="{{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}}"  width="64px" height="64px" style="position: absolute; opacity: 0.5; ">
                              <img id="imgGT-{{loop.index}}" src="{{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}}"  width="64px" height="64px" style="position: initial;">
-                             {{ mdebug('path used by jinja: ' ~ image.EM ~ '/' ~ image.Middle_Slice) }}
                          </div>
                          <a id="id-a-{{loop.index}}" class="stretched-link image-card-btn" page="{{page}}" data_id="{{ loop.index }}" label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}"></a>
                      </div>

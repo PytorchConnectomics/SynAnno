@@ -240,14 +240,24 @@ def visualize(syn, seg, img, sz, return_data=False):
         if not return_data:
 
             imageio.volwrite(os.path.join(img_all, "image.tif"), vis_image)
-            # save center slice
-            img_c = Image.fromarray(vis_image[z_mid_relative,:,:])
-            img_c.save(os.path.join(img_all,str(item["Middle_Slice"])+".png"))
-
             imageio.volwrite(os.path.join(syn_all, "label.tif"), vis_label)
-            # save center slice
-            lab_c = Image.fromarray(vis_label[z_mid_relative,:,:,:])
-            lab_c.save(os.path.join(syn_all,str(item["Middle_Slice"])+".png"))
+
+            # center slice of padded subvolume
+            cs_dix = (vis_image.shape[0]-1)//2 # assumes even padding
+
+            # overwrite cs incase that object close to boundary
+            cs = min(int(item["Middle_Slice"]), cs_dix)
+
+            # save volume slices
+            for s in range(vis_image.shape[0]):
+                img_name = str(int(item["Middle_Slice"])-cs+s)+".png"
+
+                # image
+                img_c = Image.fromarray(vis_image[s,:,:])
+                img_c.save(os.path.join(img_all,img_name))
+                # label
+                lab_c = Image.fromarray(vis_label[s,:,:,:])
+                lab_c.save(os.path.join(syn_all,img_name))
 
     if return_data:
         return data_dict

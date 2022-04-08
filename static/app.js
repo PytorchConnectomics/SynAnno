@@ -43,7 +43,7 @@ $(document).ready(function() {
         req.done(function (data) {
             $('#rangeSlices').attr("min", data.range_min);
             $('#rangeSlices').attr("max", data.range_min + data.slices_len-1);
-            $('#rangeSlices').val(data.halflen+1);
+            $('#rangeSlices').val(data.halflen);
             $('#rangeSlices').attr("data_id", data_id);
             $('#rangeSlices').attr("page", page);
 
@@ -54,8 +54,8 @@ $(document).ready(function() {
             $('#maxSlice').html(data.slices_len-1);
 
             $('#imgDetails-EM').addClass(label.toLowerCase());
-            $('#imgDetails-EM').attr("src", data.data.EM +'/'+ data.data.Middle_Slice);
-            $('#imgDetails-GT').attr("src", data.data.GT +'/'+ data.data.Middle_Slice);
+            $('#imgDetails-EM').attr("src", data.data.EM +'/'+ data.data.Middle_Slice + '.png');
+            $('#imgDetails-GT').attr("src", data.data.GT +'/'+ data.data.Middle_Slice + '.png');
             // $('#value-opacity').attr("value", defaultOpacity);
             // $('#imgDetails-GT').css("opacity", defaultOpacity);
             $('#detailsModal').modal("show");

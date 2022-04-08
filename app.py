@@ -216,13 +216,17 @@ def save_slices():
     slice = int(request.form['slice'])
 
     data = session.get('data')
-    slices_len = len(os.listdir('.' + data[page][index]['EM']+'/'))
-    half_len = int(data[page][index]['Middle_Slice'].replace('.png', ''))
+    slices_len = len(os.listdir('.' + data[page][index]['EM']+'/')) - 1 # for tiff file
+    half_len = int(data[page][index]['Middle_Slice'])
+    
+
     if(slices_len % 2 == 0):
-        range_min = half_len - (slices_len/2)+1
+        range_min = half_len - ((slices_len)//2) + 1
     else:
         range_min = half_len - (slices_len//2)
 
+
+    print(str(index), data[page][index]['Middle_Slice'], str(slices_len), str(half_len), str(range_min))
     final_json = jsonify(data=data[page][index], slices_len=slices_len, halflen=half_len, range_min=range_min)
 
     return final_json

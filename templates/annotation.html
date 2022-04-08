@@ -26,7 +26,7 @@
                          </div>
                          <a id="id-a-{{loop.index}}" class="stretched-link image-card-btn" page="{{page}}" data_id="{{ loop.index }}" label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}"></a>
                      </div>
-                     <span>{{image.Adjusted_Bbox[1]-image.Adjusted_Bbox[0]}} slices</span>
+                     <span>{{image.Adjusted_Bbox[1] - image.Adjusted_Bbox[0] + 1 }} slices</span>
                 </div>
         {% endfor %}
         </div>
@@ -82,14 +82,14 @@
                 <div class="btn-group btn-group-sm ps-1" role="group" aria-label="Basic example">
                     <span style="margin-right: 8px;">Label opacity:  </span>
                     <button id="dec-opacity" type="button" class="btn btn-primary" onclick="dec_opacity()">-</button>
-                    <span id="value-opacity"type="button" class="btn btn-light" value="1">1</span>
+                    <span id="value-opacity"type="button" class="btn btn-light" value="0.5">0.5</span>
                     <button id="inc-opacity" type="button" class="btn btn-primary" onclick="add_opacity()">+</button>
                 </div>
 
             </div>
               <div id="cardDetails" class="card border-0 p-1">
                   <img id="imgDetails-EM" class="card-img-top mb-1" src="" width="284px" height="284px"  style="position: initial; width:384px; height:384px;">
-                  <img id="imgDetails-GT" class="card-img-top mb-1" src="" width="284px" height="284px"  style="position: absolute; opacity: 1; width:384px; height:384px;">
+                  <img id="imgDetails-GT" class="card-img-top mb-1" src="" width="284px" height="284px"  style="position: absolute; opacity: 0.5; width:384px; height:384px;">
               </div>
               <div class="center">
                   <input id="rangeSlices" type="range" class="form-range" value="0" min="0" max="30" data_id="" page="">
@@ -98,11 +98,6 @@
                           <div class="col justify-content-center">
                               <button id="minSlice" type="button" class="btn btn-outline-secondary btn-sm disabled float-start"> -15 </button>
                           </div>
-                          <!-- button to center the cursos
-                          <div class="col text-center">
-                              <button type="button" class="btn btn-secondary btn-sm ">Center</button>
-                          </div>
-                          --!>
                           <div class="col justify-content-center">
                               <button id="maxSlice" type="button" class="btn btn-outline-secondary btn-sm disabled float-end"> +15 </button>
                           </div>

@@ -12,3 +12,9 @@ flask>=2.0.0
 flask-cors
 Flask-Session>= 0.4.0
 jsonschema>=3.2.0
+
+neuroglancer 
+imageio 
+h5py 
+cloud-volume
+

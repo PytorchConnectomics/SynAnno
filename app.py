@@ -10,6 +10,8 @@ import base64
 import sys
 
 import backend.processing as ip
+import subprocess
+
 
 app = Flask(__name__)
 CORS(app)
@@ -22,14 +24,28 @@ Session(app)
 app.config['UPLOAD_FOLDER'] = 'files/'
 app.config['UPLOAD_EXTENSIONS'] = ['.json', '.h5']
 
+global source_path
+global target_path
 
 @app.route('/')
 def open_data():
     return render_template("opendata.html", modenext="disabled")
 
+@app.route('/_neuro/', methods=['GET','POST'])
+def _neuro():
+    global source_path
+    global target_path
+
+    cmd = "python3 -i neuro_glancer.py --port 9015 --imgs "+str(source_path)+" --segs " + str(target_path)
+    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
+
+    return redirect('http://localhost:9015/v/mytoken/', 301)
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_file():
+    global source_path
+    global target_path
+
     #Check if files folder exists, if not create it
     if os.path.exists('./files'):
         pass
@@ -55,6 +71,9 @@ def upload_file():
 
         # if the source and target path are valid
         if original_name and gt_name:
+
+            source_path = os.path.join(app.config['UPLOAD_FOLDER'], original_name)
+            target_path = os.path.join(app.config['UPLOAD_FOLDER'], gt_name)
 
             # remove existing json file 
             if os.path.isfile(os.path.join(".", "synAnno.json")):

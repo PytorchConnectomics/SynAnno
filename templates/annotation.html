@@ -3,6 +3,13 @@
 {% block content %}
     <div class="container-fluid content-row mb-5 ">
 
+        <div id="loading"></div>
+        <div>
+            <p>
+              <a type="button" id="content" class="btn btn-primary" href="{{ url_for('_neuro') }}" target="_blank">View data in the Neuroglancer</a>
+            </p>
+        </div>
+
         <p style="text-align: justify;">
             This tool aims to help to annotate large datasets. The annotation is based on labels: right (green), wrong 
             (red) and unsure (white). One-click, you label the data as wrong (red color), one more click you label as unsure (white), one more click, and the data is labeled as right again (green). At the end of the process, you can download a JSON file containing your final labels. If you want to proofread the labels, you can use this file to check your previous results.</p>

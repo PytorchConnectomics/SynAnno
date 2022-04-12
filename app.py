@@ -31,15 +31,15 @@ global target_path
 def open_data():
     return render_template("opendata.html", modenext="disabled")
 
-@app.route('/_neuro/', methods=['GET','POST'])
-def _neuro():
+@app.route('/dele')
+def dele():
     global source_path
     global target_path
 
-    cmd = "python3 -i neuro_glancer.py --port 9015 --imgs "+str(source_path)+" --segs " + str(target_path)
+    cmd = "python3 -i neuro_glancer.py --port 9015 --imgs "+str(source_path)+" --segs "+str(target_path)
     proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
-
-    return redirect('http://localhost:9015/v/mytoken/', 301)
+ 
+    return redirect('http://localhost:9015/v/MyToken/', 301)
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_file():

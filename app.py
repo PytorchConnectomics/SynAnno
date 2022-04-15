@@ -10,13 +10,16 @@ import base64
 import sys
 
 import backend.processing as ip
-import subprocess
 
+import subprocess
+import random
+import psutil
 
 app = Flask(__name__)
 CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
-app.secret_key = 'BAD_SECRET_KEY'
+# setting the secret key to a random value to invalidate the old sessions
+app.secret_key = os.urandom(32)
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
@@ -26,20 +29,30 @@ app.config['UPLOAD_EXTENSIONS'] = ['.json', '.h5']
 
 global source_path
 global target_path
+global proc
+global neuro_version 
+neuro_version = None
+
 
 @app.route('/')
 def open_data():
     return render_template("opendata.html", modenext="disabled")
 
-@app.route('/dele')
-def dele():
+@app.route('/neuro/<int:oz>/<int:oy>/<int:ox>/', methods=['GET'])
+def neuro(oz=0,oy=0,ox=0):
     global source_path
     global target_path
+    global proc
+    global neuro_version 
 
-    cmd = "python3 -i neuro_glancer.py --port 9015 --imgs "+str(source_path)+" --segs "+str(target_path)
-    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
- 
-    return redirect('http://localhost:9015/v/MyToken/', 301)
+    print("python3 -i neuro_glancer.py --port 9015 --version "+str(neuro_version)+" --imgs "+str(source_path)+" --segs "+str(target_path)+" --ox "+str(ox)+" --oy "+str(oy)+" --oz "+str(oz))
+    if neuro_version is None: 
+        neuro_version = random.randint(0,32e+2)
+        cmd = "python3 -i neuro_glancer.py --port 9015 --version "+str(neuro_version)+" --imgs "+str(source_path)+" --segs "+str(target_path)+" --ox "+str(ox)+" --oy "+str(oy)+" --oz "+str(oz)
+        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
+    print(neuro_version)
+
+    return redirect('http://localhost:9015/v/'+str(neuro_version)+'/', 301)
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_file():
@@ -244,7 +257,6 @@ def save_slices():
     else:
         range_min = half_len - (slices_len//2)
 
-
     print(str(index), data[page][index]['Middle_Slice'], str(slices_len), str(half_len), str(range_min))
     final_json = jsonify(data=data[page][index], slices_len=slices_len, halflen=half_len, range_min=range_min)
 
@@ -289,6 +301,15 @@ def validate_json(json_data):
         return False
     return True
 
+def kill(proc_pid):
+    process = psutil.Process(proc_pid)
+    for proc in process.children(recursive=True):
+        proc.kill()
+    process.kill()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)
+    try:
+        app.run(host='0.0.0.0', port=8080)
+    except KeyboardInterrupt:
+        kill(proc)
+    

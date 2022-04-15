@@ -3,10 +3,9 @@
 {% block content %}
     <div class="container-fluid content-row mb-5 ">
 
-        <div id="loading"></div>
         <div>
             <p>
-              <a type="button" id="content" class="btn btn-primary" href="{{ url_for('_neuro') }}" target="_blank">View data in the Neuroglancer</a>
+                <a type="button" id="neuro" class="btn btn-primary" href="{{ url_for('neuro', oz=10, oy=10, ox=10) }}" target="_blank">View data in the Neuroglancer</a>
             </p>
         </div>
 
@@ -98,6 +97,9 @@
                   <img id="imgDetails-EM" class="card-img-top mb-1" src="" width="284px" height="284px"  style="position: initial; width:384px; height:384px;">
                   <img id="imgDetails-GT" class="card-img-top mb-1" src="" width="284px" height="284px"  style="position: absolute; opacity: 0.5; width:384px; height:384px;">
               </div>
+              <div>
+                <a class="btn btn-primary" id="ng-link" href="http://localhost:9999/neuro/0/0/0">View in NG</a>
+             </div>
               <div class="center">
                   <input id="rangeSlices" type="range" class="form-range" value="0" min="0" max="30" data_id="" page="">
                   <div class="container">

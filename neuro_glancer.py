@@ -30,6 +30,10 @@ if __name__=='__main__':
     parser.add_argument('--port', type=str, default='main', help='segmentation masks')
     parser.add_argument('--imgs', type=str, default='main', help='images')
     parser.add_argument('--segs', type=str, default='main', help='segmentation masks')
+    parser.add_argument('--version', type=str, help='version identifier')
+    parser.add_argument('--ox', type=float, default=0.0, help='start postion origin x')
+    parser.add_argument('--oy', type=float, default=0.0, help='start postion origin y')
+    parser.add_argument('--oz', type=float, default=0.0, help='start postion origin z')
 
     # retrive the args
     args = parser.parse_args()
@@ -37,7 +41,7 @@ if __name__=='__main__':
     ip = 'localhost' #or public IP of the machine for sharable display
     port = args.port #change to an unused port number
     neuroglancer.set_server_bind_address(bind_address=ip,bind_port=port)
-    viewer=neuroglancer.Viewer(token='mytoken')
+    viewer=neuroglancer.Viewer(token=args.version)
 
     res = neuroglancer.CoordinateSpace(
         names=['z', 'y', 'x'],
@@ -70,5 +74,6 @@ if __name__=='__main__':
     with viewer.txn() as s:
         s.layers.append(name='im',layer=ngLayer(im,res,tt='image'))
         s.layers.append(name='gt',layer=ngLayer(gt,res,tt='segmentation'))
+        s.position = [args.oz,args.oy,args.ox]
 
     print(viewer)

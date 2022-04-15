@@ -74,11 +74,17 @@ $(document).ready(function() {
             type: 'POST',
             data: {data_id: data_id, page: page, slice: rangeValue}
         });
-
+        
         req.done(function (data){
             $('#imgDetails-EM').attr("src",  data.data.EM +'/'+ rangeValue + '.png');
             $('#imgDetails-GT').attr("src",  data.data.GT +'/'+ rangeValue + '.png');
+            $('#ng-link').prop("href",  "http://localhost:9999/neuro/"+data.data.z0+"/"+data.data.y0+"/"+data.data.x0);
         });
+
+        // document.getElementById(".design-button").onclick = function() {
+        //     this.href = "http://localhost:9999/neuro/"+data.data.z0+"/"+data.data.y0+"/"+data.data.x0;
+        //     console.log(this.href);
+        // }
     })
 
     // @deprecated

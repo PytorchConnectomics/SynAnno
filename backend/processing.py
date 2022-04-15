@@ -43,6 +43,7 @@ from skimage.morphology import binary_dilation, remove_small_objects
 from skimage.measure import label as label_cc
 
 from .utils import *
+import time
 
 # Processing the synpases using binary dilation as well as by removing small objects.
 def process_syn(gt, small_thres=16):
@@ -165,6 +166,7 @@ def visualize(syn, seg, img, sz, return_data=False):
     syn_folder, img_folder = create_dir(idx_dir, 'Syn'), create_dir(idx_dir, 'Img')
     
     # iterate over the synapses. save the middle slices and before/after ones for navigation.
+    tim_avg = []
     for idx in seg_idx:
         syn_all, img_all = create_dir(syn_folder, str(idx)), create_dir(img_folder, str(idx))
 
@@ -188,6 +190,11 @@ def visualize(syn, seg, img, sz, return_data=False):
 
         item["Middle_Slice"] = str(z_mid_total)
         item["Original_Bbox"] = [int(u) for u in list(bbox)]
+        item["z0"] = item["Original_Bbox"][0]
+        item["y0"] = item["Original_Bbox"][2]
+        item["x0"] = item["Original_Bbox"][4]
+
+        print("item[Original_Bbox]: ", item["Original_Bbox"])
         
         temp_2d = temp[z_mid_total]    
 
@@ -254,10 +261,27 @@ def visualize(syn, seg, img, sz, return_data=False):
 
                 # image
                 img_c = Image.fromarray(vis_image[s,:,:])
-                img_c.save(os.path.join(img_all,img_name))
+                img_c.save(os.path.join(img_all,img_name), "PNG")
+
                 # label
                 lab_c = Image.fromarray(vis_label[s,:,:,:])
-                lab_c.save(os.path.join(syn_all,img_name))
+
+                # reduce the opacity of all black pixels to zero
+                lab_c = lab_c.convert("RGBA")
+
+                lab_c = np.asarray(lab_c) 
+                r, g, b, a = np.rollaxis(lab_c, axis=-1) # split into 4 n x m arrays 
+                r_m = r != 0 # binary mask for red channel, True for all non black values
+                g_m = g != 0 # binary mask for green channel, True for all non black values
+                b_m = b != 0 # binary mask for blue channel, True for all non black values
+
+                # combine the three binary masks by multiplying them (1*1=1, 1*0=0, 0*1=0, 0*0=0)
+                # multiply the combined binary mask with the alpha channel
+                a = a * ((r_m == 1) | (g_m == 1) | (b_m == 1))
+
+                lab_c = Image.fromarray(np.dstack([r, g, b, a]), 'RGBA') # stack the img back together 
+
+                lab_c.save(os.path.join(syn_all,img_name), "PNG")
 
     if return_data:
         return data_dict
@@ -288,6 +312,7 @@ def load_3d_files(im_file, gt_file, patch_size=142):
 
     # creates a json file
     visualize(syn, seg, im, sz=patch_size)
+
     
     synanno_json = os.path.join('.', 'synAnno.json')
     if os.path.isfile(synanno_json):

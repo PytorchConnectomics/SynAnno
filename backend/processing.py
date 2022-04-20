@@ -316,7 +316,7 @@ def load_3d_files(im_file, gt_file, patch_size=142):
     
     synanno_json = os.path.join('.', 'synAnno.json')
     if os.path.isfile(synanno_json):
-        return synanno_json
+        return synanno_json, im, gt
     else:
         # the json file should have been created by the visualize function
         raise FileNotFoundError(

@@ -56,8 +56,7 @@ $(document).ready(function() {
             $('#imgDetails-EM').addClass(label.toLowerCase());
             $('#imgDetails-EM').attr("src", data.data.EM +'/'+ data.data.Middle_Slice + '.png');
             $('#imgDetails-GT').attr("src", data.data.GT +'/'+ data.data.Middle_Slice + '.png');
-            // $('#value-opacity').attr("value", defaultOpacity);
-            // $('#imgDetails-GT').css("opacity", defaultOpacity);
+            $('#ng-link').prop("href",  "http://localhost:9999/neuro/"+data.data.z0+"/"+data.data.y0+"/"+data.data.x0);
             $('#detailsModal').modal("show");
         });
     });
@@ -74,37 +73,13 @@ $(document).ready(function() {
             type: 'POST',
             data: {data_id: data_id, page: page, slice: rangeValue}
         });
-        
+
         req.done(function (data){
             $('#imgDetails-EM').attr("src",  data.data.EM +'/'+ rangeValue + '.png');
             $('#imgDetails-GT').attr("src",  data.data.GT +'/'+ rangeValue + '.png');
-            $('#ng-link').prop("href",  "http://localhost:9999/neuro/"+data.data.z0+"/"+data.data.y0+"/"+data.data.x0);
         });
 
-        // document.getElementById(".design-button").onclick = function() {
-        //     this.href = "http://localhost:9999/neuro/"+data.data.z0+"/"+data.data.y0+"/"+data.data.x0;
-        //     console.log(this.href);
-        // }
     })
-
-    // @deprecated
-    // $('#rangeSlices').change( function() {
-    //     var rangeValue = $(this).val();
-    //     console.log(rangeValue)
-    //     var data_id = $(this).attr('data_id')
-    //     var page = $(this).attr('page')
-
-    //     req = $.ajax({
-    //         url: '/get_slice',
-    //         type: 'POST',
-    //         data: {data_id: data_id, page: page, slice: rangeValue}
-    //     });
-
-    //     req.done(function (data){
-    //         $('#imgDetails-EM').attr("src",  data.data.EM +'/'+ rangeValue + '.png');
-    //         $('#imgDetails-GT').attr("src",  '/static/Images/Transp_Syn/' + data.data.Image_Index +'/'+ rangeValue + '.png');
-    //     });
-    // });
 });
 
 

@@ -1,19 +1,23 @@
+# os and process dependent imports
 import os, os.path, shutil
-from flask import Flask, render_template, session, flash, jsonify, request, send_file, redirect
+import backend.processing as ip
+from werkzeug.utils import secure_filename
+
+# flask dependent imports
 from flask_session import Session
 from flask_cors import CORS, cross_origin
-from werkzeug.utils import secure_filename
+from flask import Flask, render_template, session, flash, jsonify, request, send_file, redirect
+
+# json dependent imports
 import json
 import jsonschema
 from jsonschema import validate
-import base64
-import sys
 
-import backend.processing as ip
-
-import subprocess
+# neuroglancer dependent imports
+import neuroglancer
+import numpy as np
 import random
-import psutil
+import h5py
 
 app = Flask(__name__)
 CORS(app)
@@ -27,10 +31,14 @@ Session(app)
 app.config['UPLOAD_FOLDER'] = 'files/'
 app.config['UPLOAD_EXTENSIONS'] = ['.json', '.h5']
 
-global source_path
-global target_path
-global proc
-global neuro_version 
+app.config['NG_IP'] = 'localhost'
+app.config['NG_PORT'] = '9015'
+
+# global variables
+global source_img # path to the images
+global target_seg # path to the segmentation masks
+global ng_viewer # handle to the neurglancer viewer instance
+global neuro_version # versioning number for the neuroglancer instance
 neuro_version = None
 
 
@@ -40,24 +48,48 @@ def open_data():
 
 @app.route('/neuro/<int:oz>/<int:oy>/<int:ox>/', methods=['GET'])
 def neuro(oz=0,oy=0,ox=0):
-    global source_path
-    global target_path
-    global proc
+    global source_img
+    global target_seg
     global neuro_version 
+    global ng_viewer
 
-    print("python3 -i neuro_glancer.py --port 9015 --version "+str(neuro_version)+" --imgs "+str(source_path)+" --segs "+str(target_path)+" --ox "+str(ox)+" --oy "+str(oy)+" --oz "+str(oz))
+    # if the NG version number is None setup a new NG viewer
     if neuro_version is None: 
-        neuro_version = random.randint(0,32e+2)
-        cmd = "python3 -i neuro_glancer.py --port 9015 --version "+str(neuro_version)+" --imgs "+str(source_path)+" --segs "+str(target_path)+" --ox "+str(ox)+" --oy "+str(oy)+" --oz "+str(oz)
-        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
-    print(neuro_version)
+        # generate a version number
+        neuro_version = str(random.randint(0,32e+2))
+
+        # setup Tornado web server and create viewer instance
+        neuroglancer.set_server_bind_address(bind_address=app.config['NG_IP'],bind_port=app.config['NG_PORT'])
+        ng_viewer=neuroglancer.Viewer(token=neuro_version)
+
+        # specify the NG coordinate space
+        res = neuroglancer.CoordinateSpace(
+            names=['z', 'y', 'x'],
+            units=['nm', 'nm', 'nm'],
+            scales=[1000, 333, 333])
+
+        # config viewer: Add image layer, add segmentation mask layer, define position
+        with ng_viewer.txn() as s:
+            s.layers.append(name='im',layer= neuroglancer.LocalVolume(source_img,dimensions=res,volume_type='image', voxel_offset=[0,0,0]))
+            s.layers.append(name='gt',layer= neuroglancer.LocalVolume(target_seg,dimensions=res,volume_type='segmentation', voxel_offset=[0,0,0]))
+            s.position = [oz,oy,ox]
+        
+        print(f"Starting a Neuroglancer instance at {ng_viewer}, centered at x,y,x {oz,oy,ox}")
+    
+    # if the NG version number is not None, a viewer instance was allready created -> only update the position 
+    else:
+        # update the view center
+        with ng_viewer.txn() as s:
+            s.position = [oz,oy,ox]
+
+        print(f"Neuroglancer instance running at {ng_viewer}, centered at x,y,x {oz,oy,ox}")
 
     return redirect('http://localhost:9015/v/'+str(neuro_version)+'/', 301)
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_file():
-    global source_path
-    global target_path
+    global source_img
+    global target_seg
 
     #Check if files folder exists, if not create it
     if os.path.exists('./files'):
@@ -79,12 +111,14 @@ def upload_file():
     # check if the path to the required files (source and target) are not None 
     if file_original.filename and file_gt.filename:
 
+        # retrive the names of the provided files
         original_name = save_file(file_original, file_original.filename)
         gt_name = save_file(file_gt, file_gt.filename)
 
         # if the source and target path are valid
         if original_name and gt_name:
 
+            # path for uploading
             source_path = os.path.join(app.config['UPLOAD_FOLDER'], original_name)
             target_path = os.path.join(app.config['UPLOAD_FOLDER'], gt_name)
 
@@ -96,14 +130,14 @@ def upload_file():
             if file_json.filename:
                 filename_json = save_file(file_json, "synAnno.json", ".")
 
-            # else compute the bb information and dump them to a json
+            # else compute the bounding box information and write them to a json
             else:
-                filename_json = ip.load_3d_files(
+                filename_json, source_img, target_seg = ip.load_3d_files(
                     os.path.join(app.config['UPLOAD_FOLDER'], file_original.filename), 
                     os.path.join(app.config['UPLOAD_FOLDER'], file_gt.filename), 
                     patch_size)
 
-            # test if the created or provided json is valid by loading it
+            # test if the created/provided json is valid by loading it
             try:
                 with open(filename_json, 'r') as f:
                     json.load(f)
@@ -113,7 +147,7 @@ def upload_file():
                 flash("Something is wrong with the loaded JSON!")
                 return render_template("opendata.html", modenext="disabled")
         else:
-            flash("Please provide at least the paths to valiud source and target .h5 files!")
+            flash("Please provide at least the paths to valid source and target .h5 files!")
 
 
 @app.route('/set-data/<data_name>')
@@ -131,18 +165,22 @@ def set_data(data_name='synAnno.json'):
     if not session.get('data'):
         session['data'] = [data['Data'][i:i+per_page] for i in range(0, len(data['Data']), per_page)]
 
+    # save the name of the json file to the session
     session['filename'] = data_name
 
-    # calculate the number of pages (based on 100 per page) and save it to the session
+    # retrive the number of instances in the json {"Data": [ ... ]}
     number_images = len(data['Data'])
-
+ 
     if number_images == 0:
-        print("No images found")
-        flash("No synapses found in this data. Try another one.")
+        flash("No synapsis detect in the GT data or the provided JSON does not list any")
         return render_template("opendata.html", modenext="disabled")
+
+    # calculate the number of pages needed for the instance count in the JSON
     number_pages = number_images // per_page
     if not (number_images % per_page == 0):
         number_pages = number_pages + 1
+
+    # save the number of required pages to the session
     if not session.get('n_pages'):
         session['n_pages'] = number_pages
     
@@ -161,11 +199,11 @@ def final_page():
 
 @app.route('/finalize')
 def finalize():
-    # Pop all the session content.
+    # pop all the session content.
     for key in list(session.keys()):
         session.pop(key)
 
-    # Delete all files in files
+    # delete all the uploaded h5 files 
     if os.path.exists("./"+app.config['UPLOAD_FOLDER']):
         for filename in os.listdir("./"+app.config['UPLOAD_FOLDER']):
             file_path = os.path.join("./"+app.config['UPLOAD_FOLDER'], filename)
@@ -177,11 +215,11 @@ def finalize():
             except Exception as e:
                 print('Failed to delete %s. Reason: %s' % (file_path, e))
 
-    #delete json file.
+    # delete json file.
     if os.path.isfile(os.path.join(".", "synAnno.json")):
         os.remove(os.path.join(".", "synAnno.json"))
         
-    #delete static images
+    # delete static images
     image_folder = "./static/Images/"
     if os.path.exists(image_folder):
         try:
@@ -232,7 +270,6 @@ def update_card():
 def get_slice():
     page = int(request.form['page'])
     index = int(request.form['data_id']) - 1
-    slice = int(request.form['slice'])
 
     data = session.get('data')
     final_json = jsonify(data=data[page][index])
@@ -245,19 +282,16 @@ def get_slice():
 def save_slices():
     page = int(request.form['page'])
     index = int(request.form['data_id']) - 1
-    slice = int(request.form['slice'])
 
     data = session.get('data')
-    slices_len = len(os.listdir('.' + data[page][index]['EM']+'/')) - 1 # for tiff file
+    slices_len = len(os.listdir('.' + data[page][index]['EM']+'/')) - 1 
     half_len = int(data[page][index]['Middle_Slice'])
     
-
     if(slices_len % 2 == 0):
         range_min = half_len - ((slices_len)//2) + 1
     else:
         range_min = half_len - (slices_len//2)
 
-    print(str(index), data[page][index]['Middle_Slice'], str(slices_len), str(half_len), str(range_min))
     final_json = jsonify(data=data[page][index], slices_len=slices_len, halflen=half_len, range_min=range_min)
 
     return final_json
@@ -281,35 +315,6 @@ def save_file(file, filename, path=app.config['UPLOAD_FOLDER']):
         file.save(os.path.join(path, filename))
         return(filename)
 
-
-def validate_json(json_data):
-    f = open("static/json_schema.json")
-
-    json_schema = json.load(f)
-
-    #validator = jsonschema.Draft7Validator(json_schema)
-
-    #errors = validator.iter_errors(json_data)  # get all validation errors
-
-    #for error in errors:
-    #    print(error)
-    #    print('------')
-
-    try:
-        validate(instance=json_data, schema=json_schema)
-    except jsonschema.exceptions.ValidationError as err:
-        return False
-    return True
-
-def kill(proc_pid):
-    process = psutil.Process(proc_pid)
-    for proc in process.children(recursive=True):
-        proc.kill()
-    process.kill()
-
 if __name__ == '__main__':
-    try:
-        app.run(host='0.0.0.0', port=8080)
-    except KeyboardInterrupt:
-        kill(proc)
-    
+    app.run(host='0.0.0.0', port=8080)
+

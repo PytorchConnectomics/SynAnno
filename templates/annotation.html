@@ -1,119 +1,134 @@
 {% extends "templatebase.html" %}
 
 {% block content %}
-    <div class="container-fluid content-row mb-5 ">
+<div class="container-fluid content-row mb-5 ">
 
-        <p style="text-align: justify;">
-            This tool aims to help to annotate large datasets. The annotation is based on labels: right (green), wrong 
-            (red) and unsure (white). One-click, you label the data as wrong (red color), one more click you label as unsure (white), one more click, and the data is labeled as right again (green). At the end of the process, you can download a JSON file containing your final labels. If you want to proofread the labels, you can use this file to check your previous results.</p>
-
-        <p style="font-weight: 600;">Note: Right-click to enlarge the patch and navigate surrounding slices.</p>
-
-        <div class="legend">
-            <strong>Legend:</strong>
-            <div class="legend-item"><span class="color-block" style="background-color: #abebc6;"></span>Right</div>
-            <div class="legend-item"><span class="color-block" style="background-color: #f08080;"></span>Wrong</div>
-            <div class="legend-item"><span class="color-block" style="background-color: #d7dbdd;border: 1px solid;"></span>Unsure</div>
-        </div>
-        <div class="row justify-content-start card-group">
-        {% for image in images %}
-                <div class="annotate-item mb-3">
-                     <div id="id{{loop.index}}" class="card border-0 p-2 {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}">
-                         <!---<img id="imgOriginal-{{loop.index}}" class="card-img-top mb-1" src="{{ image.EM +'/'~ image.Middle_Slice}}">!--->
-                         <div id="main-image" style="position: relative;">
-                             <img id="imgEM-GT-{{loop.index}}" src="{{ '/static/Images/Transp_Syn/' ~ image.Image_Index ~'/'~ image.Middle_Slice}}"  width="64px" height="64px" style="position: absolute; opacity: 0.5; ">
-                             <img id="imgGT-{{loop.index}}" src="{{ image.EM +'/'~ image.Middle_Slice}}"  width="64px" height="64px" style="position: initial;">
-                         </div>
-                         <a id="id-a-{{loop.index}}" class="stretched-link image-card-btn" page="{{page}}" data_id="{{ loop.index }}" label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}"></a>
-                     </div>
-                     <span>{{image.Bounding_Boxes|length}} slices</span>
-                </div>
-        {% endfor %}
-        </div>
+    <div>
+        <p>
+            <a type="button" id="neuro" class="btn btn-primary" href="{{ url_for('neuro', oz=10, oy=10, ox=10) }}"
+                target="_blank">View data in the Neuroglancer</a>
+        </p>
     </div>
-    <nav aria-label="Page navigation example mt-4">
-      <ul class="pagination justify-content-center">
-          {% if page > 0 %}
-              <li class="page-item"><a class="page-link" href={{ url_for('annotation', page=page-1)}}>< Previous</a></li>
-          {% else %}
-              <li class="page-item disabled"><a class="page-link " href="#">< Previous</a></li>
-          {% endif %}
-          <li style="padding: .375rem .75rem;">{{page+1}} / {{n_pages}} </li>
-          {% if page+1 < n_pages %}
-            <li class="page-item"><a class="page-link" href={{ url_for('annotation', page=page+1)}}>Next ></a></li>
-          {% else %}
+
+    <p style="text-align: justify;">
+        This tool aims to help to annotate large datasets. The annotation is based on labels: right (green), wrong
+        (red) and unsure (white). One-click, you label the data as wrong (red color), one more click you label as unsure
+        (white), one more click, and the data is labeled as right again (green). At the end of the process, you can
+        download a JSON file containing your final labels. If you want to proofread the labels, you can use this file to
+        check your previous results.</p>
+
+    <p style="font-weight: 600;">Note: Right-click to enlarge the patch and navigate surrounding slices.</p>
+
+    <div class="legend">
+        <strong>Legend:</strong>
+        <div class="legend-item"><span class="color-block" style="background-color: #abebc6;"></span>Right</div>
+        <div class="legend-item"><span class="color-block" style="background-color: #f08080;"></span>Wrong</div>
+        <div class="legend-item"><span class="color-block"
+                style="background-color: #d7dbdd;border: 1px solid;"></span>Unsure</div>
+    </div>
+    <div class="row justify-content-start card-group">
+        {% for image in images %}
+        <div class="annotate-item mb-3">
+            <div id="id{{loop.index}}"
+                class="card border-0 p-2 {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}">
+                <div id="main-image" style="position: relative;">
+                    <img id="imgEM-GT-{{loop.index}}" src="{{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}}"
+                        width="64px" height="64px" style="position: absolute; opacity: 0.5; ">
+                    <img id="imgGT-{{loop.index}}" src="{{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}}" width="64px"
+                        height="64px" style="position: initial;">
+                </div>
+                <a id="id-a-{{loop.index}}" class="stretched-link image-card-btn" page="{{page}}"
+                    data_id="{{ loop.index }}"
+                    label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}"></a>
+            </div>
+            <span>{{image.Adjusted_Bbox[1] - image.Adjusted_Bbox[0] + 1 }} slices</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+<nav aria-label="Page navigation example mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page > 0 %}
+        <li class="page-item"><a class="page-link" href={{ url_for('annotation', page=page-1)}}>
+                < Previous</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><a class="page-link " href="#">
+                < Previous</a>
+        </li>
+        {% endif %}
+        <li style="padding: .375rem .75rem;">{{page+1}} / {{n_pages}} </li>
+        {% if page+1 < n_pages %} <li class="page-item"><a class="page-link" href={{ url_for('annotation',
+                page=page+1)}}>Next ></a></li>
+            {% else %}
             <li class="page-item disabled"><a class="page-link" href="#">Next ></a></li>
             <li class="page-item"><a class="page-link" href={{ url_for('final_page')}}>Finish</a></li>
-          {% endif %}
-      </ul>
-    </nav>
+            {% endif %}
+    </ul>
+</nav>
 
-    <!-- Modal for synapse slyce-->
-    <div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-      <div class="modal-dialog">
+<!-- Modal for synapse slice-->
+<div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
         <div class="modal-content">
-          <div class="modal-header">
-              <h5 class="modal-title pe-5" id="exampleModalLabel">Synapse details</h5>
-              <!-- <div class="form-check pe-4">
-                  <input id="check-em" class="form-check-input" type="checkbox" value="" id="flexCheckChecked" onclick="check_em();" checked>
-                  <label class="form-check-label" for="flexCheckChecked"> EM </label>
-              </div>
-              <div class="form-check pe-4">
-                  <input id="check-gt" class="form-check-input" type="checkbox" value="" id="flexCheckChecked" onclick="check_gt();" checked>
-                  <label class="form-check-label" for="flexCheckChecked"> GT </label>
-              </div>
-              <div class="btn-group btn-group-sm ps-1" role="group" aria-label="Basic example">
-                  <button id="dec-opacity" type="button" class="btn btn-primary" onclick="dec_opacity()">-</button>
-                  <span id="value-opacity"type="button" class="btn btn-light" value="1">1</span>
-                  <button id="inc-opacity" type="button" class="btn btn-primary" onclick="add_opacity()">+</button>
-              </div> -->
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body" style="margin-left: auto; margin-right: auto;">
-            <div class="center" style="display:flex; margin-bottom: 8px;">
-                <div class="form-check pe-4">
-                    <input id="check-em" class="form-check-input" type="checkbox" value="" id="flexCheckChecked" onclick="check_em();" checked>
-                    <label class="form-check-label" for="flexCheckChecked"> Image </label>
-                </div>
-                <div class="form-check pe-4">
-                    <input id="check-gt" class="form-check-input" type="checkbox" value="" id="flexCheckChecked" onclick="check_gt();" checked>
-                    <label class="form-check-label" for="flexCheckChecked"> Label </label>
-                </div>
-                <div class="btn-group btn-group-sm ps-1" role="group" aria-label="Basic example">
-                    <span style="margin-right: 8px;">Label opacity:  </span>
-                    <button id="dec-opacity" type="button" class="btn btn-primary" onclick="dec_opacity()">-</button>
-                    <span id="value-opacity"type="button" class="btn btn-light" value="1">1</span>
-                    <button id="inc-opacity" type="button" class="btn btn-primary" onclick="add_opacity()">+</button>
-                </div>
-
+            <div class="modal-header">
+                <h5 class="modal-title pe-5" id="exampleModalLabel">Synapse details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-              <div id="cardDetails" class="card border-0 p-1">
-                  <img id="imgDetails-EM" class="card-img-top mb-1" src="" width="284px" height="284px"  style="position: initial; width:384px; height:384px;">
-                  <img id="imgDetails-GT" class="card-img-top mb-1" src="" width="284px" height="284px"  style="position: absolute; opacity: 1; width:384px; height:384px;">
-              </div>
-              <div class="center">
-                  <input id="rangeSlices" type="range" class="form-range" value="0" min="0" max="30" data_id="" page="">
-                  <div class="container">
-                      <div class="row">
-                          <div class="col justify-content-center">
-                              <button id="minSlice" type="button" class="btn btn-outline-secondary btn-sm disabled float-start"> -15 </button>
-                          </div>
-                          <!-- button to center the cursos
-                          <div class="col text-center">
-                              <button type="button" class="btn btn-secondary btn-sm ">Center</button>
-                          </div>
-                          --!>
-                          <div class="col justify-content-center">
-                              <button id="maxSlice" type="button" class="btn btn-outline-secondary btn-sm disabled float-end"> +15 </button>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-          </div>
-        </div>
-      </div>
-    </div>
+            <div class="modal-body" style="margin-left: auto; margin-right: auto;">
+                <div class="center" style="display:flex; margin-bottom: 8px;">
+                    <div class="form-check pe-4">
+                        <input id="check-em" class="form-check-input" type="checkbox" value="" id="flexCheckChecked"
+                            onclick="check_em();" checked>
+                        <label class="form-check-label" for="flexCheckChecked"> Image </label>
+                    </div>
+                    <div class="form-check pe-4">
+                        <input id="check-gt" class="form-check-input" type="checkbox" value="" id="flexCheckChecked"
+                            onclick="check_gt();" checked>
+                        <label class="form-check-label" for="flexCheckChecked"> Label </label>
+                    </div>
+                    <div class="btn-group btn-group-sm ps-1" role="group" aria-label="Basic example">
+                        <span style="margin-right: 8px;">Label opacity: </span>
+                        <button id="dec-opacity" type="button" class="btn btn-primary"
+                            onclick="dec_opacity()">-</button>
+                        <span id="value-opacity" type="button" class="btn btn-light" value="0.5">0.5</span>
+                        <button id="inc-opacity" type="button" class="btn btn-primary"
+                            onclick="add_opacity()">+</button>
+                    </div>
 
-    <!-- add js file to chang the card colors -->
-    <script src="{{ url_for('static', filename='app.js') }}"></script>
+                </div>
+                <div id="cardDetails" class="card border-0 p-1">
+                    <img id="imgDetails-EM" class="card-img-top mb-1" src="" width="284px" height="284px"
+                        style="position: initial; width:384px; height:384px;">
+                    <img id="imgDetails-GT" class="card-img-top mb-1" src="" width="284px" height="284px"
+                        style="position: absolute; opacity: 0.5; width:384px; height:384px;">
+                </div>
+
+                <div class="center">
+                    <input id="rangeSlices" type="range" class="form-range" value="0" min="0" max="30" data_id=""
+                        page="">
+                    <div class="container">
+                        <div class="row">
+                            <div class="col justify-content-center">
+                                <button id="minSlice" type="button"
+                                    class="btn btn-outline-secondary btn-sm disabled float-start"> -15 </button>
+                            </div>
+                            <div class="col justify-content-center">
+                                <a class="btn btn-primary" target="_blank" id="ng-link"
+                                    href="http://localhost:9999/neuro/0/0/0">View in NG</a>
+                            </div>
+                            <div class="col justify-content-center">
+                                <button id="maxSlice" type="button"
+                                    class="btn btn-outline-secondary btn-sm disabled float-end"> +15 </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- add js file to chang the card colors -->
+<script src="{{ url_for('static', filename='app.js') }}"></script>
 {% endblock %}

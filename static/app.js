@@ -43,7 +43,7 @@ $(document).ready(function() {
         req.done(function (data) {
             $('#rangeSlices').attr("min", data.range_min);
             $('#rangeSlices').attr("max", data.range_min + data.slices_len-1);
-            $('#rangeSlices').val(data.halflen+1);
+            $('#rangeSlices').val(data.halflen);
             $('#rangeSlices').attr("data_id", data_id);
             $('#rangeSlices').attr("page", page);
 
@@ -54,10 +54,9 @@ $(document).ready(function() {
             $('#maxSlice').html(data.slices_len-1);
 
             $('#imgDetails-EM').addClass(label.toLowerCase());
-            $('#imgDetails-EM').attr("src", data.data.EM +'/'+ data.data.Middle_Slice);
-            $('#imgDetails-GT').attr("src", '/static/Images/Transp_Syn/' + data.data.Image_Index +'/'+ data.data.Middle_Slice);
-            // $('#value-opacity').attr("value", defaultOpacity);
-            // $('#imgDetails-GT').css("opacity", defaultOpacity);
+            $('#imgDetails-EM').attr("src", data.data.EM +'/'+ data.data.Middle_Slice + '.png');
+            $('#imgDetails-GT').attr("src", data.data.GT +'/'+ data.data.Middle_Slice + '.png');
+            $('#ng-link').prop("href",  "http://localhost:9999/neuro/"+data.data.z0+"/"+data.data.y0+"/"+data.data.x0);
             $('#detailsModal').modal("show");
         });
     });
@@ -77,28 +76,10 @@ $(document).ready(function() {
 
         req.done(function (data){
             $('#imgDetails-EM').attr("src",  data.data.EM +'/'+ rangeValue + '.png');
-            $('#imgDetails-GT').attr("src",  '/static/Images/Transp_Syn/' + data.data.Image_Index +'/'+ rangeValue + '.png');
+            $('#imgDetails-GT').attr("src",  data.data.GT +'/'+ rangeValue + '.png');
         });
+
     })
-
-    // @deprecated
-    // $('#rangeSlices').change( function() {
-    //     var rangeValue = $(this).val();
-    //     console.log(rangeValue)
-    //     var data_id = $(this).attr('data_id')
-    //     var page = $(this).attr('page')
-
-    //     req = $.ajax({
-    //         url: '/get_slice',
-    //         type: 'POST',
-    //         data: {data_id: data_id, page: page, slice: rangeValue}
-    //     });
-
-    //     req.done(function (data){
-    //         $('#imgDetails-EM').attr("src",  data.data.EM +'/'+ rangeValue + '.png');
-    //         $('#imgDetails-GT').attr("src",  '/static/Images/Transp_Syn/' + data.data.Image_Index +'/'+ rangeValue + '.png');
-    //     });
-    // });
 });
 
 

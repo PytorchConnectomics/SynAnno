@@ -190,11 +190,9 @@ def visualize(syn, seg, img, sz, return_data=False):
 
         item["Middle_Slice"] = str(z_mid_total)
         item["Original_Bbox"] = [int(u) for u in list(bbox)]
-        item["z0"] = item["Original_Bbox"][0]
-        item["y0"] = item["Original_Bbox"][2]
-        item["x0"] = item["Original_Bbox"][4]
-
-        print("item[Original_Bbox]: ", item["Original_Bbox"])
+        item["cz0"] = item["Middle_Slice"]
+        item["cy0"] = (item["Original_Bbox"][2] + item["Original_Bbox"][3])//2 
+        item["cx0"] = (item["Original_Bbox"][4] + item["Original_Bbox"][5])//2
         
         temp_2d = temp[z_mid_total]    
 
@@ -246,8 +244,8 @@ def visualize(syn, seg, img, sz, return_data=False):
 
         if not return_data:
 
-            imageio.volwrite(os.path.join(img_all, "image.tif"), vis_image)
-            imageio.volwrite(os.path.join(syn_all, "label.tif"), vis_label)
+            # imageio.volwrite(os.path.join(img_all, "image.tif"), vis_image)
+            # imageio.volwrite(os.path.join(syn_all, "label.tif"), vis_label)
 
             # center slice of padded subvolume
             cs_dix = (vis_image.shape[0]-1)//2 # assumes even padding

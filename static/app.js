@@ -31,8 +31,6 @@ $(document).ready(function() {
         var page = $(this).attr('page')
         var label = $(this).attr('label')
         var strSlice = 0;
-        var defaultOpacity = 1;
-
 
         req = $.ajax({
             url: '/save_slices',
@@ -56,7 +54,7 @@ $(document).ready(function() {
             $('#imgDetails-EM').addClass(label.toLowerCase());
             $('#imgDetails-EM').attr("src", data.data.EM +'/'+ data.data.Middle_Slice + '.png');
             $('#imgDetails-GT').attr("src", data.data.GT +'/'+ data.data.Middle_Slice + '.png');
-            $('#ng-link').prop("href",  "http://localhost:9999/neuro/"+data.data.z0+"/"+data.data.y0+"/"+data.data.x0);
+            $('#ng-link').prop("href",  "http://localhost:9999/neuro/"+data.data.cz0+"/"+data.data.cy0+"/"+data.data.cx0);
             $('#detailsModal').modal("show");
         });
     });

@@ -48,41 +48,17 @@ def open_data():
 
 @app.route('/neuro/<int:oz>/<int:oy>/<int:ox>/', methods=['GET'])
 def neuro(oz=0,oy=0,ox=0):
-    global source_img
-    global target_seg
     global neuro_version 
     global ng_viewer
 
-    # if the NG version number is None setup a new NG viewer
-    if neuro_version is None: 
-        # generate a version number
-        neuro_version = str(random.randint(0,32e+2))
-
-        # setup Tornado web server and create viewer instance
-        neuroglancer.set_server_bind_address(bind_address=app.config['NG_IP'],bind_port=app.config['NG_PORT'])
-        ng_viewer=neuroglancer.Viewer(token=neuro_version)
-
-        # specify the NG coordinate space
-        res = neuroglancer.CoordinateSpace(
-            names=['z', 'y', 'x'],
-            units=['nm', 'nm', 'nm'],
-            scales=[1000, 333, 333])
-
-        # config viewer: Add image layer, add segmentation mask layer, define position
-        with ng_viewer.txn() as s:
-            s.layers.append(name='im',layer= neuroglancer.LocalVolume(source_img,dimensions=res,volume_type='image', voxel_offset=[0,0,0]))
-            s.layers.append(name='gt',layer= neuroglancer.LocalVolume(target_seg,dimensions=res,volume_type='segmentation', voxel_offset=[0,0,0]))
-            s.position = [oz,oy,ox]
-        
-        print(f"Starting a Neuroglancer instance at {ng_viewer}, centered at x,y,x {oz,oy,ox}")
-    
-    # if the NG version number is not None, a viewer instance was allready created -> only update the position 
-    else:
+    if neuro_version is not None: 
         # update the view center
         with ng_viewer.txn() as s:
             s.position = [oz,oy,ox]
+    else:
+        raise Exception("No NG instance running") 
 
-        print(f"Neuroglancer instance running at {ng_viewer}, centered at x,y,x {oz,oy,ox}")
+    print(f"Neuroglancer instance running at {ng_viewer}, centered at x,y,x {oz,oy,ox}")
 
     return redirect('http://localhost:9015/v/'+str(neuro_version)+'/', 301)
 
@@ -90,6 +66,8 @@ def neuro(oz=0,oy=0,ox=0):
 def upload_file():
     global source_img
     global target_seg
+    global neuro_version 
+    global ng_viewer
 
     #Check if files folder exists, if not create it
     if os.path.exists('./files'):
@@ -136,6 +114,29 @@ def upload_file():
                     os.path.join(app.config['UPLOAD_FOLDER'], file_original.filename), 
                     os.path.join(app.config['UPLOAD_FOLDER'], file_gt.filename), 
                     patch_size)
+
+            # if the NG version number is None setup a new NG viewer
+            if neuro_version is None: 
+                # generate a version number
+                neuro_version = str(random.randint(0,32e+2))
+
+                # setup Tornado web server and create viewer instance
+                neuroglancer.set_server_bind_address(bind_address=app.config['NG_IP'],bind_port=app.config['NG_PORT'])
+                ng_viewer=neuroglancer.Viewer(token=neuro_version)
+
+                # specify the NG coordinate space
+                res = neuroglancer.CoordinateSpace(
+                    names=['z', 'y', 'x'],
+                    units=['nm', 'nm', 'nm'],
+                    scales=[30, 8, 8])
+
+                # config viewer: Add image layer, add segmentation mask layer, define position
+                with ng_viewer.txn() as s:
+                    s.layers.append(name='im',layer= neuroglancer.LocalVolume(source_img,dimensions=res,volume_type='image', voxel_offset=[0,0,0]))
+                    s.layers.append(name='gt',layer= neuroglancer.LocalVolume(target_seg,dimensions=res,volume_type='segmentation', voxel_offset=[0,0,0]))
+                    s.position = [0,0,0]
+                
+                print(f"Starting a Neuroglancer instance at {ng_viewer}, centered at x,y,x {0,0,0}")
 
             # test if the created/provided json is valid by loading it
             try:

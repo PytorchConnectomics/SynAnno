@@ -31,15 +31,19 @@ Session(app)
 app.config['UPLOAD_FOLDER'] = 'files/'
 app.config['UPLOAD_EXTENSIONS'] = ['.json', '.h5']
 
+app.config['IP'] = '127.0.0.1'
+app.config['PORT'] = '5000'
+
 app.config['NG_IP'] = 'localhost'
 app.config['NG_PORT'] = '9015'
+
 
 # global variables
 global source_img # path to the images
 global target_seg # path to the segmentation masks
 global ng_viewer # handle to the neurglancer viewer instance
 global neuro_version # versioning number for the neuroglancer instance
-neuro_version = None
+neuro_version = None 
 
 
 @app.route('/')
@@ -51,6 +55,7 @@ def neuro(oz=0,oy=0,ox=0):
     global neuro_version 
     global ng_viewer
 
+
     if neuro_version is not None: 
         # update the view center
         with ng_viewer.txn() as s:
@@ -60,7 +65,7 @@ def neuro(oz=0,oy=0,ox=0):
 
     print(f"Neuroglancer instance running at {ng_viewer}, centered at x,y,x {oz,oy,ox}")
 
-    return redirect('http://localhost:9015/v/'+str(neuro_version)+'/', 301)
+    return redirect('http://'+app.config['IP']+':9015/v/'+str(neuro_version)+'/', 301)
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_file():
@@ -95,10 +100,6 @@ def upload_file():
 
         # if the source and target path are valid
         if original_name and gt_name:
-
-            # path for uploading
-            source_path = os.path.join(app.config['UPLOAD_FOLDER'], original_name)
-            target_path = os.path.join(app.config['UPLOAD_FOLDER'], gt_name)
 
             # remove existing json file 
             if os.path.isfile(os.path.join(".", "synAnno.json")):
@@ -138,17 +139,18 @@ def upload_file():
                 
                 print(f"Starting a Neuroglancer instance at {ng_viewer}, centered at x,y,x {0,0,0}")
 
-            # test if the created/provided json is valid by loading it
-            try:
-                with open(filename_json, 'r') as f:
-                    json.load(f)
-                flash("Data ready!")
-                return render_template("opendata.html", filename=filename_json, modecurrent="disabled", modeform="formFileDisabled")
-            except ValueError as e:
-                flash("Something is wrong with the loaded JSON!")
-                return render_template("opendata.html", modenext="disabled")
-        else:
-            flash("Please provide at least the paths to valid source and target .h5 files!")
+        # test if the created/provided json is valid by loading it
+        try:
+            with open(filename_json, 'r') as f:
+                json.load(f)
+            flash("Data ready!")
+            return render_template("opendata.html", filename=filename_json, modecurrent="disabled", modeform="formFileDisabled")
+        except ValueError as e:
+            flash("Something is wrong with the loaded JSON!")
+            return render_template("opendata.html", modenext="disabled")
+    else:
+        flash("Please provide at least the paths to valid source and target .h5 files!")
+        return render_template("opendata.html", modenext="disabled")
 
 
 @app.route('/set-data/<data_name>')
@@ -293,7 +295,7 @@ def save_slices():
     else:
         range_min = half_len - (slices_len//2)
 
-    final_json = jsonify(data=data[page][index], slices_len=slices_len, halflen=half_len, range_min=range_min)
+    final_json = jsonify(data=data[page][index], slices_len=slices_len, halflen=half_len, range_min=range_min, host=app.config['IP'], port=app.config['PORT'])
 
     return final_json
 
@@ -317,5 +319,5 @@ def save_file(file, filename, path=app.config['UPLOAD_FOLDER']):
         return(filename)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)
+    app.run(host=app.config['IP'], port=app.config['PORT'])
 

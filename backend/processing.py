@@ -141,6 +141,13 @@ def calculate_rot(syn, struct_sz=3, return_overlap=False, mode='linear'):
         overlap = (syn!=0).astype(np.uint8)
 
     pt = np.where(overlap != 0)
+    if len(np.unique(pt[0]))==1: # only contains one value
+        angle, slope = 90, 1e6 # approximation of infty
+        if return_overlap:
+            return angle, slope, overlap
+
+        return angle, slope
+
     if mode == 'linear':
         slope, _, _, _, _ = stats.linregress(pt[0], pt[1])
     elif mode == 'siegel':

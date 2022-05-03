@@ -29,11 +29,12 @@ Metadata JSON file structure:
     ]
 }
 '''
+from typing import Optional, Union, List, Tuple
+from collections import OrderedDict
 
 import os
 import json
 import errno
-import imageio
 import warnings
 import itertools
 import numpy as np
@@ -41,6 +42,7 @@ from PIL import Image
 from scipy import stats
 from skimage.morphology import binary_dilation, remove_small_objects
 from skimage.measure import label as label_cc
+from scipy.ndimage import find_objects
 
 from .utils import *
 import time
@@ -70,13 +72,29 @@ def process_syn(gt, small_thres=16):
     return syn, seg
 
 
-def bbox2_ND(img):
+def bbox_ND(img):
     N = img.ndim
     out = []
     for ax in itertools.combinations(reversed(range(N)), N - 1):
         nonzero = np.any(img, axis=ax)
         out.extend(np.where(nonzero)[0][[0, -1]])
     return tuple(out)
+
+
+def crop_ND(img: np.ndarray, coord: Tuple[int], 
+            end_included: bool = False) -> np.ndarray:
+    """Crop a chunk from a N-dimensional array based on the 
+    bounding box coordinates.
+    """
+    N = img.ndim
+    assert len(coord) == N * 2
+    slicing = []
+    for i in range(N):
+        start = coord[2*i]
+        end = coord[2*i+1] + 1 if end_included else coord[2*i+1]
+        slicing.append(slice(start, end))
+    slicing = tuple(slicing)
+    return img[slicing].copy()
 
 
 def adjust_bbox(low, high, sz):
@@ -164,10 +182,64 @@ def calculate_rot(syn, struct_sz=3, return_overlap=False, mode='linear'):
     return angle, slope
 
 
-def visualize(syn, seg, img, sz, return_data=False):
+def bbox_relax(coord: Union[tuple, list], 
+               shape: tuple, 
+               relax: int = 0) -> tuple:
+    assert len(coord) == len(shape) * 2
+    coord = list(coord)
+    for i in range(len(shape)):
+        coord[2*i] = max(0, coord[2*i]-relax)
+        coord[2*i+1] = min(shape[i], coord[2*i+1]+relax)
+
+    return tuple(coord)
+
+
+def index2bbox(seg: np.ndarray, indices: list, relax: int = 0,
+               iterative: bool = False) -> dict:
+    """Calculate the bounding boxes associated with the given mask indices. 
+    For a small number of indices, the iterative approach may be preferred.
+
+    Note:
+        Since labels with value 0 are ignored in ``scipy.ndimage.find_objects``,
+        the first tuple in the output list is associated with label index 1. 
+    """
+    bbox_dict = OrderedDict()
+
+    if iterative:
+        # calculate the bounding boxes of each segment iteratively
+        for idx in indices:
+            temp = (seg == idx) # binary mask of the current seg
+            bbox = bbox_ND(temp, relax=relax)
+            bbox_dict[idx] = bbox
+        return bbox_dict
+
+    # calculate the bounding boxes using scipy.ndimage.find_objects
+    loc = find_objects(seg)
+    seg_shape = seg.shape
+    for idx, item in enumerate(loc):
+        if item is None:
+            # For scipy.ndimage.find_objects, if a number is 
+            # missing, None is returned instead of a slice.
+            continue
+
+        object_idx = idx + 1 # 0 is ignored in find_objects
+        if object_idx not in indices:
+            continue
+
+        bbox = []
+        for x in item: # slice() object
+            bbox.append(x.start)
+            bbox.append(x.stop-1) # bbox is inclusive by definition
+        bbox_dict[object_idx] = bbox_relax(bbox, seg_shape, relax)
+    return bbox_dict
+
+
+def visualize(syn, seg, img, sz, return_data=False, iterative_bbox=False):
     crop_size = int(sz * 1.415) # considering rotation 
     item_list, data_dict = [], {}
     seg_idx = np.unique(seg)[1:] # ignore background
+    if not iterative_bbox:
+        bbox_dict = index2bbox(seg, seg_idx, iterative=False)
     
     idx_dir = create_dir('./static/', 'Images')
     syn_folder, img_folder = create_dir(idx_dir, 'Syn'), create_dir(idx_dir, 'Img')
@@ -188,12 +260,14 @@ def visualize(syn, seg, img, sz, return_data=False):
         item["Annotated"] = "No"            
         
         temp = (seg == idx) # binary mask of the current synapse
-        bbox = bbox2_ND(temp)
+        bbox = bbox_ND(temp) if iterative_bbox else bbox_dict[idx]
                 
-        # find the most centric slice that contains True values
-        idx_t = np.unique(np.where(temp==True)[0]) # index of slices containing True values
-        z_mid_total = min(idx_t, key=lambda x : abs(max(((bbox[1]-bbox[0]) // 2) + bbox[0], 0) - x)) # c-slice relative to volume
-        z_mid_relative = min(idx_t - bbox[0], key=lambda x : abs(max((bbox[1]-bbox[0]) // 2, 0) - x)) # c-slice relative to sub-volume
+        # find the most centric slice that contains foreground
+        temp_crop = crop_ND(temp, bbox, end_included=True)
+        crop_mid = (temp_crop.shape[0]-1) // 2
+        idx_t = np.where(np.any(temp_crop, axis=(1,2)))[0] # index of slices containing True values
+        z_mid_relative = idx_t[np.argmin(np.abs(idx_t-crop_mid))]
+        z_mid_total = z_mid_relative + bbox[0]
 
         item["Middle_Slice"] = str(z_mid_total)
         item["Original_Bbox"] = [int(u) for u in list(bbox)]
@@ -201,9 +275,8 @@ def visualize(syn, seg, img, sz, return_data=False):
         item["cy0"] = (item["Original_Bbox"][2] + item["Original_Bbox"][3])//2 
         item["cx0"] = (item["Original_Bbox"][4] + item["Original_Bbox"][5])//2
         
-        temp_2d = temp[z_mid_total]    
-
-        bbox_2d = bbox2_ND(temp_2d)    
+        temp_2d = temp[z_mid_total]
+        bbox_2d = bbox_ND(temp_2d)    
 
         y1, y2 = adjust_bbox(bbox_2d[0], bbox_2d[1], crop_size)
         x1, x2 = adjust_bbox(bbox_2d[2], bbox_2d[3], crop_size)
@@ -250,10 +323,6 @@ def visualize(syn, seg, img, sz, return_data=False):
         data_dict[idx] = [vis_image, vis_label]
 
         if not return_data:
-
-            # imageio.volwrite(os.path.join(img_all, "image.tif"), vis_image)
-            # imageio.volwrite(os.path.join(syn_all, "label.tif"), vis_label)
-
             # center slice of padded subvolume
             cs_dix = (vis_image.shape[0]-1)//2 # assumes even padding
 

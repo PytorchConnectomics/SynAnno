@@ -1,0 +1,14 @@
+{% extends "templatebase.html" %}
+{% block content %}
+
+<div>
+    <h2 class="mb-1">You finalize the proofreading of your data! </h2>
+    <p> Click "Save results" to export a json file containing the final labels of the your data.</p>
+    <p> Click "Open new data" to go back to the import page.</p>
+</div>
+<div class="mt-4">
+    <a type="button" class="btn btn-primary {{ btn_status }}" href={{ url_for('export_data')}}>Save results</a>
+    <a type="button" class="btn btn-secondary ml-2 " href={{ url_for('finalize')}}>Open new data</a>
+</div>
+
+{% endblock %}

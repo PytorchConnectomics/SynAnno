@@ -43,7 +43,6 @@ from skimage.morphology import binary_dilation, remove_small_objects
 from skimage.measure import label as label_cc
 
 from .utils import *
-import time
 
 # Processing the synpases using binary dilation as well as by removing small objects.
 def process_syn(gt, small_thres=16):
@@ -162,21 +161,20 @@ def visualize(syn, seg, img, sz, return_data=False):
     item_list, data_dict = [], {}
     seg_idx = np.unique(seg)[1:] # ignore background
     
-    idx_dir = create_dir('./static/', 'Images')
+    idx_dir = create_dir('./synanno/static/', 'Images')
     syn_folder, img_folder = create_dir(idx_dir, 'Syn'), create_dir(idx_dir, 'Img')
     
     # iterate over the synapses. save the middle slices and before/after ones for navigation.
-    tim_avg = []
     for idx in seg_idx:
         syn_all, img_all = create_dir(syn_folder, str(idx)), create_dir(img_folder, str(idx))
 
         # create a new item for the JSON file with defaults.
         item = dict()
-        item["Image_Name"] = 'image.tif'
-        item["Label_Name"] = 'label.tif'
+        item["Image_Name"] = 'image.h5'
+        item["Label_Name"] = 'label.h5'
         item["Image_Index"] = int(idx)
-        item["GT"] = syn_all.strip(".\\")
-        item["EM"] = img_all.strip(".\\")
+        item["GT"] = "/"+"/".join(syn_all.strip(".\\").split("/")[2:])
+        item["EM"] = "/"+"/".join(img_all.strip(".\\").split("/")[2:])
         item["Label"] = "Correct"
         item["Annotated"] = "No"            
         

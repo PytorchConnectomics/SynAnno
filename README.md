@@ -14,7 +14,7 @@ This tool is designed for synaptic polarity annotation from electron microscopy 
 3. Install the required dependencies. </br>
 ```pip install -r requirements.txt```
 4. Launch the app and start annotating!</br>
-```python -m flask run``` 
+```python run.py``` 
 5. Access </br>
 ```localhost:8080``` 
 

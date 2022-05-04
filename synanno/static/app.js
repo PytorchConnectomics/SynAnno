@@ -61,7 +61,6 @@ $(document).ready(function() {
 
     $('#rangeSlices').on('input', function() {
         var rangeValue = $(this).val();
-        console.log('input', rangeValue)
 
         var data_id = $(this).attr('data_id')
         var page = $(this).attr('page')

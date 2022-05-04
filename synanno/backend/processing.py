@@ -32,6 +32,9 @@ Metadata JSON file structure:
 from typing import Optional, Union, List, Tuple
 from collections import OrderedDict
 
+from typing import Optional, Union, List, Tuple
+from collections import OrderedDict
+
 import os
 import json
 import errno
@@ -45,7 +48,6 @@ from skimage.measure import label as label_cc
 from scipy.ndimage import find_objects
 
 from .utils import *
-import time
 
 # Processing the synpases using binary dilation as well as by removing small objects.
 def process_syn(gt, small_thres=16):
@@ -80,6 +82,20 @@ def bbox_ND(img):
         out.extend(np.where(nonzero)[0][[0, -1]])
     return tuple(out)
 
+def crop_ND(img: np.ndarray, coord: Tuple[int], 
+            end_included: bool = False) -> np.ndarray:
+    """Crop a chunk from a N-dimensional array based on the 
+    bounding box coordinates.
+    """
+    N = img.ndim
+    assert len(coord) == N * 2
+    slicing = []
+    for i in range(N):
+        start = coord[2*i]
+        end = coord[2*i+1] + 1 if end_included else coord[2*i+1]
+        slicing.append(slice(start, end))
+    slicing = tuple(slicing)
+    return img[slicing].copy()
 
 def crop_ND(img: np.ndarray, coord: Tuple[int], 
             end_included: bool = False) -> np.ndarray:
@@ -106,6 +122,55 @@ def adjust_bbox(low, high, sz):
 
     return low - diff, low - diff + sz
 
+def bbox_relax(coord: Union[tuple, list], 
+               shape: tuple, 
+               relax: int = 0) -> tuple:
+    assert len(coord) == len(shape) * 2
+    coord = list(coord)
+    for i in range(len(shape)):
+        coord[2*i] = max(0, coord[2*i]-relax)
+        coord[2*i+1] = min(shape[i], coord[2*i+1]+relax)
+
+    return tuple(coord)
+
+
+def index2bbox(seg: np.ndarray, indices: list, relax: int = 0,
+               iterative: bool = False) -> dict:
+    """Calculate the bounding boxes associated with the given mask indices. 
+    For a small number of indices, the iterative approach may be preferred.
+    Note:
+        Since labels with value 0 are ignored in ``scipy.ndimage.find_objects``,
+        the first tuple in the output list is associated with label index 1. 
+    """
+    bbox_dict = OrderedDict()
+
+    if iterative:
+        # calculate the bounding boxes of each segment iteratively
+        for idx in indices:
+            temp = (seg == idx) # binary mask of the current seg
+            bbox = bbox_ND(temp, relax=relax)
+            bbox_dict[idx] = bbox
+        return bbox_dict
+
+    # calculate the bounding boxes using scipy.ndimage.find_objects
+    loc = find_objects(seg)
+    seg_shape = seg.shape
+    for idx, item in enumerate(loc):
+        if item is None:
+            # For scipy.ndimage.find_objects, if a number is 
+            # missing, None is returned instead of a slice.
+            continue
+
+        object_idx = idx + 1 # 0 is ignored in find_objects
+        if object_idx not in indices:
+            continue
+
+        bbox = []
+        for x in item: # slice() object
+            bbox.append(x.start)
+            bbox.append(x.stop-1) # bbox is inclusive by definition
+        bbox_dict[object_idx] = bbox_relax(bbox, seg_shape, relax)
+    return bbox_dict
 
 # crop a 2D patch from 3D volume
 def crop_pad_data(data, z, bbox_2d, pad_val=0, mask=None, return_box=False):
@@ -182,58 +247,6 @@ def calculate_rot(syn, struct_sz=3, return_overlap=False, mode='linear'):
     return angle, slope
 
 
-def bbox_relax(coord: Union[tuple, list], 
-               shape: tuple, 
-               relax: int = 0) -> tuple:
-    assert len(coord) == len(shape) * 2
-    coord = list(coord)
-    for i in range(len(shape)):
-        coord[2*i] = max(0, coord[2*i]-relax)
-        coord[2*i+1] = min(shape[i], coord[2*i+1]+relax)
-
-    return tuple(coord)
-
-
-def index2bbox(seg: np.ndarray, indices: list, relax: int = 0,
-               iterative: bool = False) -> dict:
-    """Calculate the bounding boxes associated with the given mask indices. 
-    For a small number of indices, the iterative approach may be preferred.
-
-    Note:
-        Since labels with value 0 are ignored in ``scipy.ndimage.find_objects``,
-        the first tuple in the output list is associated with label index 1. 
-    """
-    bbox_dict = OrderedDict()
-
-    if iterative:
-        # calculate the bounding boxes of each segment iteratively
-        for idx in indices:
-            temp = (seg == idx) # binary mask of the current seg
-            bbox = bbox_ND(temp, relax=relax)
-            bbox_dict[idx] = bbox
-        return bbox_dict
-
-    # calculate the bounding boxes using scipy.ndimage.find_objects
-    loc = find_objects(seg)
-    seg_shape = seg.shape
-    for idx, item in enumerate(loc):
-        if item is None:
-            # For scipy.ndimage.find_objects, if a number is 
-            # missing, None is returned instead of a slice.
-            continue
-
-        object_idx = idx + 1 # 0 is ignored in find_objects
-        if object_idx not in indices:
-            continue
-
-        bbox = []
-        for x in item: # slice() object
-            bbox.append(x.start)
-            bbox.append(x.stop-1) # bbox is inclusive by definition
-        bbox_dict[object_idx] = bbox_relax(bbox, seg_shape, relax)
-    return bbox_dict
-
-
 def visualize(syn, seg, img, sz, return_data=False, iterative_bbox=False):
     crop_size = int(sz * 1.415) # considering rotation 
     item_list, data_dict = [], {}
@@ -241,21 +254,20 @@ def visualize(syn, seg, img, sz, return_data=False, iterative_bbox=False):
     if not iterative_bbox:
         bbox_dict = index2bbox(seg, seg_idx, iterative=False)
     
-    idx_dir = create_dir('./static/', 'Images')
+    idx_dir = create_dir('./synanno/static/', 'Images')
     syn_folder, img_folder = create_dir(idx_dir, 'Syn'), create_dir(idx_dir, 'Img')
     
     # iterate over the synapses. save the middle slices and before/after ones for navigation.
-    tim_avg = []
     for idx in seg_idx:
         syn_all, img_all = create_dir(syn_folder, str(idx)), create_dir(img_folder, str(idx))
 
         # create a new item for the JSON file with defaults.
         item = dict()
-        item["Image_Name"] = 'image.tif'
-        item["Label_Name"] = 'label.tif'
+        item["Image_Name"] = 'image.h5'
+        item["Label_Name"] = 'label.h5'
         item["Image_Index"] = int(idx)
-        item["GT"] = syn_all.strip(".\\")
-        item["EM"] = img_all.strip(".\\")
+        item["GT"] = "/"+"/".join(syn_all.strip(".\\").split("/")[2:])
+        item["EM"] = "/"+"/".join(img_all.strip(".\\").split("/")[2:])
         item["Label"] = "Correct"
         item["Annotated"] = "No"            
         

@@ -58,3 +58,9 @@
   height: 1rem;
   display: inline-block;
 }
+
+#ng-screen{
+  visibility: hidden;
+  width:70%;
+  height:50%
+}

@@ -130,9 +130,9 @@ def neuro():
     global neuro_version
     global ng_viewer
 
-    oz = int(request.form['coz'])
-    oy = int(request.form['coy'])
-    ox = int(request.form['cox'])
+    oz = int(request.form['cz0'])
+    oy = int(request.form['cy0'])
+    ox = int(request.form['cx0'])
 
     if neuro_version is not None:
         # update the view center
@@ -143,10 +143,8 @@ def neuro():
 
     print(f'Neuroglancer instance running at {ng_viewer}, centered at x,y,x {oz,oy,ox}')
 
-    #return redirect('http://'+app.config['IP']+':9015/v/'+str(neuro_version)+'/', 301)
     final_json = jsonify({'ng_link':'http://'+app.config['IP']+':9015/v/'+str(neuro_version)+'/'})
-    print("debugg")
-    print(final_json)
+
     return final_json
 
 def save_file(file, filename, path=os.path.join(app.config['PACKAGE_NAME'],app.config['UPLOAD_FOLDER'])):

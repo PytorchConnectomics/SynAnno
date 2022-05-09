@@ -30,7 +30,7 @@ $(document).ready(function() {
     var cy0;
     var cx0;
 
-    $('.image-card-btn').bind('contextmenu',function(e){
+    $('.image-card-btn').bind('contextmenu', async function(e){
         e.preventDefault();
         var data_id = $(this).attr('data_id')
         var page = $(this).attr('page')
@@ -43,7 +43,7 @@ $(document).ready(function() {
             data: {data_id: data_id, page: page, slice: strSlice}
         });
 
-        req_data.done(function (data) {
+        await req_data.done(function (data) {
             $('#rangeSlices').attr('min', data.range_min);
             $('#rangeSlices').attr('max', data.range_min + data.slices_len-1);
             $('#rangeSlices').val(data.halflen);
@@ -64,27 +64,20 @@ $(document).ready(function() {
 
         });
 
-        console.log(cz0)
-        console.log(cy0)
-        console.log(cx0)
-
         req_ng = $.ajax({
-            url: '/neur',
+            url: '/neuro',
             type: 'POST',
             data: {cz0: cz0, cy0: cy0, cx0: cx0}
         });
 
-        req_data.done(function (data){
-            console.log(data.ng_link)
+        req_ng.done(function (data){
             ng_link = data.ng_link;
         });
+
     });
 
     $('#ng-link').on('click', function (){
-        console.log(ng_link)
         $('#ng-iframe').attr('src', ng_link)
-        $('#ng-screen').show()
-
     });
 
 

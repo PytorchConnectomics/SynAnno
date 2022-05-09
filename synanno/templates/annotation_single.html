@@ -1,12 +1,13 @@
 <!-- Instance-specific view that opens up when right-clicking one of the tiles of the annotation view.
-    It shows an enlarged version of the instance. Additional, it lets the user move a lever, located at the bottom of the newly opened window,
-    which scrolls through all the slices of the selected instance and their associated segmentation masks. 
+    It shows an enlarged version of the instance. Additional, it lets the user move a lever, 
+    located at the bottom of the newly opened window, which scrolls through all the slices 
+    of the selected instance and their associated segmentation masks. 
     Both views load the request images as png files from a corresponding folder structure. -->
-<div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+<div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="modalToggleLabel1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title pe-5" id="exampleModalLabel">Synapse details</h5>
+                <h5 class="modal-title pe-5" id="modalToggleLabel1">Synapse details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" style="margin-left: auto; margin-right: auto;">
@@ -48,8 +49,9 @@
                                     class="btn btn-outline-secondary btn-sm disabled float-start"> -15 </button>
                             </div>
                             <div class="col justify-content-center">
-                                <a class="btn btn-primary" target="_blank" id="ng-link"
-                                    href="http://localhost:9015/neuro/0/0/0">View in NG</a>
+                                <button class="btn btn-primary" id="ng-link" type="button"
+                                    data-bs-target="#neuroModel" data-bs-toggle="modal"
+                                    data-bs-dismiss="modal">View in NG</button>
                             </div>
                             <div class="col justify-content-center">
                                 <button id="maxSlice" type="button"

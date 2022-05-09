@@ -1,5 +1,6 @@
 # flask 
-from flask import render_template, flash, request, redirect
+from flask import render_template, flash, request, jsonify
+from flask_cors import cross_origin
 
 # os and process dependent imports
 import os
@@ -122,11 +123,16 @@ def upload_file():
         flash('Please provide at least the paths to valid source and target .h5 files!', 'error')
         return render_template('opendata.html', modenext='disabled')
 
-@app.route('/neuro')
-@app.route('/neuro/<int:oz>/<int:oy>/<int:ox>/', methods=['GET'])
-def neuro(oz=0, oy=0, ox=0):
+
+@app.route('/neuro', methods=['POST'])
+@cross_origin()
+def neuro():
     global neuro_version
     global ng_viewer
+
+    oz = int(request.form['cz0'])
+    oy = int(request.form['cy0'])
+    ox = int(request.form['cx0'])
 
     if neuro_version is not None:
         # update the view center
@@ -135,10 +141,11 @@ def neuro(oz=0, oy=0, ox=0):
     else:
         raise Exception('No NG instance running')
 
-    print(
-        f'Neuroglancer instance running at {ng_viewer}, centered at x,y,x {oz,oy,ox}')
+    print(f'Neuroglancer instance running at {ng_viewer}, centered at x,y,x {oz,oy,ox}')
 
-    return redirect('http://'+app.config['IP']+':9015/v/'+str(neuro_version)+'/', 301)
+    final_json = jsonify({'ng_link':'http://'+app.config['IP']+':9015/v/'+str(neuro_version)+'/'})
+
+    return final_json
 
 def save_file(file, filename, path=os.path.join(app.config['PACKAGE_NAME'],app.config['UPLOAD_FOLDER'])):
     filename = secure_filename(filename)

@@ -1,0 +1,19 @@
+<!-- Module that toggles with the instance specific view and depicts the Neuroglancer -->
+<div class="modal fade" id="neuroModel" aria-hidden="true" aria-labelledby="modalToggleLabel2" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalToggleLabel2">Neuroglancer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row justify-content-center">
+                    <iframe id="ng-iframe" height="600" src="" title="Neuroglancer"></iframe>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" data-bs-target="#detailsModal" data-bs-toggle="modal"
+                        data-bs-dismiss="modal">Back to 2D view</button>
+                </div>
+            </div>
+        </div>
+    </div>

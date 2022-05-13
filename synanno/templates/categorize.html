@@ -12,11 +12,13 @@
 
     <div class="container-fluid py-2">
         <div class="d-flex flex-row flex-nowrap overflow-auto">
+            {% for images in pages%}
+            {% set pages_loop = loop %}
             {% for image in images %}
 
             {% if (image.Label == 'Incorrect' or image.Label == 'Unsure') %}
 
-            <div class="card card-body" id="id_error_{{loop.index}}">
+            <div class="card card-body" id="id_error_{{pages_loop.index}}_{{loop.index}}">
                 <div
                     class="card-block border-0 p-1 {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}">
                     <div class="main-image-categorize">
@@ -30,28 +32,30 @@
                 <div class="card-block">
                     <div class="form">
                         <div class="form-check m-2">
-                            <input class="form-check-input" type="radio" name="select_{{loop.index}}" id="falsePositive_{{loop.index}}"
-                                value="option1">
+                            <input class="form-check-input" type="radio" name="select_{{pages_loop.index}}_{{loop.index}}"
+                                id="falsePositive_{{pages_loop.index}}_{{loop.index}}" value="option1">
                             <label class="form-check-label" for="falsePositive"></label>
                             False Positive
                         </div>
                         <div class="form-check m-2">
-                            <input class="form-check-input" type="radio" name="select_{{loop.index}}" id="badFit_{{loop.index}}" value="option2">
+                            <input class="form-check-input" type="radio" name="select_{{pages_loop.index}}_{{loop.index}}"
+                                id="badFit_{{pages_loop.index}}_{{loop.index}}" value="option2">
                             <label class="form-check-label" for="badFit"></label>
                             Bad Fit
                         </div>
                         <div class="form-check m-2">
-                            <input class="form-check-input" type="radio" name="select_{{loop.index}}" id="polaritySwitch_{{loop.index}}"
-                                value="option3">
+                            <input class="form-check-input" type="radio" name="select_{{pages_loop.index}}_{{loop.index}}"
+                                id="polaritySwitch_{{pages_loop.index}}_{{loop.index}}" value="option3">
                             <label class="form-check-label" for="polaritySwitch"></label>
                             Polarity Switch
                         </div>
-                        <div class="input-group" id="custom_flag_{{loop.index}}">
+                        <div class="input-group" id="custom_flag_{{pages_loop.index}}_{{loop.index}}">
                             <div class="input-group-text">
-                                <input type="radio" name="select_{{loop.index}}" id="customFlagButton_{{loop.index}}" aria-label="Radio button for following text input">
+                                <input type="radio" name="select_{{pages_loop.index}}_{{loop.index}}" id="customFlagButton_{{pages_loop.index}}_{{loop.index}}"
+                                    aria-label="Radio button for following text input">
                             </div>
-                            <input type="text" class="form-control disabled" id="customFlagInput_{{loop.index}}" aria-label="Text input with radio button"
-                                placeholder="Custom Flag" disabled>
+                            <input type="text" class="form-control disabled" id="customFlagInput_{{pages_loop.index}}_{{loop.index}}"
+                                aria-label="Text input with radio button" placeholder="Custom Flag" disabled>
                         </div>
                     </div>
                 </div>
@@ -59,11 +63,13 @@
             </div>
             {% endif %}
             {% endfor %}
+            {% endfor %}
+
         </div>
     </div>
     <div class="m-4 p-1">
         <a type="button" id="submit_button" class="btn btn-primary {{ modenext }}"
-        href="{{ url_for('final_page') }}">Submit and Finish</a>
+            href="{{ url_for('final_page') }}" >Submit and Finish</a>
     </div>
 </div>
 

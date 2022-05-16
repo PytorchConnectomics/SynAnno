@@ -19,7 +19,7 @@
             <p class="mt-4">
                 <input id="processData" type="submit" class="btn btn-secondary {{ modecurrent }}" value="Submit" >
                 <a type="button" class="btn btn-primary {{ modenext }}" href="{{ url_for('set_data', data_name=filename) }}">Start data proofread</a>
-                <a type="button" class="btn btn-primary d-{{ modereset or 'none'}}" href="{{ url_for('reset') }}">Reset Backend</a>
+                <a type="button" id='resetButton' class="btn btn-primary d-{{ modereset or 'none'}}" href="{{ url_for('reset') }}">Reset Backend</a>
             </p>
         </form>
     </div>
@@ -39,5 +39,7 @@
     <!-- Script to update the progress bar -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.1/moment.min.js"></script>
     <script src="{{ url_for('static', filename='progressbar.js') }}"></script>
+    <!-- add js file to disable the form on reset -->
+    <script src="{{ url_for('static', filename='opendata.js') }}"></script>
 
 {% endblock %}

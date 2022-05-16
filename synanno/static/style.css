@@ -61,7 +61,9 @@
 
 .card-body {
   min-height: 30%;
+  max-height: 30%;
   min-width: 30%;
+  max-width: 30%;
   margin-right: 5px;
 }
 

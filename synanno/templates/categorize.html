@@ -18,44 +18,44 @@
 
             {% if (image.Label == 'Incorrect' or image.Label == 'Unsure') %}
 
-            <div class="card card-body" id="id_error_{{pages_loop.index}}_{{loop.index}}">
+            <div class="card card-body" id="id_error_{{pages_loop.index-1}}_{{loop.index-1}}">
                 <div
                     class="card-block border-0 p-1 image-card-btn {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}"
                     page="{{pages_loop.index - 1 }}" data_id="{{ loop.index }}" label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}">
                     <div class="main-image-categorize">
-                        <img id="imgEM-GT-{{loop.index}}" class="img_categorize"
+                        <img id="imgEM-GT-{{loop.index-1}}" class="img_categorize"
                             src="{{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}}" width="64px" height="64px"
                             style="opacity: 0.5; ">
-                        <img id="imgGT-{{loop.index}}" class="img_categorize"
+                        <img id="imgGT-{{loop.index-1}}" class="img_categorize"
                             src="{{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}}" width="64px" height="64px">
                     </div>
                 </div>
                 <div class="card-block">
                     <div class="form">
                         <div class="form-check m-2">
-                            <input class="form-check-input" type="radio" name="select_{{pages_loop.index}}_{{loop.index}}"
-                                id="falsePositive_{{pages_loop.index}}_{{loop.index}}" value="option1">
+                            <input class="form-check-input" type="radio" name="select_{{pages_loop.index-1}}_{{loop.index-1}}"
+                                id="falsePositive_{{pages_loop.index-1}}_{{loop.index-1}}" value="option1">
                             <label class="form-check-label" for="falsePositive"></label>
                             False Positive
                         </div>
                         <div class="form-check m-2">
-                            <input class="form-check-input" type="radio" name="select_{{pages_loop.index}}_{{loop.index}}"
-                                id="badFit_{{pages_loop.index}}_{{loop.index}}" value="option2">
+                            <input class="form-check-input" type="radio" name="select_{{pages_loop.index-1}}_{{loop.index-1}}"
+                                id="badFit_{{pages_loop.index-1}}_{{loop.index-1}}" value="option2">
                             <label class="form-check-label" for="badFit"></label>
                             Bad Fit
                         </div>
                         <div class="form-check m-2">
-                            <input class="form-check-input" type="radio" name="select_{{pages_loop.index}}_{{loop.index}}"
-                                id="polaritySwitch_{{pages_loop.index}}_{{loop.index}}" value="option3">
+                            <input class="form-check-input" type="radio" name="select_{{pages_loop.index-1}}_{{loop.index-1}}"
+                                id="polaritySwitch_{{pages_loop.index-1}}_{{loop.index-1}}" value="option3">
                             <label class="form-check-label" for="polaritySwitch"></label>
                             Polarity Switch
                         </div>
-                        <div class="input-group" id="custom_flag_{{pages_loop.index}}_{{loop.index}}">
+                        <div class="input-group" id="custom_flag_{{pages_loop.index-1}}_{{loop.index-1}}">
                             <div class="input-group-text">
-                                <input type="radio" name="select_{{pages_loop.index}}_{{loop.index}}" id="customFlagButton_{{pages_loop.index}}_{{loop.index}}"
+                                <input type="radio" name="select_{{pages_loop.index-1}}_{{loop.index-1}}" id="customFlagButton_{{pages_loop.index-1}}_{{loop.index-1}}"
                                     aria-label="Radio button for following text input">
                             </div>
-                            <input type="text" class="form-control disabled" id="customFlagInput_{{pages_loop.index}}_{{loop.index}}"
+                            <input type="text" class="form-control disabled" id="customFlagInput_{{pages_loop.index-1}}_{{loop.index-1}}"
                                 aria-label="Text input with radio button" placeholder="Custom Flag" disabled>
                         </div>
                     </div>
@@ -81,7 +81,7 @@
 {% include "annotation_neuro.html" %}
 
 
-<script src="{{ url_for('static', filename='categorization.js') }}"></script>
+<script src="{{ url_for('static', filename='categorize.js') }}"></script>
 
 <!-- add js file to chang the card colors -->
 <script src="{{ url_for('static', filename='annotation.js') }}"></script>

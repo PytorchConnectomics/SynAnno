@@ -27,32 +27,31 @@ $(document).ready(function(){
 
     // process the flags: [[pager number, image number, flag], ..., [pager number, image number, flag]]
     $('#submit_button').click(async function(){
+        var flags = []
         await $('[id^="id_error_"]').each(function() {
-            var flag = []
             var [page, img_id] = $(this).attr('id').replace(/id_error_/, '').split('_')
-            flag.push(page)
-            flag.push(img_id)
             if ($('[id^="falsePositive_"]', this).is(":checked")) {
-                flag.push("falsePositive")
+                flags.push({page:page, idx:img_id, flag:"falsePositive"})
               }
             else if ($('[id^="badFit_"]', this).is(":checked")) {
-                flag.push("badFit")
+                flags.push({page:page, idx:img_id, flag:"badFit"})
             }
             else if ($('[id^="polaritySwitch_"]', this).is(":checked")) {
-                flag.push("polaritySwitch")
+                flags.push({page:page, idx:img_id, flag:"polaritySwitch"})
             }
             else if ($('[id^="customFlagButton_"]', this).is(":checked")) {
-                flag.push($('[id^="customFlagInput_"]', this).val())
+                flags.push({page:page, idx:img_id, flag:$('[id^="customFlagInput_"]', this).val()})
             }
             else{
-                flag.push("None")
+                flags.push({page:page, idx:img_id, flag:"None"})
             }
-            req = $.ajax({
-                url: '/pass_flags',
-                type: 'POST',
-                data: {flag: flag}
-
         });
+        await $.ajax({
+            url: '/pass_flags',
+            type: 'POST',
+            contentType: 'application/json',
+            dataType : 'json',
+            data: JSON.stringify({flags: flags})
         });
     });
     

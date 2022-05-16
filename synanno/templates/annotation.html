@@ -2,14 +2,15 @@
 
 {% block content %}
 <div class="container-fluid content-row mb-3 ">
-
+    <!--
     <p style="text-align: justify;">
         This tool aims to help to annotate large datasets. The annotation is based on labels: right (green), wrong
         (red) and unsure (white). One-click, you label the data as wrong (red color), one more click you label as unsure
         (white), one more click, and the data is labeled as right again (green). At the end of the process, you can
         download a JSON file containing your final labels. If you want to proofread the labels, you can use this file to
         check your previous results. Note: Right-click to enlarge the patch and navigate surrounding slices.</p>
-
+    -->
+    
     <div class="legend">
         <strong>Legend:</strong>
         <div class="legend-item"><span class="color-block" style="background-color: #abebc6;"></span>Right</div>
@@ -37,7 +38,7 @@
         {% endfor %}
     </div>
 </div>
-<nav aria-label="Page navigation mt-2">
+<nav aria-label="Page navigation mt-5">
     <ul class="pagination justify-content-center">
         {% if page > 0 %}
         <li class="page-item"><a class="page-link" href="{{ url_for('annotation', page=page-1) }}">

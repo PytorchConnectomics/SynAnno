@@ -32,7 +32,7 @@ neuro_version = None
 @app.route('/')
 def open_data():
     if os.path.isdir('./synanno/static/Images/'):
-        flash('The backend already contains data. Click reset to wipe the storage and avoid mixups.')
+        flash('Click \"Reset Backend\" to clear the memory and start a new task.')
         return render_template('opendata.html', modecurrent='d-none', modenext='d-none', modereset='block')
     return render_template('opendata.html', modenext='disabled')
 

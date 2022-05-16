@@ -31,8 +31,8 @@ def export_data():
         return render_template('exportdata.html')
 
 
-@app.route('/finalize')
-def finalize():
+@app.route('/reset')
+def reset():
     # pop all the session content.
     for key in list(session.keys()):
         session.pop(key)

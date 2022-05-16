@@ -270,6 +270,7 @@ def visualize(syn, seg, img, sz, return_data=False, iterative_bbox=False):
         item["EM"] = "/"+"/".join(img_all.strip(".\\").split("/")[2:])
         item["Label"] = "Correct"
         item["Annotated"] = "No"            
+        item["Error_Description"] = "None"
         
         temp = (seg == idx) # binary mask of the current synapse
         bbox = bbox_ND(temp) if iterative_bbox else bbox_dict[idx]

@@ -17,7 +17,7 @@ import json
 def set_data(data_name='synAnno.json'):
 
     # set the number of cards in one page
-    per_page = 50
+    per_page = 10
     session['per_page'] = per_page
 
     # open the json data and save it to the session
@@ -95,7 +95,7 @@ def save_slices():
     index = int(request.form['data_id']) - 1
 
     data = session.get('data')
-    slices_len = len(os.listdir('./synanno'+ data[page][index]['EM']+'/')) - 1
+    slices_len = len(os.listdir('./synanno'+ data[page][index]['EM']+'/'))
     half_len = int(data[page][index]['Middle_Slice'])
 
     if(slices_len % 2 == 0):

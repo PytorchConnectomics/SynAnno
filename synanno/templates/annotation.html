@@ -1,16 +1,14 @@
 {% extends "templatebase.html" %}
 
 {% block content %}
-<div class="container-fluid content-row mb-5 ">
+<div class="container-fluid content-row mb-3 ">
 
     <p style="text-align: justify;">
         This tool aims to help to annotate large datasets. The annotation is based on labels: right (green), wrong
         (red) and unsure (white). One-click, you label the data as wrong (red color), one more click you label as unsure
         (white), one more click, and the data is labeled as right again (green). At the end of the process, you can
         download a JSON file containing your final labels. If you want to proofread the labels, you can use this file to
-        check your previous results.</p>
-
-    <p style="font-weight: 600;">Note: Right-click to enlarge the patch and navigate surrounding slices.</p>
+        check your previous results. Note: Right-click to enlarge the patch and navigate surrounding slices.</p>
 
     <div class="legend">
         <strong>Legend:</strong>
@@ -25,9 +23,9 @@
             <div id="id{{loop.index}}"
                 class="card border-0 p-2 {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}">
                 <div id="main-image" style="position: relative;">
-                    <img id="imgEM-GT-{{loop.index}}" src="{{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}}"
+                    <img id="imgEM-GT-{{loop.index}}" class="img_annotate" src="{{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}}"
                         width="64px" height="64px" style="position: absolute; opacity: 0.5; ">
-                    <img id="imgGT-{{loop.index}}" src="{{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}}" width="64px"
+                    <img id="imgGT-{{loop.index}}" class="img_annotate" src="{{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}}" width="64px"
                         height="64px" style="position: initial;">
                 </div>
                 <a id="id-a-{{loop.index}}" class="stretched-link image-card-btn" page="{{page}}"
@@ -39,10 +37,10 @@
         {% endfor %}
     </div>
 </div>
-<nav aria-label="Page navigation example mt-4">
+<nav aria-label="Page navigation mt-2">
     <ul class="pagination justify-content-center">
         {% if page > 0 %}
-        <li class="page-item"><a class="page-link" href={{ url_for('annotation', page=page-1)}}>
+        <li class="page-item"><a class="page-link" href="{{ url_for('annotation', page=page-1) }}">
                 < Previous</a>
         </li>
         {% else %}
@@ -51,15 +49,14 @@
         </li>
         {% endif %}
         <li style="padding: .375rem .75rem;">{{page+1}} / {{n_pages}} </li>
-        {% if page+1 < n_pages %} <li class="page-item"><a class="page-link" href={{ url_for('annotation',
-                page=page+1)}}>Next ></a></li>
+        {% if page+1 < n_pages %} <li class="page-item"><a class="page-link" href="{{ url_for('annotation',
+                page=page+1)}}" >Next ></a></li>
             {% else %}
             <li class="page-item disabled"><a class="page-link" href="#">Next ></a></li>
-            <li class="page-item"><a class="page-link" href={{ url_for('final_page')}}>Finish</a></li>
+            <li class="page-item"><a class="page-link" href="{{ url_for('categorize') }}">Error Processing</a></li>
             {% endif %}
     </ul>
 </nav>
-
 
 <!-- Modal for synapse slice-->
 {% include "annotation_single.html" %}
@@ -67,8 +64,6 @@
 <!-- Modal for neuroglancer slice-->
 {% include "annotation_neuro.html" %}
 
-
-
 <!-- add js file to chang the card colors -->
-<script src="{{ url_for('static', filename='app.js') }}"></script>
+<script src="{{ url_for('static', filename='annotation.js') }}"></script>
 {% endblock %}

@@ -20,7 +20,8 @@
 
             <div class="card card-body" id="id_error_{{pages_loop.index}}_{{loop.index}}">
                 <div
-                    class="card-block border-0 p-1 {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}">
+                    class="card-block border-0 p-1 image-card-btn {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}"
+                    page="{{pages_loop.index}}" data_id="{{ loop.index }}" label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}">
                     <div class="main-image-categorize">
                         <img id="imgEM-GT-{{loop.index}}" class="img_categorize"
                             src="{{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}}" width="64px" height="64px"
@@ -73,7 +74,16 @@
     </div>
 </div>
 
+<!-- Modal for synapse slice-->
+{% include "annotation_single.html" %}
+
+<!-- Modal for neuroglancer slice-->
+{% include "annotation_neuro.html" %}
+
+
 <script src="{{ url_for('static', filename='categorization.js') }}"></script>
 
+<!-- add js file to chang the card colors -->
+<script src="{{ url_for('static', filename='annotation.js') }}"></script>
 
 {% endblock %}

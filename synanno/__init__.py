@@ -26,4 +26,4 @@ app.config['PORT'] = '5000'
 app.config['NG_IP'] = 'localhost'
 app.config['NG_PORT'] = '9015'
 
-from synanno.routes import annotation, finish, opendata
+from synanno.routes import annotation, finish, opendata, categorize

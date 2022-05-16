@@ -95,7 +95,7 @@ def save_slices():
     index = int(request.form['data_id']) - 1
 
     data = session.get('data')
-    slices_len = len(os.listdir('./synanno'+ data[page][index]['EM']+'/')) - 1
+    slices_len = len(os.listdir('./synanno'+ data[page][index]['EM']+'/'))
     half_len = int(data[page][index]['Middle_Slice'])
 
     if(slices_len % 2 == 0):

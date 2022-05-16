@@ -19,6 +19,7 @@
             <p class="mt-4">
                 <input id="processData" type="submit" class="btn btn-secondary {{ modecurrent }}" value="Submit" >
                 <a type="button" class="btn btn-primary {{ modenext }}" href="{{ url_for('set_data', data_name=filename) }}">Start data proofread</a>
+                <a type="button" class="btn btn-primary d-{{ modereset or 'none'}}" href="{{ url_for('reset') }}">Reset Backend</a>
             </p>
         </form>
     </div>

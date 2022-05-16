@@ -58,15 +58,12 @@
     </ul>
 </nav>
 
-
 <!-- Modal for synapse slice-->
 {% include "annotation_single.html" %}
 
 <!-- Modal for neuroglancer slice-->
 {% include "annotation_neuro.html" %}
 
-
-
 <!-- add js file to chang the card colors -->
-<script src="{{ url_for('static', filename='app.js') }}"></script>
+<script src="{{ url_for('static', filename='annotation.js') }}"></script>
 {% endblock %}

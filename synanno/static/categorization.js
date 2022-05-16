@@ -47,7 +47,6 @@ $(document).ready(function(){
             else{
                 flag.push("None")
             }
-            console.log(flag)
             req = $.ajax({
                 url: '/pass_flags',
                 type: 'POST',
@@ -56,4 +55,5 @@ $(document).ready(function(){
         });
         });
     });
+    
 })

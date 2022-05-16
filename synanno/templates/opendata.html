@@ -1,9 +1,14 @@
 {% extends "templatebase.html" %}
+
+{% block help_content %}
+<p class="text-muted">This tool aims to help to annotate large datasets. To start, load the .h5 file of the original and ground truth data. If you have a previous json file exported by this tool, you can load it too</p>
+{% endblock %}
+
 {% block content %}
 
     <div class="px-4 py-3 my-3 text-center">
         <h2 class="mb-3"> Welcome to SynAnno Annotation Tool</h2>
-        <p>This tool aims to help to annotate large datasets.<b> To start, load the .h5 file of the original and ground truth data. If you have a previous json file exported by this tool, you can load it too.</b></p>
+        <p>Select some data and start proofreading!</p>
     </div>
 
     <div class="mb-3">

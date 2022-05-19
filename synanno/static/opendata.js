@@ -2,13 +2,13 @@ $(document).ready(function(){
 
     if ($('#resetButton').hasClass('d-block')){
         $('.form-control').each(function(){
-            $(this).attr('disabled', 'disabled')
+            $(this).prop("disabled", true)
         });
     }
     else
     {
         $('.form-control').each(function(){
-            $(this).removeAttr('disabled')
+            $(this).prop("disabled", false)
         });
     };
 });

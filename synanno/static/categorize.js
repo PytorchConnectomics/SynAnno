@@ -4,25 +4,25 @@ $(document).ready(function(){
     $('[id^="customFlagButton_"]').change(function() {
         var [page, img_id] = $(this).attr('id').replace(/customFlagButton_/, '').split('_')
         var customFlagId = '#customFlagInput_'+page+'_'+img_id
-        $(customFlagId).removeAttr('disabled');
+        $(customFlagId).prop("disabled", false);
      });
 
      $('[id^="falsePositive_"]').change(function() {
         var [page, img_id] = $(this).attr('id').replace(/falsePositive_/, '').split('_')
         var customFlagId = '#customFlagInput_'+page+'_'+img_id
-        $(customFlagId).attr('disabled','disabled');
+        $(customFlagId).prop("disabled", true);
      });
 
      $('[id^="badFit_"]').change(function() {
         var [page, img_id] = $(this).attr('id').replace(/badFit_/, '').split('_')
         var customFlagId = '#customFlagInput_'+page+'_'+img_id
-        $(customFlagId).attr('disabled','disabled');
+        $(customFlagId).prop("disabled", true);
      });
 
      $('[id^="polaritySwitch_"]').change(function() {
         var [page, img_id] = $(this).attr('id').replace(/polaritySwitch_/, '').split('_')
         var customFlagId = '#customFlagInput_'+page+'_'+img_id
-        $(customFlagId).attr('disabled','disabled');
+        $(customFlagId).prop("disabled", true);
      });
 
     // process the flags: [[pager number, image number, flag], ..., [pager number, image number, flag]]

@@ -138,6 +138,7 @@ function check_em(){
     var checkbox = document.getElementById('check-em');
     if(checkbox.checked==false){
         $('#imgDetails-GT').css('background-color', 'black');
+        $('#imgDetails-GT').css('opacity', '1');
     } else {
         $('#imgDetails-GT').css('background-color', 'transparent');
         $('#imgDetails-GT').css('opacity', '1');

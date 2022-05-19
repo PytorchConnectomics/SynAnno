@@ -53,6 +53,12 @@ $(document).ready(function(){
             dataType : 'json',
             data: JSON.stringify({flags: flags})
         });
-    });
-    
+    });    
+
+    // show message in case no faulty instances where selected/marked
+    if ($('.card')[1] ) {
+        $('.bg-secondary').addClass('d-none')
+    }else{
+        $('.bg-secondary').removeClass('d-none')
+    }
 })

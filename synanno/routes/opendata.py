@@ -12,6 +12,7 @@ import synanno.backend.processing as ip
 
 # import the package app 
 from synanno import app
+import synanno
 
 # json dependent imports
 import json
@@ -126,6 +127,14 @@ def upload_file():
         flash('Please provide at least the paths to valid source and target .h5 files!', 'error')
         return render_template('opendata.html', modenext='disabled')
 
+
+@app.route('/progress', methods=['POST'])
+@cross_origin()
+def progress():
+    return jsonify({
+                    'status': synanno.progress_bar_status['status'], 
+                    'progress': synanno.progress_bar_status['percent']
+                    })
 
 @app.route('/neuro', methods=['POST'])
 @cross_origin()

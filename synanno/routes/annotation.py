@@ -17,7 +17,7 @@ import json
 def set_data(data_name='synAnno.json'):
 
     # set the number of cards in one page
-    per_page = 10
+    per_page = 18
     session['per_page'] = per_page
 
     # open the json data and save it to the session

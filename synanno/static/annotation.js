@@ -129,8 +129,10 @@ function check_gt(){
     var checkbox = document.getElementById('check-gt');
     if(checkbox.checked==false){
         $('#imgDetails-GT').css('display', 'none');
+        $('#check-em').prop("disabled", true);
     } else {
         $('#imgDetails-GT').css('display', 'block');
+        $('#check-em').prop("disabled", false);
     }
 }
 
@@ -139,8 +141,10 @@ function check_em(){
     if(checkbox.checked==false){
         $('#imgDetails-GT').css('background-color', 'black');
         $('#imgDetails-GT').css('opacity', '1');
+        $('#check-gt').prop("disabled", true);
     } else {
         $('#imgDetails-GT').css('background-color', 'transparent');
         $('#imgDetails-GT').css('opacity', '1');
+        $('#check-gt').prop("disabled", false);
     }
 }

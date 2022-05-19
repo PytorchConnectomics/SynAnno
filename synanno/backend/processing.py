@@ -49,6 +49,9 @@ from scipy.ndimage import find_objects
 
 from .utils import *
 
+import synanno
+
+
 # Processing the synpases using binary dilation as well as by removing small objects.
 def process_syn(gt, small_thres=16):
     indices = np.unique(gt)
@@ -60,9 +63,12 @@ def process_syn(gt, small_thres=16):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=UserWarning)
         seg = binary_dilation(gt.copy() != 0)
+        synanno.progress_bar_status['percent'] = int(8) 
+
         seg = label_cc(seg).astype(int)
         seg = seg * (gt.copy() != 0).astype(int)
         seg = remove_small_objects(seg, small_thres)
+        synanno.progress_bar_status['percent'] = int(12) 
 
         c2 = (gt.copy() == 2).astype(int)
         c1 = (gt.copy() == 1).astype(int)
@@ -70,7 +76,7 @@ def process_syn(gt, small_thres=16):
         syn_pos = np.clip((seg * 2 - 1), a_min=0, a_max=None) * c1
         syn_neg = (seg * 2) * c2
         syn = np.maximum(syn_pos, syn_neg)
-
+        synanno.progress_bar_status['percent'] = int(15) 
     return syn, seg
 
 
@@ -256,9 +262,13 @@ def visualize(syn, seg, img, sz, return_data=False, iterative_bbox=False):
     
     idx_dir = create_dir('./synanno/static/', 'Images')
     syn_folder, img_folder = create_dir(idx_dir, 'Syn'), create_dir(idx_dir, 'Img')
+
+    # calculate process time for progess bar
+    len_instances = len(seg_idx)
+    perc = (100)/len_instances 
     
     # iterate over the synapses. save the middle slices and before/after ones for navigation.
-    for idx in seg_idx:
+    for i, idx in enumerate(seg_idx):
         syn_all, img_all = create_dir(syn_folder, str(idx)), create_dir(img_folder, str(idx))
 
         # create a new item for the JSON file with defaults.
@@ -370,6 +380,9 @@ def visualize(syn, seg, img, sz, return_data=False, iterative_bbox=False):
 
                 lab_c.save(os.path.join(syn_all,img_name), "PNG")
 
+                # update progress bar
+                synanno.progress_bar_status['percent'] = min(int(i * perc) + 15, 100)
+
     if return_data:
         return data_dict
 
@@ -382,9 +395,12 @@ def visualize(syn, seg, img, sz, return_data=False, iterative_bbox=False):
 
 
 def load_3d_files(im_file, gt_file, patch_size=142):
-    gt = readvol(gt_file)  # The mask annotation (GT: ground truth)
+    synanno.progress_bar_status['status'] = "Loading Source File"
     im = readvol(im_file)  # The original image (EM)
+    synanno.progress_bar_status['status'] = "Loading Target File"
+    gt = readvol(gt_file)  # The mask annotation (GT: ground truth)
 
+    synanno.progress_bar_status['status'] = "Convert Polarity Prediction to Segmentation"
     if gt.ndim != 3:
         # If the gt is not segmentation mask but predicted polarity, generate
         # the individual synapses using the polarity2instance function from
@@ -393,18 +409,26 @@ def load_3d_files(im_file, gt_file, patch_size=142):
         warnings.warn("Converting polarity prediction into segmentation, which can be very slow!")
         scales = (im.shape[0]/gt.shape[1], im.shape[1]/gt.shape[2], im.shape[2]/gt.shape[3])
         gt = polarity2instance(gt.astype(np.uint8), semantic=False, scale_factors=scales)
+    synanno.progress_bar_status['percent'] = int(5) 
 
+    synanno.progress_bar_status['status'] = "Retrive 2D patches from 3D volume"
     # Processing the 3D volume to get 2D patches.
     syn, seg = process_syn(gt)
 
+
+    synanno.progress_bar_status['status'] = "Render Images"
     # creates a json file
     visualize(syn, seg, im, sz=patch_size)
 
     
     synanno_json = os.path.join('.', 'synAnno.json')
+    synanno.progress_bar_status['percent'] = int(100) 
+
     if os.path.isfile(synanno_json):
         return synanno_json, im, gt
     else:
         # the json file should have been created by the visualize function
         raise FileNotFoundError(
             errno.ENOENT, os.strerror(errno.ENOENT), 'synAnno.json')
+
+

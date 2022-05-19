@@ -3,7 +3,7 @@
 }
 
 .annotate-item{
-  width: 20%;
+  width: 16.5%;
   text-align: center;
 }
 
@@ -82,3 +82,17 @@
  grid-column-start: 1;
 }
 
+.progress {
+  position: relative;
+}
+
+.progress-bar-title {
+  position: absolute;
+  text-align: center;
+  line-height: 15px; /* line-height should be equal to bar height */
+  overflow: hidden;
+  color: rgb(74, 72, 72);
+  right: 0;
+  left: 0;
+  top: 0;
+}

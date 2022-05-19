@@ -8,6 +8,7 @@ import shutil
 
 # import the package app 
 from synanno import app
+import synanno
 
 # json dependent imports
 import json
@@ -33,6 +34,10 @@ def export_data():
 
 @app.route('/reset')
 def reset():
+
+    # reset progress bar 
+    synanno.progress_bar_status = {"status":"Loading Source File", "percent":0}
+
     # pop all the session content.
     for key in list(session.keys()):
         session.pop(key)

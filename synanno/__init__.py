@@ -29,5 +29,5 @@ app.config['NG_PORT'] = '9015'
 global progress_bar_status
 progress_bar_status = {"status":"Loading Source File", "percent":0}
 
-from synanno.routes import annotation, finish, opendata, categorize
+from synanno.routes import annotation, finish, opendata, categorize, landingpage
 

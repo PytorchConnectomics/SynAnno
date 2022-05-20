@@ -30,7 +30,7 @@ global neuro_version  # versioning number for the neuroglancer instance
 # initialize the neuroglancer version number as noon
 neuro_version = None
 
-@app.route('/')
+@app.route('/open_data')
 def open_data():
     if os.path.isdir('./synanno/static/Images/'):
         flash('Click \"Reset Backend\" to clear the memory and start a new task.')

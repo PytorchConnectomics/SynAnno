@@ -9,7 +9,7 @@
 {% block content %}
 
 
-<div class="container-fluid content-row mb-5 ">
+<div class="container-fluid content-row mt-5 ">
 
     <div class="container-fluid py-2">
         <div class="d-flex flex-row flex-nowrap overflow-auto">
@@ -19,7 +19,7 @@
 
             {% if (image.Label == 'Incorrect' or image.Label == 'Unsure') %}
 
-            <div class="card card-body" id="id_error_{{pages_loop.index-1}}_{{loop.index-1}}">
+            <div class="card card-body card-body-proof-read" id="id_error_{{pages_loop.index-1}}_{{loop.index-1}}">
                 <div class="card-block border-0 p-1 image-card-btn {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}"
                     page="{{pages_loop.index - 1 }}" data_id="{{ loop.index }}"
                     label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}">

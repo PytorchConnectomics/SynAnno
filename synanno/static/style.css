@@ -96,3 +96,19 @@
   left: 0;
   top: 0;
 }
+
+.outsideWrapper{ 
+    margin: auto;
+    width:512px; height:512px; 
+    border:1px solid blue;}
+.insideWrapper{ 
+    width:100%; height:100%; 
+    position:relative;}
+.coveredImage{ 
+    width:100%; height:100%; 
+    position:absolute; top:0px; left:0px;
+}
+.coveringCanvas{ 
+    width:100%; height:100%; 
+    position:absolute; top:0px; left:0px;
+}

@@ -1,0 +1,37 @@
+{% extends "templatebase.html"%}
+
+{% block content %}
+
+
+<div class="container-fluid vh-100">
+    <div class="row">
+    <div class="col">
+        <div class="outsideWrapper">
+            <div class="insideWrapper">
+                <img src="static/Images/Img/27/17.png" class="coveredImage">
+                <canvas class="coveringCanvas d-none"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="row justify-content-center">
+        <div class="col">
+            <button type="button" class="btn btn-secondary" id="canvasButtonActivate">Activate Canvas</button>
+        </div>
+        <div class="col">
+            <button type="button" class="btn btn-secondary" id="canvasButtonDelete">Delete Drawing</button>
+        </div>
+        <div class="col">
+            <button type="button" class="btn btn-secondary" id="canvasButtonSave">Save Drawing</button>
+        </div>
+        <div class="col">
+            <button type="button" class="btn btn-secondary" id="canvasButtonCreate">Create Drawing</button>
+        </div>
+
+    </div>
+</div>
+
+
+</div>
+
+<script src="{{url_for('static', filename='test_draw.js') }}"></script>
+{% endblock %}

@@ -1,37 +1,104 @@
 # SynAnno
 
-This tool is designed for synaptic polarity annotation from electron microscopy (EM) volumes.
+SynAnno is a tool for synaptic polarity annotation from electron microscopy (EM) volumes.
 
-## How to use the tool
-### Install locally
-#### Requirements
-- Anaconda (https://www.anaconda.com/)
+## Functionalities 
 
-#### Instructions
-1. Clone this repository to your system.</li>
-2. Navigate to the cloned repository using your terminal. </br>
-``` cd  "cloned repository path goes here" ```
-3. Install the required dependencies. </br>
-```pip install -r requirements.txt```
-4. Launch the app and start annotating!</br>
-```python run.py``` 
-5. Access </br>
-```localhost:8080``` 
+1. Proofreading annotated data
+    - Viewing data instances and mask
+    - Marking faulty segmentation masks
+    - Describing error in segmentation mask
+2. Correcting Segmentation masks
+    - Deleting False Positives
+    - Redrawing bad matches (under development)
 
-### With Docker
-#### Requirements
-- Docker (https://docs.docker.com/get-docker/)
-#### Instructions 
-1. Clone this repository to your system.</li>
-2. Navigate to the cloned repository using your terminal. </br>
-``` cd  "cloned repository path goes here" ```
-3. Create the docker image. </br>
-``` docker build --tag "name" .```
-4. Run the docker image. </br>
-``` docker run --publish 8080:8080 "name"```
-5. Access </br>
-```localhost:8080```
+## Requirements
 
-### Additional instructions
-1. If starting a new proofreading task, upload the .h5 files, proofread and remember to save the results at the end. It is going to take some minutes to load the .h5 files, do not worry. 
-2. If continuing a previously incomplete proofreading task or just going over it, no need to upload the .h5 files again. Just upload the JSON file (saved results) from the previous session and you shall be ready!
+**Download and unzip SynAnno**
+
+Download SynAnno and unzip it into a folder of your choice.
+We assume that you have unzipped the folder under `/home/user/SynAnno`.
+
+**Anaconda (https://www.anaconda.com/)**
+
+Conda is an environment and package manager for python built for data science and machine learning.
+It provides an easy and stable means to set up an environment with all of SynAnno's relevant dependencies.
+To run SynAnno, even the lightweight version MiniConda is sufficient.
+
+To download and install MiniConda, go to [here](https://docs.conda.io/en/latest/miniconda.html#latest-miniconda-installer-links) and select the latest version for your Operation System.
+For MacOs, this would be "Miniconda3 MacOSX 64-bit pkg" or "Miniconda3 macOS Apple M1 64-bit pkg," depending on your Mac's chip architecture. Make sure to select the "... pkg" version and not the "... bash" version.
+After downloading the package, simply double-click it and follow the steps described by the install manager.
+
+**Setup the SynAnno environment**
+
+1. Open a terminal
+    - On a Mac, this can be achieved by opening the spotlight (command + space), entering "Terminal", and pressing enter.
+
+2. Navigate to you the SynAnno folder
+    - In a bash terminal, we use `cd` to navigate and `ls` to show the content
+    - Write `cd /home/user/SynAnno` in the terminal and press enter
+    - You can check the content of the folder by writing `ls` and pressing enter
+
+3. Check the Miniconda installation
+    - To check if you correctly installed Miniconda write `conda     -version` into terminal and press enter
+    - The terminal should depict the version of Miniconda.
+
+4. Setup the environment
+    - We want to install SynAnno-specific dependencies - Python libraries. To make sure that we do not run into conflicts with already installed, or in the future to be installed, decencies, we logically isolate the SynAnno dependencies by putting them into an environment.
+    - To create the environment, write `conda create -y     -name SynAnno python=3.7` into the terminal and press enter
+    - To install the requirements into the newly created `SynAnno` environment, write `conda install -y     -name SynAnno     -file requirements.txt` into the terminal and press enter. The flags in the command stand for, `-y`: Yes, do not ask for confirmation, `    -name`: Name of the environment, `    -file`: File from which to install the requirements. Important, the command only works if you are inside `/home/user/SynAnno` since we are referencing the `requirements.txt` file located in the folder.
+    - To activate the environment, write `conda activate SynAnno` into the terminal and press enter
+
+## Start up SynAnno tool
+
+1. Open a terminal 
+2. Navigate to your `SynAnno` folder within the terminal (cd `/home/user/SynAnno`)
+3. Activate the conda environment (`conda activate SynAnno`)
+4. Start the app by writing `python run.py` in the terminal and pressing enter
+5. On startup, the tool will write a URL to the terminal. The default URL is `http://127.0.0.1:5000/`. Go to your browser and enter the URL.
+
+
+## Using SynAnno
+
+*On each page click the question mark in the top right corner should you be unsure how to proceed.*
+
+1. Go to the App's URL (root path `http://127.0.0.1:5000/`) and upload the data 
+    - Select an h5 source and target file, click `Submit`, and when submitted successfully, click `Start Data Proofread.`
+    - If you have already proofread the dataset, you can also upload the annotation JSON. However, this JSON must fit the data perfectly and can not deviate from the predefined format, i.e., it must have been generated by this tool.
+
+[![App root page][1]][1]
+
+3. After clicking `Start Data Proofread`, you will be redirected to the instance overview (`http://127.0.0.1:5000/set-data/synAnno.json`).
+    - The status of an instance segmentation is indicated by the color surrounding the instance: correct (green), incorrect (red), and uncertain (gray). You can change the status by clicking on an instance. One click marks the instance as wrong (red color), two clicks mark the instance as unsure (gray), three clicks and the data is again marked as right (green). 
+    
+
+    [![App proof read page][2]][2]
+
+    - Should you be unsure for of an instance's mask, you can right-click the instance to enlarge the patch and navigate surrounding slices. In this view, you can also click `View in NG` to view the instance in the Neuroglancer. 
+    - After evaluating the segmentation masks for all instances on the current page, click the `Next` button at the bottom to evaluate the next set of segmentation masks.
+    - When you are done proof reading all instances, click `Error Processing` at the bottom of the page (this button will show on the last proofreading page).
+
+
+
+[![App proof instance view][3]][3]
+
+4. Clicking on the `Error Processing` button takes you to the error categorization view (`http://127.0.0.1:5000/categorize`), which lets you specify the error for all instances marked as `wrong` or `unsure`
+    - Scroll sideways to see all cards.
+    - Right-click to enlarge the patch, navigate surrounding slices, and open the Neuroglancer at that instance position.
+    - When done categorizing all instances, click on `Submit and Finish`.
+
+[![App proof error processing page][4]][4]
+
+5. Clicking `Submit and finish` takes you to the final view (`http://127.0.0.1:5000/finalpage`)
+    - Click `Save Results` to download the JSON.
+    - Click `Open new data` to go back to the root page and start proofreading a new dataset.
+
+[![App proof finish page][5]][5]
+
+
+
+  [1]: ./documentation/images/root_page.png
+  [2]: ./documentation/images/proof_read.png
+  [3]: ./documentation/images/instance_view.png
+  [4]: ./documentation/images/error_processing.png
+  [5]: ./documentation/images/finish_page.png

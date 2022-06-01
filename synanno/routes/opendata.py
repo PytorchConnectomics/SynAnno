@@ -74,10 +74,16 @@ def upload_file():
             if os.path.isfile(os.path.join('.', 'synAnno.json')):
                 os.remove(os.path.join('.', 'synAnno.json'))
 
-            # if a json got provided save it locally
+            # if a json got provided save it locally and process the data based on the JSON info
             if file_json.filename:
                 filename_json = save_file(file_json, 'synAnno.json', '.')
-
+                _, source_img, target_seg = ip.load_3d_files(
+                    os.path.join(
+                        os.path.join(app.config['PACKAGE_NAME'],app.config['UPLOAD_FOLDER']), file_original.filename),
+                    os.path.join(
+                        os.path.join(app.config['PACKAGE_NAME'],app.config['UPLOAD_FOLDER']), file_gt.filename),
+                    patch_size=patch_size,
+                    filename_json=filename_json)
             # else compute the bounding box information and write them to a json
             else:
                 filename_json, source_img, target_seg = ip.load_3d_files(

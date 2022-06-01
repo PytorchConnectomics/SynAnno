@@ -1,11 +1,12 @@
 {% extends "templatebase.html" %}
 
 {% block help_content %}
-<p class="text-muted">This tool aims to help to annotate large datasets. The annotation is based on labels: right (green), wrong
-    (red) and unsure (white). One-click, you label the data as wrong (red color), one more click you label as unsure
-    (white), one more click, and the data is labeled as right again (green). At the end of the process, you can
-    download a JSON file containing your final labels. If you want to proofread the labels, you can use this file to
-    check your previous results. Note: Right-click to enlarge the patch and navigate surrounding slices.</p>
+<p class="text-muted">The status of an instance segmentation is indicated by the color surrounding the instance: correct (green), incorrect (red), and uncertain (gray).
+    You can change the status by clicking on an instance. One click marks the instance as wrong (red color), two clicks mark the instance as unsure (gray), three clicks and the data is again marked as right (green). 
+    Should you be unsure for of an instance's mask, you can right-click the instance to enlarge the patch and navigate surrounding slices. In this view, you can also click "View in NG" to view the instance in the Neuroglancer. 
+    After evaluating the segmentation masks for all instances on the current page, click the "Next" button at the bottom to evaluate the next set of segmentation masks.
+    When you are done proof reading all instances, click "Error Processing" at the bottom of the page (this button will show on the last proofreading page).
+</p>
 {% endblock %}
 
 {% block content %}

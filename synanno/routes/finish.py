@@ -14,7 +14,7 @@ import synanno
 import json
 
 
-@app.route('/finalpage')
+@app.route('/final_page')
 def final_page():
     return render_template('exportdata.html')
 

@@ -12,8 +12,6 @@ Metadata JSON file structure:
 {
     "Data": [
         {
-            "Image_Name": "image.tif",  # image volume filename
-            "Label_Name": "label.tif",  # label volume filename
             "Image_Index": 1,           # synapse index (int)
             "GT": ".\Images\Syn\1",     # folder containing GT images.
             "EM": ".\Images\Img\1",     # folder containing EM images.
@@ -253,77 +251,117 @@ def calculate_rot(syn, struct_sz=3, return_overlap=False, mode='linear'):
     return angle, slope
 
 
-def visualize(syn, seg, img, sz, return_data=False, iterative_bbox=False):
+def visualize(syn, seg, img, sz, return_data=False, iterative_bbox=False, filename_json=None):
     crop_size = int(sz * 1.415) # considering rotation 
+
     item_list, data_dict = [], {}
-    seg_idx = np.unique(seg)[1:] # ignore background
-    if not iterative_bbox:
-        bbox_dict = index2bbox(seg, seg_idx, iterative=False)
+
+    if filename_json is not None:
+        item_list = json.load(open(filename_json))["Data"]
+    else:
+        seg_idx = np.unique(seg)[1:] # ignore background
+        if not iterative_bbox:
+            bbox_dict = index2bbox(seg, seg_idx, iterative=False)
     
     idx_dir = create_dir('./synanno/static/', 'Images')
     syn_folder, img_folder = create_dir(idx_dir, 'Syn'), create_dir(idx_dir, 'Img')
 
+    # specify the list we iterate over (index list or json)
+    instance_list = []
+    if filename_json is not None:
+        instance_list = item_list
+    else:
+        instance_list = seg_idx
+
     # calculate process time for progess bar
-    len_instances = len(seg_idx)
+    len_instances = len(instance_list)
     perc = (100)/len_instances 
-    
+
     # iterate over the synapses. save the middle slices and before/after ones for navigation.
-    for i, idx in enumerate(seg_idx):
+    for i, inst in enumerate(instance_list):
+
+        if filename_json is not None:
+            idx = inst["Image_Index"]
+        else:
+            idx = inst
+
         syn_all, img_all = create_dir(syn_folder, str(idx)), create_dir(img_folder, str(idx))
 
-        # create a new item for the JSON file with defaults.
-        item = dict()
-        item["Image_Name"] = 'image.h5'
-        item["Label_Name"] = 'label.h5'
-        item["Image_Index"] = int(idx)
-        item["GT"] = "/"+"/".join(syn_all.strip(".\\").split("/")[2:])
-        item["EM"] = "/"+"/".join(img_all.strip(".\\").split("/")[2:])
-        item["Label"] = "Correct"
-        item["Annotated"] = "No"            
-        item["Error_Description"] = "None"
-        
         temp = (seg == idx) # binary mask of the current synapse
-        bbox = bbox_ND(temp) if iterative_bbox else bbox_dict[idx]
-                
-        # find the most centric slice that contains foreground
-        temp_crop = crop_ND(temp, bbox, end_included=True)
-        crop_mid = (temp_crop.shape[0]-1) // 2
-        idx_t = np.where(np.any(temp_crop, axis=(1,2)))[0] # index of slices containing True values
-        z_mid_relative = idx_t[np.argmin(np.abs(idx_t-crop_mid))]
-        z_mid_total = z_mid_relative + bbox[0]
 
-        item["Middle_Slice"] = str(z_mid_total)
-        item["Original_Bbox"] = [int(u) for u in list(bbox)]
-        item["cz0"] = item["Middle_Slice"]
-        item["cy0"] = (item["Original_Bbox"][2] + item["Original_Bbox"][3])//2 
-        item["cx0"] = (item["Original_Bbox"][4] + item["Original_Bbox"][5])//2
+        # create a new item for the JSON file with defaults.
+        if filename_json is None:
+            item = dict()
+            item["Image_Index"] = int(idx)
+            item["GT"] = "/"+"/".join(syn_all.strip(".\\").split("/")[2:])
+            item["EM"] = "/"+"/".join(img_all.strip(".\\").split("/")[2:])
+            item["Label"] = "Correct"
+            item["Annotated"] = "No"            
+            item["Error_Description"] = "None"
         
-        temp_2d = temp[z_mid_total]
-        bbox_2d = bbox_ND(temp_2d)    
+            
+            bbox = bbox_ND(temp) if iterative_bbox else bbox_dict[idx]
+                    
+            # find the most centric slice that contains foreground
+            temp_crop = crop_ND(temp, bbox, end_included=True)
+            crop_mid = (temp_crop.shape[0]-1) // 2
+            idx_t = np.where(np.any(temp_crop, axis=(1,2)))[0] # index of slices containing True values
+            z_mid_relative = idx_t[np.argmin(np.abs(idx_t-crop_mid))]
+            z_mid_total = z_mid_relative + bbox[0]
 
-        y1, y2 = adjust_bbox(bbox_2d[0], bbox_2d[1], crop_size)
-        x1, x2 = adjust_bbox(bbox_2d[2], bbox_2d[3], crop_size)
-        crop_2d = [y1, y2, x1, x2]
+            item["Middle_Slice"] = str(z_mid_total)
+            item["Original_Bbox"] = [int(u) for u in list(bbox)]
+            item["cz0"] = item["Middle_Slice"]
+            item["cy0"] = (item["Original_Bbox"][2] + item["Original_Bbox"][3])//2 
+            item["cx0"] = (item["Original_Bbox"][4] + item["Original_Bbox"][5])//2
+        
+            temp_2d = temp[z_mid_total]
+            bbox_2d = bbox_ND(temp_2d)    
 
-        cropped_syn, syn_bbox, padding = crop_pad_data(syn, z_mid_total, crop_2d, mask=temp, return_box=True)
-        cropped_img = crop_pad_data(img, z_mid_total, crop_2d, pad_val=128)
+            y1, y2 = adjust_bbox(bbox_2d[0], bbox_2d[1], crop_size)
+            x1, x2 = adjust_bbox(bbox_2d[2], bbox_2d[3], crop_size)
+            crop_2d = [y1, y2, x1, x2]
 
-        # calculate the padding for frontend display, later used for unpadding.
-        item["Adjusted_Bbox"] = [bbox[0], bbox[1]] + syn_bbox
+            cropped_syn, syn_bbox, padding = crop_pad_data(syn, z_mid_total, crop_2d, mask=temp, return_box=True)
+            cropped_img = crop_pad_data(img, z_mid_total, crop_2d, pad_val=128)
 
-        item["Padding"] = padding
+            # calculate the padding for frontend display, later used for unpadding.
+            item["Adjusted_Bbox"] = [bbox[0], bbox[1]] + syn_bbox
 
-        # calculate and save the angle of rotation.
-        angle, _ = calculate_rot(cropped_syn, return_overlap=False, mode='linear')
+            item["Padding"] = padding
 
-        img_dtype, syn_dtype = cropped_img.dtype, cropped_syn.dtype
-        rotate_img_zmid, rotate_syn_zmid, angle = rotateIm_polarity(
-            cropped_img.astype(np.float32), cropped_syn.astype(np.float32), -angle)
-        rotate_img_zmid = center_crop(rotate_img_zmid.astype(img_dtype), sz)
-        rotate_syn_zmid = center_crop(rotate_syn_zmid.astype(syn_dtype), sz)
+            # calculate and save the angle of rotation.
+            angle, _ = calculate_rot(cropped_syn, return_overlap=False, mode='linear')
 
-        item["Rotation_Angle"] = angle
-        item_list.append(item)
+            img_dtype, syn_dtype = cropped_img.dtype, cropped_syn.dtype
+            rotate_img_zmid, rotate_syn_zmid, angle = rotateIm_polarity(
+                cropped_img.astype(np.float32), cropped_syn.astype(np.float32), -angle)
+            rotate_img_zmid = center_crop(rotate_img_zmid.astype(img_dtype), sz)
+            rotate_syn_zmid = center_crop(rotate_syn_zmid.astype(syn_dtype), sz)
+
+            item["Rotation_Angle"] = angle
+            item_list.append(item)
+        else:
+            temp = (seg == idx) # binary mask of the current synapse
+            bbox = list(map(int,inst["Original_Bbox"]))
+            z_mid_total = int(inst["Middle_Slice"])
+            angle = float(inst["Rotation_Angle"])
+
+            temp_2d = temp[z_mid_total]
+            bbox_2d = bbox_ND(temp_2d)    
+
+            y1, y2 = adjust_bbox(bbox_2d[0], bbox_2d[1], crop_size)
+            x1, x2 = adjust_bbox(bbox_2d[2], bbox_2d[3], crop_size)
+            crop_2d = [y1, y2, x1, x2]
+
+            cropped_syn, syn_bbox, padding = crop_pad_data(syn, z_mid_total, crop_2d, mask=temp, return_box=True)
+            cropped_img = crop_pad_data(img, z_mid_total, crop_2d, pad_val=128)
+
+            img_dtype, syn_dtype = cropped_img.dtype, cropped_syn.dtype
+            rotate_img_zmid, rotate_syn_zmid, angle = rotateIm_polarity(
+                cropped_img.astype(np.float32), cropped_syn.astype(np.float32), -angle)
+            rotate_img_zmid = center_crop(rotate_img_zmid.astype(img_dtype), sz)
+            rotate_syn_zmid = center_crop(rotate_syn_zmid.astype(syn_dtype), sz)
 
         image_list, label_list = [], []
         for z_index in range(bbox[0], bbox[1]+1):
@@ -350,11 +388,11 @@ def visualize(syn, seg, img, sz, return_data=False, iterative_bbox=False):
             cs_dix = (vis_image.shape[0]-1)//2 # assumes even padding
 
             # overwrite cs incase that object close to boundary
-            cs = min(int(item["Middle_Slice"]), cs_dix)
+            cs = min(int(z_mid_total), cs_dix)
 
             # save volume slices
             for s in range(vis_image.shape[0]):
-                img_name = str(int(item["Middle_Slice"])-cs+s)+".png"
+                img_name = str(int(z_mid_total)-cs+s)+".png"
 
                 # image
                 img_c = Image.fromarray(vis_image[s,:,:])
@@ -387,14 +425,21 @@ def visualize(syn, seg, img, sz, return_data=False, iterative_bbox=False):
         return data_dict
 
     # create and export the JSON File
-    final_file = dict()
-    final_file["Data"] = item_list
-    json_obj = json.dumps(final_file, indent=4, cls=NpEncoder)
-    with open("synAnno.json", "w") as outfile:
-        outfile.write(json_obj)
+    if filename_json is None:
+        final_file = dict()
+        final_file["Data"] = item_list
+        json_obj = json.dumps(final_file, indent=4, cls=NpEncoder)
+        with open("synAnno.json", "w") as outfile:
+            outfile.write(json_obj)
+
+        synanno_json = os.path.join('.', 'synAnno.json')
+        return synanno_json
+    else:
+        return
 
 
-def load_3d_files(im_file, gt_file, patch_size=142):
+
+def load_3d_files(im_file, gt_file, patch_size=142, filename_json=None):
     synanno.progress_bar_status['status'] = "Loading Source File"
     im = readvol(im_file)  # The original image (EM)
     synanno.progress_bar_status['status'] = "Loading Target File"
@@ -417,18 +462,20 @@ def load_3d_files(im_file, gt_file, patch_size=142):
 
 
     synanno.progress_bar_status['status'] = "Render Images"
-    # creates a json file
-    visualize(syn, seg, im, sz=patch_size)
-
     
-    synanno_json = os.path.join('.', 'synAnno.json')
-    synanno.progress_bar_status['percent'] = int(100) 
-
-    if os.path.isfile(synanno_json):
-        return synanno_json, im, gt
+    # if a json was provided process the data accordingly
+    if filename_json is not None:
+        visualize(syn, seg, im, sz=patch_size, filename_json=filename_json)
+        synanno.progress_bar_status['percent'] = int(100) 
+        return None, im, gt
+    # if no json was provided create a json file and process the data
     else:
-        # the json file should have been created by the visualize function
-        raise FileNotFoundError(
-            errno.ENOENT, os.strerror(errno.ENOENT), 'synAnno.json')
-
+        synanno_json = visualize(syn, seg, im, sz=patch_size)
+        synanno.progress_bar_status['percent'] = int(100) 
+        if os.path.isfile(synanno_json):
+            return synanno_json, im, gt
+        else:
+            # the json file should have been created by the visualize function
+            raise FileNotFoundError(
+                errno.ENOENT, os.strerror(errno.ENOENT), 'synAnno.json')
 

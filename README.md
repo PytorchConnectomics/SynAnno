@@ -97,8 +97,8 @@ After downloading the package, simply double-click it and follow the steps descr
 
 
 
-  [1]: ./documentation/images/root_page.png
-  [2]: ./documentation/images/proof_read.png
-  [3]: ./documentation/images/instance_view.png
-  [4]: ./documentation/images/error_processing.png
-  [5]: ./documentation/images/finish_page.png
+  [1]: ./synanno/documentation/images/root_page.png
+  [2]: ./synanno/documentation/images/proof_read.png
+  [3]: ./synanno/documentation/images/instance_view.png
+  [4]: ./synanno/documentation/images/error_processing.png
+  [5]: ./synanno/documentation/images/finish_page.png

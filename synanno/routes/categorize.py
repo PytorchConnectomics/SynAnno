@@ -8,6 +8,9 @@ from flask_cors import cross_origin
 import json
 
 
+global delete_fp
+delete_fp = False
+
 @app.route('/categorize')
 def categorize():
     return render_template('categorize.html', pages=session.get('data'))
@@ -16,6 +19,8 @@ def categorize():
 @app.route('/pass_flags', methods=['GET','POST'])
 @cross_origin()
 def pass_flags():
+    global delete_fp
+
     flags = request.get_json()['flags']
     data = session.get('data')
     pages = len(data)
@@ -27,19 +32,19 @@ def pass_flags():
     for flag in flags:
         page_nr, img_nr, f = dict(flag).values()
         # deleting false positives
-        if f == "falsePositive":
+        if f == "falsePositive" and delete_fp:
             false_positives[int(page_nr)].append(int(img_nr))
         else:
             data[int(page_nr)][int(img_nr)]['Error_Description'] = str(f)
 
-
-    # delete the FPs
-    for p in range(0,pages):
-        # sort the indexes that should be deleted
-        # adjust them based on the # of images deleted and the page number
-        false_positives[p] = [ (fp - i) for i, fp in enumerate(sorted(false_positives[p]))]
-        for id in false_positives[p]:
-            del data[p][id]
+    if delete_fp:
+        # delete the FPs
+        for p in range(0,pages):
+            # sort the indexes that should be deleted
+            # adjust them based on the # of images deleted and the page number
+            false_positives[p] = [ (fp - i) for i, fp in enumerate(sorted(false_positives[p]))]
+            for id in false_positives[p]:
+                del data[p][id]
 
     session['data'] = data
 

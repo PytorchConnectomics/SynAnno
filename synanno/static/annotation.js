@@ -125,6 +125,49 @@ function add_opacity() {
     $('#imgDetails-GT').css('opacity', new_value);
 }
 
+// reduce the opacity of all instances in the current grid view
+function dec_opacity_grid() {
+    var value = $('#value-opacity-grid').attr('value');
+    var new_value = value - 0.1;
+    if(new_value<0){
+        new_value = 0;
+    }
+    $('#value-opacity-grid').attr('value', new_value);
+    $('#value-opacity-grid').text(new_value.toFixed(1));
+    $('[id^="imgEM-GT-"]').each(function () {
+        $(this).css('opacity', new_value);
+    });
+
+    // ajax sending the new grid opacity to the backend
+    req = $.ajax({
+        url: '/set_grid_opacity',
+        type: 'POST',
+        data: {grid_opacity:new_value}
+    });
+}
+
+// increase the opacity of all instances in the current grid view
+function add_opacity_grid() {
+    var value = $('#value-opacity-grid').attr('value');
+    var new_value = parseFloat(value) + 0.1;
+    if(new_value>=1){
+        new_value = 1;
+    }
+    $('#value-opacity-grid').attr('value', new_value);
+    $('#value-opacity-grid').text(new_value.toFixed(1));
+    $('[id^="imgEM-GT-"]').each(function () {
+        $(this).css('opacity', new_value);
+    });
+
+    // ajax sending the new grid opacity to the backend
+    req = $.ajax({
+        url: '/set_grid_opacity',
+        type: 'POST',
+        data: {grid_opacity:value}
+    });
+
+}
+
 function check_gt(){
     var checkbox = document.getElementById('check-gt');
     if(checkbox.checked==false){

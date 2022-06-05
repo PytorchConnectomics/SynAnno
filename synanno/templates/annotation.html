@@ -1,22 +1,36 @@
 {% extends "templatebase.html" %}
 
 {% block help_content %}
-<p class="text-muted">The status of an instance segmentation is indicated by the color surrounding the instance: correct (green), incorrect (red), and uncertain (gray).
-    You can change the status by clicking on an instance. One click marks the instance as wrong (red color), two clicks mark the instance as unsure (gray), three clicks and the data is again marked as right (green). 
-    Should you be unsure for of an instance's mask, you can right-click the instance to enlarge the patch and navigate surrounding slices. In this view, you can also click "View in NG" to view the instance in the Neuroglancer. 
-    After evaluating the segmentation masks for all instances on the current page, click the "Next" button at the bottom to evaluate the next set of segmentation masks.
-    When you are done proof reading all instances, click "Error Processing" at the bottom of the page (this button will show on the last proofreading page).
+<p class="text-muted">The status of an instance segmentation is indicated by the color surrounding the instance: correct
+    (green), incorrect (red), and uncertain (gray).
+    You can change the status by clicking on an instance. One click marks the instance as wrong (red color), two clicks
+    mark the instance as unsure (gray), three clicks and the data is again marked as right (green).
+    Should you be unsure for of an instance's mask, you can right-click the instance to enlarge the patch and navigate
+    surrounding slices. In this view, you can also click "View in NG" to view the instance in the Neuroglancer.
+    After evaluating the segmentation masks for all instances on the current page, click the "Next" button at the bottom
+    to evaluate the next set of segmentation masks.
+    When you are done proof reading all instances, click "Error Processing" at the bottom of the page (this button will
+    show on the last proofreading page).
 </p>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid content-row mb-3 ">    
+<div class="container-fluid content-row">
     <div class="legend">
-        <strong>Legend:</strong>
+        <div class="legend-item"> <strong>Legend:</strong></div>
         <div class="legend-item"><span class="color-block" style="background-color: #abebc6;"></span>Right</div>
         <div class="legend-item"><span class="color-block" style="background-color: #f08080;"></span>Wrong</div>
         <div class="legend-item"><span class="color-block"
-                style="background-color: #d7dbdd;border: 1px solid;"></span>Unsure</div>
+                style="background-color: #d7dbdd;"></span>Unsure</div>
+
+        <div class="btn-group btn-group-sm ms-auto" role="group" aria-label="Basic example">
+            <span style="margin-right: 8px; margin-top: 2px;">Label opacity: </span>
+            <button id="dec-opacity-grid" type="button" class="btn btn-primary rounded-start"
+                onclick="dec_opacity_grid()">-</button>
+            <span id="value-opacity-grid" type="button" class="btn btn-light" value="{{grid_opacity or '0.5'}}">{{grid_opacity or 0.5}}</span>
+            <button id="inc-opacity-grid" type="button" class="btn btn-primary" onclick="add_opacity_grid()">+</button>
+        </div>
+
     </div>
     <div class="row justify-content-center card-group">
         {% for image in images %}
@@ -24,10 +38,12 @@
             <div id="id{{loop.index}}"
                 class="card border-0 p-2 {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}">
                 <div id="main-image" style="position: relative;">
-                    <img id="imgEM-GT-{{loop.index}}" class="img_annotate" src="{{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}}"
-                        width="64px" height="64px" style="position: absolute; opacity: 0.5; ">
-                    <img id="imgGT-{{loop.index}}" class="img_annotate" src="{{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}}" width="64px"
-                        height="64px" style="position: initial;">
+                    <img id="imgEM-GT-{{loop.index}}" class="img_annotate"
+                        src="{{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}}" width="64px" height="64px"
+                        style="position: absolute; opacity: {{grid_opacity or '0.5'}};">
+                    <img id="imgGT-{{loop.index}}" class="img_annotate"
+                        src="{{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}}" width="64px" height="64px"
+                        style="position: initial;">
                 </div>
                 <a id="id-a-{{loop.index}}" class="stretched-link image-card-btn" page="{{page}}"
                     data_id="{{ loop.index }}"
@@ -41,19 +57,30 @@
 <nav aria-label="Page navigation mt-5">
     <ul class="pagination justify-content-center">
         {% if page > 0 %}
-        <li class="page-item"><a class="page-link" href="{{ url_for('annotation', page=page-1) }}">
-                < Previous</a>
+
+        <li class="page-item">
+            <a type="button" class="page-link btn btn-primary" href="{{ url_for('annotation', page=page-1) }}">
+                <i class="bi bi-arrow-left"></i>
+            </a>
         </li>
         {% else %}
-        <li class="page-item disabled"><a class="page-link " href="#">
-                < Previous</a>
+        <li class="page-item disabled">
+            <a type="button" class="page-link btn btn-primary">
+                <i class="bi bi-arrow-left"></i>
+            </a>
         </li>
+
         {% endif %}
         <li style="padding: .375rem .75rem;">{{page+1}} / {{n_pages}} </li>
-        {% if page+1 < n_pages %} <li class="page-item"><a class="page-link" href="{{ url_for('annotation',
-                page=page+1)}}" >Next ></a></li>
+        {% if page+1 < n_pages %} <li class="page-item">
+
+            <li class="page-item">
+                <a type="button" class="page-link btn btn-primary" href="{{ url_for('annotation', page=page+1)}}">
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+            </li>
+
             {% else %}
-            <li class="page-item disabled"><a class="page-link" href="#">Next ></a></li>
             <li class="page-item"><a class="page-link" href="{{ url_for('categorize') }}">Error Processing</a></li>
             {% endif %}
     </ul>

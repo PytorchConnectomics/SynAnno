@@ -9,6 +9,10 @@ import os.path
 # import the package app 
 from synanno import app
 
+# for access to the timing variable
+import synanno
+import datetime
+
 # json dependent imports
 import json
 
@@ -58,6 +62,8 @@ def set_data(data_name='synAnno.json'):
 @app.route('/annotation/<int:page>')
 def annotation(page=0):
     global grid_opacity
+    if synanno.proofread_time["start"] is None:
+        synanno.proofread_time["start"] = datetime.datetime.now()
     return render_template('annotation.html', images=session.get('data')[page], page=page, n_pages=session.get('n_pages'), grid_opacity=grid_opacity)
 
 @app.route('/set_grid_opacity', methods=['POST'])

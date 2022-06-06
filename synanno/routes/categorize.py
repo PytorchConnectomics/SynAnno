@@ -7,12 +7,21 @@ from flask_cors import cross_origin
 
 import json
 
+# for access to the timing variable
+import synanno
+import datetime
+
 
 global delete_fp
 delete_fp = False
 
 @app.route('/categorize')
 def categorize():
+    if synanno.proofread_time["finish_grid"] is None:
+        synanno.proofread_time["finish_grid"] = datetime.datetime.now()
+        synanno.proofread_time["difference_grid"] = synanno.proofread_time["finish_grid"] - synanno.proofread_time["start_grid"]
+    if synanno.proofread_time["start_categorize"] is None:
+        synanno.proofread_time["start_categorize"] = datetime.datetime.now()
     return render_template('categorize.html', pages=session.get('data'))
 
 

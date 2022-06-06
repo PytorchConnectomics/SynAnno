@@ -17,10 +17,9 @@ import json
 
 @app.route('/final_page')
 def final_page():
-    if synanno.proofread_time["finish"] is None:
-        synanno.proofread_time["finish"] = datetime.datetime.now()
-        synanno.proofread_time["difference"] = synanno.proofread_time["finish"] - synanno.proofread_time["start"]
-        print("synanno.proofread_time[difference]: ", synanno.proofread_time["difference"])
+    if synanno.proofread_time["finish_categorize"] is None:
+        synanno.proofread_time["finish_categorize"] = datetime.datetime.now()
+        synanno.proofread_time["difference_categorize"] = synanno.proofread_time["finish_categorize"] - synanno.proofread_time["start_categorize"]
     return render_template('exportdata.html')
 
 @app.route('/export')
@@ -43,6 +42,9 @@ def reset():
 
     # reset progress bar 
     synanno.progress_bar_status = {"status":"Loading Source File", "percent":0}
+
+    # reset time
+    synanno.proofread_time = dict.fromkeys(synanno.proofread_time, None)
 
     # pop all the session content.
     for key in list(session.keys()):

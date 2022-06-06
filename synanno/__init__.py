@@ -32,7 +32,7 @@ progress_bar_status = {"status":"Loading Source File", "percent":0}
 
 # document the time needed for proofreading
 global proofread_time
-proofread_time = {"start":None,"finish":None,"difference":None}
+proofread_time = {"start_grid":None,"finish_grid":None,"difference_grid":None, "start_categorize":None,"finish_categorize":None,"difference_categorize":None}
 
 from synanno.routes import annotation, finish, opendata, categorize
 

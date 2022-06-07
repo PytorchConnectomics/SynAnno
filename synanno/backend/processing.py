@@ -101,22 +101,6 @@ def crop_ND(img: np.ndarray, coord: Tuple[int],
     slicing = tuple(slicing)
     return img[slicing].copy()
 
-def crop_ND(img: np.ndarray, coord: Tuple[int], 
-            end_included: bool = False) -> np.ndarray:
-    """Crop a chunk from a N-dimensional array based on the 
-    bounding box coordinates.
-    """
-    N = img.ndim
-    assert len(coord) == N * 2
-    slicing = []
-    for i in range(N):
-        start = coord[2*i]
-        end = coord[2*i+1] + 1 if end_included else coord[2*i+1]
-        slicing.append(slice(start, end))
-    slicing = tuple(slicing)
-    return img[slicing].copy()
-
-
 def adjust_bbox(low, high, sz):
     assert high >= low
     bbox_sz = high - low

@@ -70,12 +70,9 @@ def pass_flags():
         final_file = dict()
         final_file['Data'] = sum(session['data'], [])
         final_file['Proofread Time'] = synanno.proofread_time
-        print(final_file['Data'])
         with open(os.path.join(app.config['PACKAGE_NAME'],os.path.join(app.config['UPLOAD_FOLDER']),final_filename), 'w') as f:
             json.dump(final_file, f, default=json_serial)
 
-        print(len(data)*0.3*session['per_page'])
-        print(len(data)*0.3*session['per_page'])
         time.sleep(len(data)*0.3*session['per_page'])
 
         # pass the data to the session

@@ -9,12 +9,20 @@ import os.path
 # import the package app 
 from synanno import app
 
+# for access to the timing variable
+import synanno
+import datetime
+
 # json dependent imports
 import json
+
+global grid_opacity
+grid_opacity = 0.5
 
 @app.route('/set-data/<data_name>')
 @app.route('/set-data')
 def set_data(data_name='synAnno.json'):
+    global grid_opacity
 
     # set the number of cards in one page
     per_page = 18
@@ -47,13 +55,25 @@ def set_data(data_name='synAnno.json'):
     if not session.get('n_pages'):
         session['n_pages'] = number_pages
 
-    return render_template('annotation.html', images=session.get('data')[0], page=0, n_pages=session.get('n_pages'))
+    return render_template('annotation.html', images=session.get('data')[0], page=0, n_pages=session.get('n_pages'), grid_opacity=grid_opacity)
 
 
 @app.route('/annotation')
 @app.route('/annotation/<int:page>')
 def annotation(page=0):
-    return render_template('annotation.html', images=session.get('data')[page], page=page, n_pages=session.get('n_pages'))
+    global grid_opacity
+    if synanno.proofread_time["start_grid"] is None:
+        synanno.proofread_time["start_grid"] = datetime.datetime.now()
+    return render_template('annotation.html', images=session.get('data')[page], page=page, n_pages=session.get('n_pages'), grid_opacity=grid_opacity)
+
+@app.route('/set_grid_opacity', methods=['POST'])
+@cross_origin()
+def set_grid_opacity():
+    global grid_opacity
+    grid_opacity = float(request.form['grid_opacity'])
+    grid_opacity = int(grid_opacity*10)/10 # only keep first decimal
+    # returning a JSON formatted response to trigger the ajax success logic
+    return json.dumps({'success':True}), 200, {'ContentType':'application/json'} 
 
 
 @app.route('/update-card', methods=['POST'])

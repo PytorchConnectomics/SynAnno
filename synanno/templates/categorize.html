@@ -2,8 +2,12 @@
 
 {% block help_content %}
 <p class="text-muted">Categorize the faulty labels. Scroll sideways to see all cards.
-    When done click on "Submit and Finish".
-    Note: Right-click to enlarge the patch and navigate surrounding slices.</p>
+After categorizing all instances, click on "Submit and Finish".</p>
+
+<p class="text-muted">Note: Right-click an instance to enlarge the patch, navigate surrounding slices, and open the Neuroglancer at that instance position.</p>
+
+<p class="text-muted">Warning: Instances marked as False Positive (FP) will be fully removed from the JSON.</p>
+
 {% endblock %}
 
 {% block content %}
@@ -34,27 +38,27 @@
                 <div class="card-block">
                     <div class="form">
                         <div class="form-check m-2">
-                            <input class="form-check-input" type="radio"
+                            <input class="form-check-input"  type="radio"
                                 name="select_{{pages_loop.index-1}}_{{loop.index-1}}"
                                 id="falsePositive_{{pages_loop.index-1}}_{{loop.index-1}}" value="option1">
                             <label class="form-check-label" for="falsePositive"></label>
                             False Positive
                         </div>
                         <div class="form-check m-2">
-                            <input class="form-check-input" type="radio"
+                            <input class="form-check-input {% if image.Error_Description == 'badFit' %}checked{% endif %}" type="radio"
                                 name="select_{{pages_loop.index-1}}_{{loop.index-1}}"
                                 id="badFit_{{pages_loop.index-1}}_{{loop.index-1}}" value="option2">
                             <label class="form-check-label" for="badFit"></label>
                             Bad Fit
                         </div>
                         <div class="form-check m-2">
-                            <input class="form-check-input" type="radio"
+                            <input class="form-check-input {% if image.Error_Description == 'polaritySwitch' %}checked{% endif %}" type="radio"
                                 name="select_{{pages_loop.index-1}}_{{loop.index-1}}"
                                 id="polaritySwitch_{{pages_loop.index-1}}_{{loop.index-1}}" value="option3">
                             <label class="form-check-label" for="polaritySwitch"></label>
                             Polarity Switch
                         </div>
-                        <div class="input-group" id="custom_flag_{{pages_loop.index-1}}_{{loop.index-1}}">
+                        <div class="input-group {% if (image.Error_Description != 'polaritySwitch') and (image.Error_Description != 'badFit') and (image.Error_Description != 'None') %}checked{% endif %}" id="customFlag_{{pages_loop.index-1}}_{{loop.index-1}}">
                             <div class="input-group-text">
                                 <input type="radio" name="select_{{pages_loop.index-1}}_{{loop.index-1}}"
                                     id="customFlagButton_{{pages_loop.index-1}}_{{loop.index-1}}"
@@ -78,9 +82,30 @@
 
 
     <div class="m-4 p-1">
-        <a type="button" id="submit_button" class="btn btn-primary {{ modenext }}"
-            href="{{ url_for('final_page') }}">Submit and Finish</a>
+        <a type="button" id="submit_button" class="btn btn-primary {{ modenext }}">Submit and Finish</a>
     </div>
+</div>
+
+
+<!-- Modal with progress bar -->
+<div class="modal fade" id="progressModal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="exampleModalLabel"
+  aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-body">
+        <div class="spinner d-flex flex-column align-items-center justify-content-center">
+          <div class="row">
+            <div class="spinner-border" role="status">
+              <span class="sr-only">Loading...</span>
+            </div>
+          </div>
+          <div class="row" id="spinnerText">
+            <strong>Updating JSON</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Modal for synapse slice-->

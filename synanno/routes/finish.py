@@ -27,11 +27,6 @@ def export_data():
     final_filename = 'results-' + session.get('filename')
     # Exporting the final json and pop session
     if session.get('data') and session.get('n_pages'):
-        final_file = dict()
-        final_file['Data'] = sum(session['data'], [])
-        final_file['Proofread Time'] = synanno.proofread_time
-        with open(os.path.join(app.config['PACKAGE_NAME'],os.path.join(app.config['UPLOAD_FOLDER']),final_filename), 'w') as f:
-            json.dump(final_file, f, default=json_serial)
         return send_file(os.path.join(app.config['UPLOAD_FOLDER'],final_filename), as_attachment=True, attachment_filename=final_filename)
     else:
         return render_template('exportdata.html')

@@ -11,6 +11,9 @@ import json
 import synanno
 import datetime
 
+import os
+import time
+
 
 global delete_fp
 delete_fp = False
@@ -55,10 +58,30 @@ def pass_flags():
             for id in false_positives[p]:
                 del data[p][id]
 
-    session['data'] = data
+    # stop the time
+    if synanno.proofread_time["finish_categorize"] is None:
+        synanno.proofread_time["finish_categorize"] = datetime.datetime.now()
+        synanno.proofread_time["difference_categorize"] = synanno.proofread_time["finish_categorize"] - synanno.proofread_time["start_categorize"]
 
-    # returning a JSON formatted response to trigger the ajax success logic
-    return json.dumps({'success':True}), 200, {'ContentType':'application/json'} 
+    # update the json
+    final_filename = 'results-' + session.get('filename')
+    # Exporting the final json and pop session
+    if session.get('data') and session.get('n_pages'):
+        final_file = dict()
+        final_file['Data'] = sum(session['data'], [])
+        final_file['Proofread Time'] = synanno.proofread_time
+        with open(os.path.join(app.config['PACKAGE_NAME'],os.path.join(app.config['UPLOAD_FOLDER']),final_filename), 'w') as f:
+            json.dump(final_file, f, default=json_serial)
+
+        time.sleep(len(data)*0.3*session['per_page'])
+
+        # pass the data to the session
+        session['data'] = data
+
+        # returning a JSON formatted response to trigger the ajax success logic
+        return json.dumps({'success':True}), 200, {'ContentType':'application/json'} 
+    else:
+        return json.dumps({'success':True}), 400, {'ContentType':'application/json'} 
 
 @app.route('/custom_flag', methods=['GET','POST'])
 @cross_origin()
@@ -69,3 +92,12 @@ def custom_flag():
     data = session.get('data')
     return jsonify(message=data[int(page)][int(img_id)]["Error_Description"])
 
+# handle non json serializable data 
+def json_serial(obj):
+    """JSON serializer for objects not serializable by default json code"""
+
+    if isinstance(obj, (datetime.timedelta)):
+        return str(obj)
+    if isinstance(obj, (datetime.datetime)):
+        return obj.isoformat()
+    raise TypeError ("Type %s not serializable" % type(obj))

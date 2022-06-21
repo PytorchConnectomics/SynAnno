@@ -17,21 +17,13 @@ import json
 
 @app.route('/final_page')
 def final_page():
-    if synanno.proofread_time["finish_categorize"] is None:
-        synanno.proofread_time["finish_categorize"] = datetime.datetime.now()
-        synanno.proofread_time["difference_categorize"] = synanno.proofread_time["finish_categorize"] - synanno.proofread_time["start_categorize"]
     return render_template('exportdata.html')
 
 @app.route('/export')
 def export_data():
     final_filename = 'results-' + session.get('filename')
-    # Exporting the final json and pop session
+    # Exporting the final json
     if session.get('data') and session.get('n_pages'):
-        final_file = dict()
-        final_file['Data'] = sum(session['data'], [])
-        final_file['Proofread Time'] = synanno.proofread_time
-        with open(os.path.join(app.config['PACKAGE_NAME'],os.path.join(app.config['UPLOAD_FOLDER']),final_filename), 'w') as f:
-            json.dump(final_file, f, default=json_serial)
         return send_file(os.path.join(app.config['UPLOAD_FOLDER'],final_filename), as_attachment=True, attachment_filename=final_filename)
     else:
         return render_template('exportdata.html')
@@ -76,13 +68,3 @@ def reset():
             print('Failed to delete %s. Reason: %s' % (file_path, e))
 
     return render_template('opendata.html', modenext='disabled')
-
-# handle non json serializable data 
-def json_serial(obj):
-    """JSON serializer for objects not serializable by default json code"""
-
-    if isinstance(obj, (datetime.timedelta)):
-        return str(obj)
-    if isinstance(obj, (datetime.datetime)):
-        return obj.isoformat()
-    raise TypeError ("Type %s not serializable" % type(obj))

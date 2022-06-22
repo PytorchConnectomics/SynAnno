@@ -18,18 +18,19 @@
 
 <div class="mb-3">
   <form method="POST" for="{{ modeform }}" action="{{ url_for('upload_file') }}" enctype="multipart/form-data">
-    <label for="formFileMultiple" class="form-label">Original .h5 data next.</label>
+    <label for="formFileMultiple" class="form-label">Source .h5 data file - Required</label>
     <p><input class="form-control" type="file" id="originalFile" name="file_original"></p>
-    <label for="formFileMultiple" class="form-label">Ground Truth .h5 data next.</label>
+    <label for="formFileMultiple" class="form-label">Target .h5 data file - Required</label>
     <p><input class="form-control" type="file" id="gtFile" name="file_gt"></p>
-    <label for="formFileMultiple" class="form-label">add a JSON file previously exported by this tool.</label>
-    <p><input class="form-control" type="file" id="formFile" name="file_json"></p>
+    <label for="formFileMultiple" class="form-label">SynAnno JSON file {% if mode == 'draw'%}- Required{% endif %}</label>
+    <p><input class="form-control {{mode}}" type="file" id="formFile" name="file_json"></p>
     <label for="formGroupExampleInput" class="form-label">Patch Size (square)</label>
     <p><input type="text" class="form-control" id="patchsize" placeholder="142" name="patchsize"></p>
     <p class="mt-4">
-      <input id="processData" type="submit" class="btn btn-secondary {{ modecurrent }}" value="Submit">
-      <a type="button" class="btn btn-primary {{ modenext }}" href="{{ url_for('set_data', data_name=filename) }}">Start
-        Data Proofread</a>
+      <input id="processData" type="submit" class="btn btn-secondary {{ modecurrent }} disabled" value="Submit">
+      <a type="button" class="btn btn-primary {{ modenext }}" href="{{ url_for('set_data', data_name=filename) }}">
+        {% if mode == 'draw'%} Start Drawing {% elif mode == 'annotate'%}Start Data Proofread{% endif %}
+      </a>
       <a type="button" id='resetButton' class="btn btn-primary d-{{ modereset or 'none'}}"
         href="{{ url_for('reset') }}">Reset Backend</a>
     </p>

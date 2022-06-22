@@ -76,8 +76,9 @@ $(document).ready(function () {
         var promise_error = new Promise ((resolve,reject) =>{
             var flags = []
             var nr_elements = $('[id^="id_error_"]').length
-            console.log(nr_elements)
-
+            if (nr_elements==0){
+                resolve(flags) 
+            }
             $('[id^="id_error_"]').each(function (index) {
                 var [page, img_id] = $($(this)).attr('id').replace(/id_error_/, '').split('_')
                 if ($('[id^="falsePositive_"]', $(this)).is(":checked")) {

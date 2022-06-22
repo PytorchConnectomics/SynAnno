@@ -18,7 +18,7 @@
             {% if (image.Label == 'Incorrect' or image.Label == 'Unsure') %}
 
             <div class="card card-body card-body-proof-read text-center" id="id_error_{{pages_loop.index-1}}_{{loop.index-1}}">
-                <h5 class="card-title">{{image.Error_Description}}</h5>
+                <h5 class="card-title mb-0 border border-secondary rounded-top border-bottom-0 p-1" style="border-width:4px !important;">{{image.Error_Description}}</h5>
                 <div class="card-block border-0 p-1 image-card-btn {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}"
                     page="{{pages_loop.index - 1 }}" data_id="{{ loop.index }}"
                     label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}">

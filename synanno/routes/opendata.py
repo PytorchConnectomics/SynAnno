@@ -26,16 +26,21 @@ global source_img  # path to the images
 global target_seg  # path to the segmentation masks
 global ng_viewer  # handle to the neurglancer viewer instance
 global neuro_version  # versioning number for the neuroglancer instance
+global draw_or_annotate # defines the downstream task; either draw or annotate
 
 # initialize the neuroglancer version number as noon
 neuro_version = None
 
-@app.route('/open_data')
-def open_data():
+@app.route('/open_data', defaults={'task': 'annotate'})
+@app.route('/open_data/<string:task>', methods=['GET'])
+def open_data(task):
+    global draw_or_annotate
+
+    draw_or_annotate = task
     if os.path.isdir('./synanno/static/Images/'):
         flash('Click \"Reset Backend\" to clear the memory and start a new task.')
-        return render_template('opendata.html', modecurrent='d-none', modenext='d-none', modereset='block')
-    return render_template('opendata.html', modenext='disabled')
+        return render_template('opendata.html', modecurrent='d-none', modenext='d-none', modereset='block', mode=draw_or_annotate)
+    return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate)
 
 
 @app.route('/upload', methods=['GET', 'POST'])
@@ -44,6 +49,7 @@ def upload_file():
     global target_seg
     global neuro_version
     global ng_viewer
+    global draw_or_annotate
 
     # Check if files folder exists, if not create it
     if not os.path.exists(os.path.join('.', os.path.join(app.config['PACKAGE_NAME'],app.config['UPLOAD_FOLDER']))):
@@ -125,13 +131,13 @@ def upload_file():
             with open(filename_json, 'r') as f:
                 json.load(f)
             flash('Data ready!')
-            return render_template('opendata.html', filename=filename_json, modecurrent='disabled', modeform='formFileDisabled')
+            return render_template('opendata.html', filename=filename_json, modecurrent='disabled', modeform='formFileDisabled', mode=draw_or_annotate)
         except ValueError as e:
             flash('Something is wrong with the loaded JSON!', 'error')
-            return render_template('opendata.html', modenext='disabled')
+            return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate)
     else:
         flash('Please provide at least the paths to valid source and target .h5 files!', 'error')
-        return render_template('opendata.html', modenext='disabled')
+        return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate)
 
 
 @app.route('/progress', methods=['POST'])
@@ -166,11 +172,12 @@ def neuro():
     return final_json
 
 def save_file(file, filename, path=os.path.join(app.config['PACKAGE_NAME'],app.config['UPLOAD_FOLDER'])):
+    global draw_or_annotate
     filename = secure_filename(filename)
     file_ext = os.path.splitext(filename)[1]
     if file_ext not in app.config['UPLOAD_EXTENSIONS']:
         flash('Incorrect file format! Load again.', 'error')
-        render_template('opendata.html', modenext='disabled')
+        render_template('opendata.html', modenext='disabled', mode=draw_or_annotate)
         return 0
     else:
         file.save(os.path.join(path, filename))

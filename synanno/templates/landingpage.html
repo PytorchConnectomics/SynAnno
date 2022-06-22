@@ -15,7 +15,7 @@
             <div class="card text-center border-primary">
                 <h4 class="card-title">Annotate a Dataset</h4>
                 <div class="card-body">
-                    <a type="button" class="btn" href="{{ url_for('draw') }}">
+                    <a type="button" class="btn" href="{{ url_for('open_data', task='draw') }}">
                         <h2>
                             <i class="fa fa-object-group fa-5x" style="color:rgb(80, 80, 80);"></i>
                         </h2>
@@ -27,7 +27,7 @@
             <div class="card text-center">
                 <h4 class="card-title">Proofread Annotations </h4>
                 <div class="card-body border-primary">
-                    <a type="button" class="btn" href="{{ url_for('open_data') }}">
+                    <a type="button" class="btn" href="{{ url_for('open_data', task='annotate') }}">
                         <h2>
                             <i class="fa fa-arrows  fa-5x" style="color:rgb(80, 80, 80);"></i>
                         </h2>

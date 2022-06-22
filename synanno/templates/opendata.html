@@ -28,7 +28,7 @@
     <p><input type="text" class="form-control" id="patchsize" placeholder="142" name="patchsize"></p>
     <p class="mt-4">
       <input id="processData" type="submit" class="btn btn-secondary {{ modecurrent }} disabled" value="Submit">
-      <a type="button" class="btn btn-primary {{ modenext }}" href="{{ url_for('set_data', data_name=filename) }}">
+      <a type="button" class="btn btn-primary {{ modenext }}" href="{{ url_for('set_data', task=mode, data_name=filename) }}">
         {% if mode == 'draw'%} Start Drawing {% elif mode == 'annotate'%}Start Data Proofread{% endif %}
       </a>
       <a type="button" id='resetButton' class="btn btn-primary d-{{ modereset or 'none'}}"

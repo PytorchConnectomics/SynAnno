@@ -1,0 +1,31 @@
+<!-- Instance-specific view that opens up when right-clicking one of the tiles of the annotation view.
+    It shows an enlarged version of the instance. Additional, it lets the user move a lever, 
+    located at the bottom of the newly opened window, which scrolls through all the slices 
+    of the selected instance and their associated segmentation masks. 
+    Both views load the request images as png files from a corresponding folder structure. -->
+<div class="modal fade" id="drawModal" tabindex="-1" aria-labelledby="drawModal" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title pe-5" id="modalToggleLabel1">Draw Mask (Center Slice)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body mx-auto">
+                <div class="d-flex justify-content-center">
+                <div id="cardDetails" class="card border-0 p-1">
+                    <img id="imgDetails-EM" class="card-img-top mb-1" src="" width="284px" height="284px"
+                        style="position: initial; width:384px; height:384px;">
+                </div>
+            </div>
+                <div class="center">
+                            <div class="col justify-content-center">
+                                <button class="btn btn-primary" id="ng-link" type="button" data-bs-target="#neuroModel"
+                                    data-bs-toggle="modal" data-bs-dismiss="modal">View in NG</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

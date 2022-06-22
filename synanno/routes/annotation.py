@@ -19,9 +19,10 @@ import json
 global grid_opacity
 grid_opacity = 0.5
 
+@app.route('/set-data/<task>/<data_name>')
 @app.route('/set-data/<data_name>')
 @app.route('/set-data')
-def set_data(data_name='synAnno.json'):
+def set_data(task='annotate',data_name='synAnno.json'):
     global grid_opacity
 
     # set the number of cards in one page
@@ -55,8 +56,10 @@ def set_data(data_name='synAnno.json'):
     if not session.get('n_pages'):
         session['n_pages'] = number_pages
 
-    return render_template('annotation.html', images=session.get('data')[0], page=0, n_pages=session.get('n_pages'), grid_opacity=grid_opacity)
-
+    if task == 'annotate':
+        return render_template('annotation.html', images=session.get('data')[0], page=0, n_pages=session.get('n_pages'), grid_opacity=grid_opacity)
+    elif task == 'draw':
+        return render_template('draw.html', pages=session.get('data'))
 
 @app.route('/annotation')
 @app.route('/annotation/<int:page>')

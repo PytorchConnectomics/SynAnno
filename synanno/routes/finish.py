@@ -67,4 +67,4 @@ def reset():
         except Exception as e:
             print('Failed to delete %s. Reason: %s' % (file_path, e))
 
-    return render_template('opendata.html', modenext='disabled')
+    return render_template('landingpage.html')

@@ -9,10 +9,6 @@ import shutil
 # import the package app 
 from synanno import app
 import synanno
-import datetime
-
-# json dependent imports
-import json
 
 
 @app.route('/final_page')

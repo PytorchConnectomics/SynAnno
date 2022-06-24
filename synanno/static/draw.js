@@ -1,8 +1,9 @@
 $(document).ready(function () {
+    
 
     // retrieve canvas and set 2D context
-    const canvas = $("canvas.coveringCanvas");
-    const ctx = canvas.get(0).getContext("2d");
+    var canvas = $("canvas.coveringCanvas");
+    var ctx = canvas.get(0).getContext("2d");
 
     // set red as default color; used for the control points
     ctx.fillStyle = "#FF0000";
@@ -44,11 +45,40 @@ $(document).ready(function () {
     // set variable for toggling the polarity
     var color_toggle = 0
 
+    $('[id^="drawButton_"]').click(async function () {
+        
+        ctx.restore() // restore default settings
+
+        width = canvas.get(0).width // retrieve the width of the canvas
+        height = canvas.get(0).height // retrieve the width of the canvas
+
+        // set red as default color; used for the control points
+        ctx.fillStyle = "#FF0000";
+
+        // reset activation button
+        $("#canvasButtonActivate").text("Activate");
+        
+        // clear previous output
+        clear_canvas()
+        points = []
+        pointsQBez = []
+        split_mask = false // deactivate mask splitting
+        draw_mask = true // activate mask drawing
+
+        // initialize mouse position to zero
+        mousePosition = {
+            x: 0,
+            y: 0
+        };
+    });
+
+
     // on click activate canvas
     $("#canvasButtonActivate").on("click", function () {
+        ctx.restore() // restore default settings
         // activate canvas for the first time
         if ($("canvas.coveringCanvas").hasClass('d-none')){
-            $(this).text("Reset Canvas");
+            $("#canvasButtonActivate").text("Reset");
             $("canvas.coveringCanvas").removeClass('d-none') // change visibility
             rect = $("canvas.coveringCanvas").get(0).getBoundingClientRect() // get absolute rect. of canvas
             width = canvas.get(0).width // retrieve the width of the canvas
@@ -65,26 +95,17 @@ $(document).ready(function () {
         }
     });
 
-    // toggle split mode
-    var toggle_split = 0
 
     // activate event for splitting/erasing the curve
     $("#canvasButtonSplit").on("click", function () {
         // activate erasing mode
-        if (toggle_split == 0){
-            ctx.save()
-            ctx.globalCompositeOperation = 'destination-out';
-            split_mask = true;
-        // deactivate erasing mode
-        }else if (toggle_split == 1){
-            split_mask = false;
-            ctx.restore()
-        }
+        ctx.save()
+        ctx.globalCompositeOperation = 'destination-out';
+        split_mask = true;
     });
 
     // if split_mask = true: circular eraser
     $("canvas.coveringCanvas").mousemove(function( event ){
-        // set global composite operation to destination-out
         if (split_mask){
             // detect possible changes in mouse position
             if ((mousePosition.x != event.clientX  || mousePosition.y != event.clientY) && event.buttons == 1) {
@@ -106,6 +127,7 @@ $(document).ready(function () {
 
     // on click activate drawing
     $("#canvasButtonPolarity").on("click", function () {
+        ctx.restore() // restore default settings
         if (color_toggle == 0) {
             color_1 = pink
             color_2 = turquoise
@@ -120,16 +142,31 @@ $(document).ready(function () {
 
     // create the mask based on the drawn spline
     $("#canvasButtonCreate").on("click", function () {
+        ctx.restore() // restore default settings
         draw_mask = false;
         fill_clip(color_1, color_2, thickness)
     });
 
     // adapt the thickness of the spline
     $('#thickness_range').on('input', function () { 
+        ctx.restore() // restore default settings
         thickness = $(this).val()
         fill_clip(color_1, color_2, thickness, sample=false)
     });
 
+
+    $('#canvasButtonSave').on('click', function(){
+        var dataURL = canvas.get(0).toDataURL();
+        $.ajax({
+        type: "POST",
+        url: "/save_canvas",
+        data:{
+            imageBase64: dataURL
+        }
+        }).done(function() {
+        console.log('sent');
+        });
+    })
 
     $("canvas.coveringCanvas").on("click", function (e) {
         if (draw_mask){
@@ -243,24 +280,8 @@ $(document).ready(function () {
 
 
         }
-        else if (points.length > 1) {
-            ctx.beginPath()
-            ctx.strokeStyle = "#33FFF0"
-            ctx.moveTo((points_r[0].x), points_r[0].y);
-            ctx.fillRect(points_r[0].x, points_r[0].y, 2, 2)
-            ctx.fillRect(points_r[1].x, points_r[1].y, 2, 2)
-            ctx.lineTo(points_r[0].x, points_r[0].y);
-            ctx.lineTo(points_r[1].x, points_r[1].y);
-            ctx.stroke();
-
-            ctx.beginPath()
-            ctx.strokeStyle = "#FC0EF9"
-            ctx.moveTo((points_l[0].x), points_l[0].y);
-            ctx.fillRect(points_l[0].x, points_l[0].y, 2, 2)
-            ctx.fillRect(points_l[1].x, points_l[1].y, 2, 2)
-            ctx.lineTo(points_l[0].x, points_l[0].y);
-            ctx.lineTo(points_l[1].x, points_l[1].y);
-            ctx.stroke();
+        else{
+            console.log("A mask needs at least 3 points")
         }
     };
 

@@ -23,7 +23,7 @@ After categorizing all instances, click on "Submit and Finish".</p>
 
             {% if (image.Label == 'Incorrect' or image.Label == 'Unsure') %}
 
-            <div class="card card-body card-body-proof-read" id="id_error_{{pages_loop.index-1}}_{{loop.index-1}}">
+            <div class="card card-body card-body-proof-read border rounded" style="border-width:4px !important;" id="id_error_{{pages_loop.index-1}}_{{loop.index-1}}">
                 <div class="card-block border-0 p-1 image-card-btn {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}"
                     page="{{pages_loop.index - 1 }}" data_id="{{ loop.index }}"
                     label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}">

@@ -1,5 +1,5 @@
 # flask 
-from flask import render_template, flash, request, jsonify
+from flask import render_template, flash, request, jsonify, session
 from flask_cors import cross_origin
 
 # os and process dependent imports
@@ -65,6 +65,8 @@ def upload_file():
         patch_size = int(request.form.get('patchsize'))
     else:
         patch_size = 142  # default patch size
+
+    session['patch_size'] = patch_size
 
     # check if the path to the required files (source and target) are not None
     if file_original.filename and file_gt.filename:

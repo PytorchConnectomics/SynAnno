@@ -118,7 +118,7 @@ $(document).ready(function () {
             });
 
             req.success(function(){
-                window.location.href = "final_page"
+                window.location.href = "export_json"
                 //console.log("done")
             })
 

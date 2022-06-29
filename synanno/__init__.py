@@ -18,8 +18,10 @@ app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
 app.config['PACKAGE_NAME'] = 'synanno/'
-app.config['UPLOAD_FOLDER'] = 'files/'
+app.config['UPLOAD_FOLDER'] = 'files/' # carful with changing this as it is used for deletion
 app.config['UPLOAD_EXTENSIONS'] = ['.json', '.h5']
+
+app.config['STATIC_FOLDER'] = 'static/'
 
 app.config['IP'] = '127.0.0.1'
 app.config['PORT'] = '5000'

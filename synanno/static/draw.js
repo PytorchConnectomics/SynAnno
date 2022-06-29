@@ -1,5 +1,4 @@
 $(document).ready(function () {
-    
 
     // retrieve canvas and set 2D context
     var canvas = $("canvas.coveringCanvas");
@@ -45,7 +44,30 @@ $(document).ready(function () {
     // set variable for toggling the polarity
     var color_toggle = 0
 
-    $('[id^="drawButton_"]').click(async function () {
+    // init image identifiers to null
+    var page;
+    var data_id;
+    var label;
+
+    // path where to save the custom masks
+    const custom_mask_path = '/static/custom_masks/'
+
+
+
+    // make sure that the modal is reset every time it get closed
+    $(".modal").on("hidden.bs.modal", function(){
+        $("canvas.coveringCanvas").addClass('d-none')
+    });
+
+    $('[id^="drawButton-"]').click(async function () {
+
+        [page, data_id, label] = $($(this)).attr('id').replace(/drawButton-/, '').split('-')
+
+        $("#canvasButtonCreate").prop("disabled", true);
+        $("#canvasButtonPolarity").prop("disabled", true);
+        $("#thickness_range").prop("disabled", true);
+        $("#canvasButtonSplit").prop("disabled", true);
+        $("#canvasButtonSave").prop("disabled", true);
         
         ctx.restore() // restore default settings
 
@@ -87,11 +109,18 @@ $(document).ready(function () {
             draw_mask = true // activate mask drawing
         // reset canvas
         }else{
+            $("#canvasButtonCreate").prop("disabled", true);
+            $("#canvasButtonPolarity").prop("disabled", true);
+            $("#thickness_range").prop("disabled", true);
+            $("#canvasButtonSplit").prop("disabled", true);
+            $("#canvasButtonSave").prop("disabled", true);
+
             clear_canvas()
             points = []
             pointsQBez = []
             split_mask = false // deactivate mask splitting
             draw_mask = true // activate mask drawing
+            
         }
     });
 
@@ -145,6 +174,10 @@ $(document).ready(function () {
         ctx.restore() // restore default settings
         draw_mask = false;
         fill_clip(color_1, color_2, thickness)
+        $("#canvasButtonPolarity").prop("disabled", false);
+        $("#thickness_range").prop("disabled", false);
+        $("#canvasButtonSplit").prop("disabled", false);
+        $("#canvasButtonSave").prop("disabled", false);
     });
 
     // adapt the thickness of the spline
@@ -155,16 +188,30 @@ $(document).ready(function () {
     });
 
 
-    $('#canvasButtonSave').on('click', function(){
+    $('#canvasButtonSave').on('click', async function(){
         var dataURL = canvas.get(0).toDataURL();
-        $.ajax({
-        type: "POST",
-        url: "/save_canvas",
-        data:{
-            imageBase64: dataURL
-        }
-        }).done(function() {
-        console.log('sent');
+        console.log( data_id, page)
+        await $.ajax({
+            type: "POST",
+            url: "/save_canvas",
+            type: 'POST',
+            data: {imageBase64: dataURL, data_id: data_id, page: page}
+            }).done(function(data) {
+                var save = '#imgEM-GT-' + page+ '-' + data_id
+
+                // create path to image
+                var coordinates = data.data.Adjusted_Bbox.join('_')
+                var middle_slice = data.data.Middle_Slice
+                var img_index =  data.data.Image_Index
+            
+                img_name = 'idx_'+img_index +'_ms_'+ middle_slice +'_cor_'+coordinates+'.png'
+                // load the image and add cache breaker
+                image_path = custom_mask_path + img_name
+                console.log(image_path)
+                $(new Image()).attr('src',image_path+'?'+Date.now()).load(function() {
+                    $(save).attr('src', this.src);
+                });
+
         });
     })
 
@@ -174,11 +221,13 @@ $(document).ready(function () {
             ctx.beginPath()
             var pos = getXY(this, e)
             var x = pos.x
-            var y = pos.y
+            var y = pos.y            
 
             points.push({ x, y })
             if (points.length > 2) {
                 draw_quad_line(points)
+                // activate the fill button should the length of point be greater 2
+                $("#canvasButtonCreate").prop("disabled", false);
             }
             else if (points.length > 1) {
                 ctx.moveTo((points[0].x), points[0].y);
@@ -190,27 +239,6 @@ $(document).ready(function () {
             }
         }
     })
-
-    function draw_mask(){
-        clear_canvas()
-            ctx.beginPath()
-            var pos = getXY(this, e)
-            var x = pos.x
-            var y = pos.y
-
-            points.push({ x, y })
-            if (points.length > 2) {
-                draw_quad_line(points)
-            }
-            else if (points.length > 1) {
-                ctx.moveTo((points[0].x), points[0].y);
-                ctx.fillRect(points[0].x, points[0].y, 2, 2)
-                ctx.fillRect(points[1].x, points[1].y, 2, 2)
-                ctx.lineTo(points[0].x, points[0].y);
-                ctx.lineTo(points[1].x, points[1].y);
-                ctx.stroke();
-            }
-    }
 
     function clear_canvas() {
         ctx.beginPath();
@@ -323,16 +351,13 @@ $(document).ready(function () {
 
             // intersection with it self inside the canvas
             line_intersection = line_intersect(points[pl - 1].x, points[pl - 1].y, points[pl].x, points[pl].y, points[1].x, points[1].y, points[0].x, points[0].y)
-            console.log(line_intersection)
             if (!line_intersection){
-                console.log("No inter")
                 // intersection with boundary
                 intersection_end = intersection(points[pl - 1].x, points[pl - 1].y, points[pl].x, points[pl].y)
                 intersection_start = intersection(points[1].x, points[1].y, points[0].x, points[0].y)
                 close_intersection(intersection_start, intersection_end)
                 ctx.closePath()
             }else{
-                console.log("intersection")
                 ctx.lineTo(line_intersection.x, line_intersection.y)
                 ctx.lineTo(points[0].x, points[0].y)
                 ctx.closePath()
@@ -478,7 +503,6 @@ $(document).ready(function () {
         }
     
         denominator = ((y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1))
-        console.log(denominator)
         // Lines are parallel
         if (denominator === 0) {
             return false

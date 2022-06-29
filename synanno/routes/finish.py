@@ -10,19 +10,37 @@ import shutil
 from synanno import app
 import synanno
 
+# to zip folder
+import shutil
 
-@app.route('/final_page')
-def final_page():
-    return render_template('exportdata.html')
 
-@app.route('/export')
-def export_data():
-    final_filename = 'results-' + session.get('filename')
-    # Exporting the final json
-    if session.get('data') and session.get('n_pages'):
-        return send_file(os.path.join(app.config['UPLOAD_FOLDER'],final_filename), as_attachment=True, attachment_filename=final_filename)
-    else:
-        return render_template('exportdata.html')
+
+@app.route('/export_json')
+def export_json():
+    return render_template('export_json.html')
+
+@app.route('/export_masks')
+def export_masks():
+    return render_template('export_masks.html')
+
+@app.route('/export/<string:data_type>', methods=['GET'])
+def export_data(data_type):
+    if data_type == 'json':
+        final_filename = 'results-' + session.get('filename')
+        # Exporting the final json
+        if session.get('data') and session.get('n_pages'):
+            return send_file(os.path.join(os.path.join(app.root_path,app.config['UPLOAD_FOLDER']),final_filename), as_attachment=True, attachment_filename=final_filename)
+        else:
+            return render_template('export_json.html')
+    elif data_type == 'mask':
+        total_folder_path = os.path.join(os.path.join(app.root_path,app.config['STATIC_FOLDER']),'custom_masks')
+        print(total_folder_path)
+        if os.path.exists(total_folder_path):
+            # create zip of folder
+            shutil.make_archive(total_folder_path, 'zip', total_folder_path)
+            return send_file(os.path.join(os.path.join(app.root_path,app.config['STATIC_FOLDER']), 'custom_masks.zip'), as_attachment=True)
+        else:
+            return render_template('export_masks.html')    
 
 
 @app.route('/reset')
@@ -57,6 +75,14 @@ def reset():
 
     # delete static images
     image_folder = './synanno/static/Images/'
+    if os.path.exists(image_folder):
+        try:
+            shutil.rmtree(image_folder)
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (file_path, e))
+
+    # delete custom masks
+    image_folder = './synanno/static/custom_masks/'
     if os.path.exists(image_folder):
         try:
             shutil.rmtree(image_folder)

@@ -1,7 +1,7 @@
 $(document).ready(function () {
 
-    $('[id^="drawButton_"]').click(async function () {
-        var [page, data_id, label] = $($(this)).attr('id').replace(/drawButton_/, '').split('_')
+    $('[id^="drawButton-"]').click(async function () {
+        var [page, data_id, label] = $($(this)).attr('id').replace(/drawButton-/, '').split('-')
 
         req_data = $.ajax({
             url: '/save_slices',

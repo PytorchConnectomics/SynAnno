@@ -13,26 +13,26 @@
         <div class="d-flex flex-row flex-nowrap overflow-auto">
             {% for images in pages%}
             {% set pages_loop = loop %}
-            {% for image in images %}
+            {% for image in images %}            
 
             {% if (image.Label == 'Incorrect' or image.Label == 'Unsure') %}
 
-            <div class="card border rounded card-body card-body-proof-read text-center" style="border-width:4px !important;" id="id_error_{{pages_loop.index-1}}_{{loop.index-1}}">
+            <div class="card border rounded card-body card-body-proof-read text-center" style="border-width:4px !important;" id="id_error-{{pages_loop.index-1}}_{{loop.index}}">
                 <h5 class="card-header border-bottom-0 mb-2">{{image.Error_Description}}</h5>
                 <div class="card-block border-0 p-1 image-card-btn {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}"
                     page="{{pages_loop.index - 1 }}" data_id="{{ loop.index }}"
                     label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}">
                     <div class="main-image-categorize">
-                        <img id="imgEM-GT-{{loop.index-1}}" class="img_categorize"
+                        <img id="imgEM-GT-{{pages_loop.index-1}}-{{loop.index}}" class="img_categorize"
                             src="{{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}}" width="64px" height="64px"
                             style="opacity: 0.5; ">
-                        <img id="imgGT-{{loop.index-1}}" class="img_categorize"
+                        <img id="imgGT-{{pages_loop.index-1}}-{{loop.index}}" class="img_categorize"
                             src="{{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}}" width="64px" height="64px">
                     </div>
                 </div>
                 <div class="card-block mt-2">
                     <div class="col justify-content-center">
-                        <button class="btn btn-primary" id="drawButton_{{pages_loop.index-1}}_{{loop.index}}_{{image.Label}}" type="button" data-bs-target="#drawModal"
+                        <button class="btn btn-primary" id="drawButton-{{pages_loop.index-1}}-{{loop.index}}-{{image.Label}}" type="button" data-bs-target="#drawModal"
                             data-bs-toggle="modal" data-bs-dismiss="modal">Draw Mask</button>
                     </div>
                 </div>
@@ -48,7 +48,7 @@
 
     <div class="m-4 p-1">
         <a type="button" id="submit_button" class="btn btn-primary {{ modenext }}"
-            href="{{ url_for('final_page') }}">Submit and Finish</a>
+            href="{{ url_for('export_masks') }}">Submit and Finish</a>
     </div>
 </div>
 

@@ -1,6 +1,7 @@
 $(document).ready(function(){
 
-    if ($('#resetButton').hasClass('d-block')){
+    // if data is already stored in the backend enable 'reset' button
+    if ($('#resetButton').hasClass('d-inline')){
         $('.form-control').each(function(){
             $(this).prop("disabled", true)
         });
@@ -11,6 +12,21 @@ $(document).ready(function(){
             $(this).prop("disabled", false)
         });
     };
+
+
+    // if data is already stored in the backend enable 'continue' button
+    if ($('#continueButton').hasClass('d-inline')){
+        $('.form-control').each(function(){
+            $(this).prop("disabled", true)
+        });
+    }
+    else
+    {
+        $('.form-control').each(function(){
+            $(this).prop("disabled", false)
+        });
+    };
+
 
     var source = false;
     var target = false;

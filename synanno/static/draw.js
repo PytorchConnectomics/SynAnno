@@ -41,7 +41,7 @@ $(document).ready(function () {
     var color_1 = turquoise
     var color_2 = pink
 
-    // set variable for toggling the polarity
+    // variable for toggling the polarity
     var color_toggle = 0
 
     // init image identifiers to null
@@ -52,17 +52,18 @@ $(document).ready(function () {
     // path where to save the custom masks
     const custom_mask_path = '/static/custom_masks/'
 
-
-
     // make sure that the modal is reset every time it get closed
     $(".modal").on("hidden.bs.modal", function(){
         $("canvas.coveringCanvas").addClass('d-none')
     });
 
+    // setup/reset the canvas when ever a draw button is clicked
     $('[id^="drawButton-"]').click(async function () {
 
+        // retrieve the instance identifiers for later ajax calls
         [page, data_id, label] = $($(this)).attr('id').replace(/drawButton-/, '').split('-')
 
+        // ensure that all options except the activate canvas button are disabled at start
         $("#canvasButtonCreate").prop("disabled", true);
         $("#canvasButtonPolarity").prop("disabled", true);
         $("#thickness_range").prop("disabled", true);
@@ -80,10 +81,10 @@ $(document).ready(function () {
         // reset activation button
         $("#canvasButtonActivate").text("Activate");
         
-        // clear previous output
-        clear_canvas()
-        points = []
-        pointsQBez = []
+        
+        clear_canvas() // clear previous output
+        points = [] // reset the point list
+        pointsQBez = [] // reset the pointsQBez list
         split_mask = false // deactivate mask splitting
         draw_mask = true // activate mask drawing
 
@@ -97,11 +98,13 @@ $(document).ready(function () {
 
     // on click activate canvas
     $("#canvasButtonActivate").on("click", function () {
+        
         ctx.restore() // restore default settings
-        // activate canvas for the first time
+
+        // activate canvas for the first time after clicking a 'Draw Mask' button
         if ($("canvas.coveringCanvas").hasClass('d-none')){
-            $("#canvasButtonActivate").text("Reset");
-            $("canvas.coveringCanvas").removeClass('d-none') // change visibility
+            $("#canvasButtonActivate").text("Reset"); // switch the button label to 'Reset'
+            $("canvas.coveringCanvas").removeClass('d-none') // change the visibility of the canvas
             rect = $("canvas.coveringCanvas").get(0).getBoundingClientRect() // get absolute rect. of canvas
             width = canvas.get(0).width // retrieve the width of the canvas
             height = canvas.get(0).height // retrieve the width of the canvas
@@ -109,15 +112,16 @@ $(document).ready(function () {
             draw_mask = true // activate mask drawing
         // reset canvas
         }else{
+            // disable all options except the activate canvas button
             $("#canvasButtonCreate").prop("disabled", true);
             $("#canvasButtonPolarity").prop("disabled", true);
             $("#thickness_range").prop("disabled", true);
             $("#canvasButtonSplit").prop("disabled", true);
             $("#canvasButtonSave").prop("disabled", true);
 
-            clear_canvas()
-            points = []
-            pointsQBez = []
+            clear_canvas() // clear previous output
+            points = [] // reset the point list
+            pointsQBez = [] // reset the pointsQBez list
             split_mask = false // deactivate mask splitting
             draw_mask = true // activate mask drawing
             
@@ -127,13 +131,12 @@ $(document).ready(function () {
 
     // activate event for splitting/erasing the curve
     $("#canvasButtonSplit").on("click", function () {
-        // activate erasing mode
-        ctx.save()
-        ctx.globalCompositeOperation = 'destination-out';
-        split_mask = true;
+        ctx.save() // save the canvas settings
+        ctx.globalCompositeOperation = 'destination-out'; // change the settings such that new input overwrites existing one
+        split_mask = true; 
     });
 
-    // if split_mask = true: circular eraser
+    // if split_mask is set to true turns the mouse pointer in to a circular eraser
     $("canvas.coveringCanvas").mousemove(function( event ){
         if (split_mask){
             // detect possible changes in mouse position
@@ -154,9 +157,10 @@ $(document).ready(function () {
         }
      })
 
-    // on click activate drawing
+    // switch the polarity
     $("#canvasButtonPolarity").on("click", function () {
         ctx.restore() // restore default settings
+        // switch the colors based on the toggle value
         if (color_toggle == 0) {
             color_1 = pink
             color_2 = turquoise
@@ -166,14 +170,16 @@ $(document).ready(function () {
             color_2 = pink
             color_toggle = 0
         }
+        // redraw the curve
         fill_clip(color_1, color_2, thickness)
     });
 
     // create the mask based on the drawn spline
     $("#canvasButtonCreate").on("click", function () {
         ctx.restore() // restore default settings
-        draw_mask = false;
-        fill_clip(color_1, color_2, thickness)
+        draw_mask = false; // do not let the user draw any more points
+        fill_clip(color_1, color_2, thickness) // draw the mask
+        // activate all options for manipulating and saving the mask
         $("#canvasButtonPolarity").prop("disabled", false);
         $("#thickness_range").prop("disabled", false);
         $("#canvasButtonSplit").prop("disabled", false);
@@ -183,31 +189,33 @@ $(document).ready(function () {
     // adapt the thickness of the spline
     $('#thickness_range').on('input', function () { 
         ctx.restore() // restore default settings
-        thickness = $(this).val()
-        fill_clip(color_1, color_2, thickness, sample=false)
+        thickness = $(this).val() // retrieve the current thickness value
+        fill_clip(color_1, color_2, thickness, sample=false) // redraw the mask
     });
 
-
+    // save the current mask
     $('#canvasButtonSave').on('click', async function(){
-        var dataURL = canvas.get(0).toDataURL();
-        console.log( data_id, page)
+        var dataURL = canvas.get(0).toDataURL(); // retrieve the image from the canvas as a base64 encoding
+        // send the base64 encoded image to the backend
         await $.ajax({
             type: "POST",
             url: "/save_canvas",
             type: 'POST',
             data: {imageBase64: dataURL, data_id: data_id, page: page}
+             // update the depicted mask with the newly drawn mask
             }).done(function(data) {
+
+                // handle to ground truth image of the instance module
                 var save = '#imgEM-GT-' + page+ '-' + data_id
 
                 // create path to image
-                var coordinates = data.data.Adjusted_Bbox.join('_')
+                var coordinates = data.data.Adjusted_Bbox.join('_') 
                 var middle_slice = data.data.Middle_Slice
                 var img_index =  data.data.Image_Index
-            
                 img_name = 'idx_'+img_index +'_ms_'+ middle_slice +'_cor_'+coordinates+'.png'
-                // load the image and add cache breaker
                 image_path = custom_mask_path + img_name
-                console.log(image_path)
+
+                // load the image and add cache breaker
                 $(new Image()).attr('src',image_path+'?'+Date.now()).load(function() {
                     $(save).attr('src', this.src);
                 });
@@ -215,24 +223,31 @@ $(document).ready(function () {
         });
     })
 
+    // set start, end, and control points for curve that draws the mask
     $("canvas.coveringCanvas").on("click", function (e) {
         if (draw_mask){
-            clear_canvas()
-            ctx.beginPath()
-            var pos = getXY(this, e)
+            clear_canvas() // clear canvas
+            ctx.beginPath() // init path
+
+            // get click position
+            var pos = getXY(this, e) 
             var x = pos.x
             var y = pos.y            
 
+            // add new point to points list
             points.push({ x, y })
+
+            // draw the line segments in case that the points list contains more then two points
             if (points.length > 2) {
                 draw_quad_line(points)
                 // activate the fill button should the length of point be greater 2
                 $("#canvasButtonCreate").prop("disabled", false);
             }
+            // if the list only contains two points draw straight light
             else if (points.length > 1) {
                 ctx.moveTo((points[0].x), points[0].y);
-                ctx.fillRect(points[0].x, points[0].y, 2, 2)
-                ctx.fillRect(points[1].x, points[1].y, 2, 2)
+                ctx.fillRect(points[0].x, points[0].y, 2, 2) // mark start point with red rectangle 
+                ctx.fillRect(points[1].x, points[1].y, 2, 2) // mark end point with red rectangle
                 ctx.lineTo(points[0].x, points[0].y);
                 ctx.lineTo(points[1].x, points[1].y);
                 ctx.stroke();
@@ -240,12 +255,14 @@ $(document).ready(function () {
         }
     })
 
+    // helper function for clearing the canvas
     function clear_canvas() {
         ctx.beginPath();
         ctx.clearRect(0, 0, canvas.get(0).width, canvas.get(0).height);
         ctx.stroke();
     }
 
+    // helper function for calculating the relative mouse click based on the canvas expansion
     function getXY(canvas, evt) {
         // using the absolute rect. of canvas
         return {
@@ -254,55 +271,73 @@ $(document).ready(function () {
         };
     }
 
+    // converts the mask line in to a volume mask with polarity indication
     function fill_clip(color_1, color_2, thickness, sample=true) {
-        clear_canvas()
-        ctx.beginPath()
-        pl = points.length
+        
+        clear_canvas() // clear the canvas
+        ctx.beginPath() // init new path
+        
+        pl = points.length // retrieve length of points list 
+
+        // if the points list contains more then two points
         if (pl > 2) {
 
+            // sample lines along the created quadratic curve
             if (sample){
-            ax = points[0].x
-            ay = points[0].y
-            for (i = 1; i < pl - 2; i++) {
-                //control.append({x:(points[i+1].x + points[i + 2].x) / 2})
-                
-                cx = points[i].x
-                cy = points[i].y
-                bx = (points[i].x + points[i + 1].x)/2
-                by = (points[i].y + points[i + 1].y)/2
+                ax = points[0].x // retrieve start point
+                ay = points[0].y // retrieve end point
+                // iterate over all intermediate points
+                for (i = 1; i < pl - 2; i++) {
+                    
+                    cx = points[i].x
+                    cy = points[i].y
+                    bx = (points[i].x + points[i + 1].x)/2
+                    by = (points[i].y + points[i + 1].y)/2
 
+                    // sample the current line segment
+                    plotQBez(pointsQBez, 100, ax, ay, cx, cy, bx, by)
+
+                    ax = bx
+                    ay = by
+                }
+                // sample the last line segment
+                bx = points[pl-1].x
+                by = points[pl-1].y
+                cx = points[pl-2].x
+                cy = points[pl-2].y
                 plotQBez(pointsQBez, 100, ax, ay, cx, cy, bx, by)
+            }            
+            
+            ctx.save(); // save the current settings
 
-                ax = bx
-                ay = by
-            }
-            bx = points[pl-1].x
-            by = points[pl-1].y
-            cx = points[pl-2].x
-            cy = points[pl-2].y
-            plotQBez(pointsQBez, 100, ax, ay, cx, cy, bx, by)
-        }            
+            let region_1 = new Path2D(); // define new region
 
-            ctx.save();
-
-            let region_1 = new Path2D();
+            // for every point that was sampled draw a an ellipse with the point at its center
             for (j = 0; j < pointsQBez.length; j++) {
                 // the normal aspect ratio of a html5 canvas is 2/1 
                 // since we have equal width and height, y is distorted by factor 2
-                region_1.moveTo(pointsQBez[j].x + thickness, pointsQBez[j].y)
-                region_1.ellipse(pointsQBez[j].x, pointsQBez[j].y, thickness, Math.floor(thickness/2), 0, 0, Math.PI * 2)
+                region_1.moveTo(pointsQBez[j].x + thickness, pointsQBez[j].y) // move to next sampled point
+                region_1.ellipse(pointsQBez[j].x, pointsQBez[j].y, thickness, Math.floor(thickness/2), 0, 0, Math.PI * 2) // draw the ellipse
             }
+            // create the region as clipping region
             ctx.clip(region_1)
 
+            // set the first color
             ctx.fillStyle = color_1;
             ctx.strokeStyle = color_1;
 
+            // draw a rectangle over the whole canvas and fill with first color - will only fill the clipping region
             ctx.rect(0, 0, canvas.get(0).width, canvas.get(0).height);
             ctx.fill()
 
+            // set the second color
             ctx.fillStyle = color_2;
             ctx.strokeStyle = color_2
+
+            // draw a closed shape between the mask and the wall
             draw_quad_line(points, lineWidth = 1, draw_points = false, close_path = true)
+
+            // fill the closed shape with the second color - will only fill the clipping region with in the closed shape
             ctx.fill()
             ctx.restore();
 
@@ -313,6 +348,7 @@ $(document).ready(function () {
         }
     };
 
+    // create a closed path between the mask path and the wall 
     function draw_quad_line(points, lineWidth = 1, draw_points = true, close_path = false) {
         ctx.beginPath()
         ctx.lineWidth = lineWidth;

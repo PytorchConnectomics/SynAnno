@@ -16,6 +16,7 @@ import datetime
 # json dependent imports
 import json
 
+
 global grid_opacity
 grid_opacity = 0.5
 
@@ -23,6 +24,12 @@ grid_opacity = 0.5
 @app.route('/set-data/<data_name>')
 @app.route('/set-data')
 def set_data(task='annotate',data_name='synAnno.json'):
+    """ Sets up the session and calculates the grid view for the annotation route.
+    
+        Args:
+            task: Identifies and links the downstream process: annotate | draw
+            data_name: Name of the json file containing the label information
+    """
     global grid_opacity
 
     # set the number of cards in one page
@@ -33,6 +40,7 @@ def set_data(task='annotate',data_name='synAnno.json'):
     f = open(os.path.join('.', data_name))
     data = json.load(f)
 
+    # write the data to the session
     if not session.get('data'):
         session['data'] = [data['Data'][i:i+per_page]
                            for i in range(0, len(data['Data']), per_page)]
@@ -56,22 +64,32 @@ def set_data(task='annotate',data_name='synAnno.json'):
     if not session.get('n_pages'):
         session['n_pages'] = number_pages
 
+    # link the relevant HTML page based on the defined task
     if task == 'annotate':
         return render_template('annotation.html', images=session.get('data')[0], page=0, n_pages=session.get('n_pages'), grid_opacity=grid_opacity)
     elif task == 'draw':
         return render_template('draw.html', pages=session.get('data'))
 
+
 @app.route('/annotation')
 @app.route('/annotation/<int:page>')
 def annotation(page=0):
+    ''' Start the proofreading timer and load the annotation view.
+
+        Args:
+            page: The current data page that is depicted in the grid view.
+    '''
     global grid_opacity
     if synanno.proofread_time["start_grid"] is None:
         synanno.proofread_time["start_grid"] = datetime.datetime.now()
     return render_template('annotation.html', images=session.get('data')[page], page=page, n_pages=session.get('n_pages'), grid_opacity=grid_opacity)
 
+
 @app.route('/set_grid_opacity', methods=['POST'])
 @cross_origin()
 def set_grid_opacity():
+    ''' Serves and saves the grid opacity value for the corresponding js ajax call.
+    '''
     global grid_opacity
     grid_opacity = float(request.form['grid_opacity'])
     grid_opacity = int(grid_opacity*10)/10 # only keep first decimal

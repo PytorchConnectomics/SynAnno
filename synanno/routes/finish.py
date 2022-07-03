@@ -34,7 +34,6 @@ def export_data(data_type):
             return render_template('export_json.html')
     elif data_type == 'mask':
         total_folder_path = os.path.join(os.path.join(app.root_path,app.config['STATIC_FOLDER']),'custom_masks')
-        print(total_folder_path)
         if os.path.exists(total_folder_path):
             # create zip of folder
             shutil.make_archive(total_folder_path, 'zip', total_folder_path)
@@ -80,6 +79,10 @@ def reset():
             shutil.rmtree(image_folder)
         except Exception as e:
             print('Failed to delete %s. Reason: %s' % (file_path, e))
+
+    # delete masks zip file.
+    if os.path.isfile(os.path.join('./synanno/static/', 'custom_masks.zip')):
+        os.remove(os.path.join('./synanno/static/', 'custom_masks.zip'))
 
     # delete custom masks
     image_folder = './synanno/static/custom_masks/'

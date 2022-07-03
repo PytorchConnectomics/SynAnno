@@ -39,7 +39,7 @@ def open_data(task):
     draw_or_annotate = task
     if os.path.isdir('./synanno/static/Images/'):
         flash('Click \"Reset Backend\" to clear the memory and start a new task.')
-        return render_template('opendata.html', modecurrent='d-none', modenext='d-none', modereset='block', mode=draw_or_annotate)
+        return render_template('opendata.html', modecurrent='d-none', modenext='d-none', modereset='inline', mode=draw_or_annotate, filename=secure_filename(app.config['JSON']))
     return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate)
 
 
@@ -79,12 +79,12 @@ def upload_file():
         if original_name and gt_name:
 
             # remove existing json file
-            if os.path.isfile(os.path.join('.', 'synAnno.json')):
-                os.remove(os.path.join('.', 'synAnno.json'))
+            if os.path.isfile(os.path.join('.', app.config['JSON'])):
+                os.remove(os.path.join('.', app.config['JSON']))
 
             # if a json got provided save it locally and process the data based on the JSON info
             if file_json.filename:
-                filename_json = save_file(file_json, 'synAnno.json', '.')
+                filename_json = save_file(file_json, app.config['JSON'], '.')
                 _, source_img, target_seg = ip.load_3d_files(
                     os.path.join(
                         os.path.join(app.config['PACKAGE_NAME'],app.config['UPLOAD_FOLDER']), file_original.filename),

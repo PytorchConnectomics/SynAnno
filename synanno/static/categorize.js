@@ -77,6 +77,12 @@ $(document).ready(function () {
             var flags = []
             var nr_elements = $('[id^="id_error_"]').length
 
+            
+            // resolve in case that no samples where marked as wrong or unsure
+            if (nr_elements==0){
+                resolve(flags) 
+            }
+
             if (nr_elements==0){
                 resolve(flags) 
             }

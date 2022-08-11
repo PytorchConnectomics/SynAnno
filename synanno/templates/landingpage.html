@@ -1,0 +1,40 @@
+{% extends "templatebase.html" %}
+
+{% block help_content%}
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid vh-100 w-75 ">
+    <div class="pt-5 text-center">
+        <h2 class="mb-2"> Welcome to SynAnno Annotation Tool</h2>
+        <p>Choose your path! Annotate a newly acquired dataset or proof read existing annotations... </p>
+    </div>
+    <div class="row justify-content-center h-50">
+        <div class="col my-auto">
+            <div class="card text-center border-primary">
+                <h4 class="card-title">Annotate a Dataset</h4>
+                <div class="card-body">
+                    <a type="button" class="btn" href="{{ url_for('open_data', task='draw') }}">
+                        <h2>
+                            <i class="fa fa-object-group fa-5x" style="color:rgb(80, 80, 80);"></i>
+                        </h2>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col my-auto">
+            <div class="card text-center">
+                <h4 class="card-title">Proofread Annotations </h4>
+                <div class="card-body border-primary">
+                    <a type="button" class="btn" href="{{ url_for('open_data', task='annotate') }}">
+                        <h2>
+                            <i class="fa fa-arrows  fa-5x" style="color:rgb(80, 80, 80);"></i>
+                        </h2>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

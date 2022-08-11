@@ -1,0 +1,47 @@
+<!-- Instance-specific view that opens up when right-clicking one of the tiles of the annotation view.
+    It shows an enlarged version of the instance. Additional, it lets the user move a lever, 
+    located at the bottom of the newly opened window, which scrolls through all the slices 
+    of the selected instance and their associated segmentation masks. 
+    Both views load the request images as png files from a corresponding folder structure. -->
+<div class="modal fade" id="drawModal" tabindex="-1" aria-labelledby="drawModal" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title pe-5" id="modalToggleLabel1">Draw Center Slice Mask</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body mx-auto">
+                <div class="d-flex justify-content-center">
+                <div id="cardDetails" class="card border-0 p-1">
+                        <div class="outsideWrapper border rounded" style="border-width:4px !important;">
+                            <div class="insideWrapper">
+                                <img id="imgDetails-EM" class="coveredImage" src="">
+                                <canvas class="coveringCanvas d-none"></canvas>
+                            </div>
+                        </div>
+                </div>
+            </div>
+                <div class="center">
+                    <div class="row justify-content-center">
+                        <div class="col-md-12 text-center">
+                            <form>
+                            <button type="button" class="btn btn-secondary" id="canvasButtonActivate">Activate</button>
+                            <button type="button" class="btn btn-secondary" id="canvasButtonCreate">Fill</button>
+                            <button type="button" class="btn btn-secondary" id="canvasButtonPolarity">Switch</button>
+                            <button type="button" class="btn btn-secondary" id="canvasButtonSplit">Revise</button>
+                            <button type="button" class="btn btn-secondary" id="canvasButtonSave" data-bs-dismiss="modal">Save</button>
+                        </form>
+                    </div>
+                    </div>
+                    <div class="row">
+                        <div class="center">
+                            <input id="thickness_range" type="range" class="form-range" value="10" min="1" max="30" data_id="" page="">
+                        </div>
+                    </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

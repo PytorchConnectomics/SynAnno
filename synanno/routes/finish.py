@@ -9,27 +9,37 @@ import shutil
 # import the package app 
 from synanno import app
 import synanno
-import datetime
 
-# json dependent imports
-import json
+# to zip folder
+import shutil
 
 
-@app.route('/final_page')
-def final_page():
-    if synanno.proofread_time["finish_categorize"] is None:
-        synanno.proofread_time["finish_categorize"] = datetime.datetime.now()
-        synanno.proofread_time["difference_categorize"] = synanno.proofread_time["finish_categorize"] - synanno.proofread_time["start_categorize"]
-    return render_template('exportdata.html')
 
-@app.route('/export')
-def export_data():
-    final_filename = 'results-' + session.get('filename')
-    # Exporting the final json and pop session
-    if session.get('data') and session.get('n_pages'):
-        return send_file(os.path.join(app.config['UPLOAD_FOLDER'],final_filename), as_attachment=True, attachment_filename=final_filename)
-    else:
-        return render_template('exportdata.html')
+@app.route('/export_json')
+def export_json():
+    return render_template('export_json.html')
+
+@app.route('/export_masks')
+def export_masks():
+    return render_template('export_masks.html')
+
+@app.route('/export/<string:data_type>', methods=['GET'])
+def export_data(data_type):
+    if data_type == 'json':
+        final_filename = 'results-' + session.get('filename')
+        # Exporting the final json
+        if session.get('data') and session.get('n_pages'):
+            return send_file(os.path.join(os.path.join(app.root_path,app.config['UPLOAD_FOLDER']),final_filename), as_attachment=True, attachment_filename=final_filename)
+        else:
+            return render_template('export_json.html')
+    elif data_type == 'mask':
+        total_folder_path = os.path.join(os.path.join(app.root_path,app.config['STATIC_FOLDER']),'custom_masks')
+        if os.path.exists(total_folder_path):
+            # create zip of folder
+            shutil.make_archive(total_folder_path, 'zip', total_folder_path)
+            return send_file(os.path.join(os.path.join(app.root_path,app.config['STATIC_FOLDER']), 'custom_masks.zip'), as_attachment=True)
+        else:
+            return render_template('export_masks.html')    
 
 
 @app.route('/reset')
@@ -70,14 +80,16 @@ def reset():
         except Exception as e:
             print('Failed to delete %s. Reason: %s' % (file_path, e))
 
-    return render_template('opendata.html', modenext='disabled')
+    # delete masks zip file.
+    if os.path.isfile(os.path.join('./synanno/static/', 'custom_masks.zip')):
+        os.remove(os.path.join('./synanno/static/', 'custom_masks.zip'))
 
-# handle non json serializable data 
-def json_serial(obj):
-    """JSON serializer for objects not serializable by default json code"""
+    # delete custom masks
+    image_folder = './synanno/static/custom_masks/'
+    if os.path.exists(image_folder):
+        try:
+            shutil.rmtree(image_folder)
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (file_path, e))
 
-    if isinstance(obj, (datetime.timedelta)):
-        return str(obj)
-    if isinstance(obj, (datetime.datetime)):
-        return obj.isoformat()
-    raise TypeError ("Type %s not serializable" % type(obj))
+    return render_template('landingpage.html')

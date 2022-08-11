@@ -76,12 +76,17 @@ $(document).ready(function () {
         var promise_error = new Promise ((resolve,reject) =>{
             var flags = []
             var nr_elements = $('[id^="id_error_"]').length
+
             
             // resolve in case that no samples where marked as wrong or unsure
             if (nr_elements==0){
                 resolve(flags) 
             }
 
+            if (nr_elements==0){
+                resolve(flags) 
+            }
+            
             $('[id^="id_error_"]').each(function (index) {
                 var [page, img_id] = $($(this)).attr('id').replace(/id_error_/, '').split('_')
                 if ($('[id^="falsePositive_"]', $(this)).is(":checked")) {
@@ -119,7 +124,7 @@ $(document).ready(function () {
             });
 
             req.success(function(){
-                window.location.href = "final_page"
+                window.location.href = "export_json"
                 //console.log("done")
             })
 

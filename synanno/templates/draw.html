@@ -14,16 +14,16 @@
 
             <div class="card border rounded card-body card-body-proof-read text-center" style="border-width:4px !important;">
                 <h5 class="card-header border-bottom-0 mb-2">False Negative</h5>
-                <div class="card-block border-0 p-1 image-card-btn unsure"
+                <div class="card-block border-0 p-1 image-card-btn unsure mt-auto"
                     label="Unsure">
                     <div class="main-image-categorize">
                         <img class="img_categorize"
                             src="/static/Images/place_holder_fp.png" width="64px" height="64px">
                     </div>
                 </div>
-                <div class="card-block mt-2">
+                <div class="card-block mt-2 mt-auto">
                     <div class="col justify-content-center">
-                        <button class="btn btn-primary" type="button" data-bs-target="#drawModal"
+                        <button id="add_new_instance" class="btn btn-primary" type="button" data-bs-target="#drawModalFP"
                             data-bs-toggle="modal" data-bs-dismiss="modal">Add New Instance</button>
                     </div>
                 </div>
@@ -75,8 +75,11 @@
     </div>
 </div>
 
-<!-- Modal for synapse slice-->
+<!-- Modal for synapse mask correction -->
 {% include "draw_modal.html" %}
+
+<!-- Modal for adding fals positve synapses -->
+{% include "draw_modal_fp.html" %}
 
 <script src="{{ url_for('static', filename='draw_module.js') }}"></script>
 

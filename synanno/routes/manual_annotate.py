@@ -1,5 +1,9 @@
+import string
 from flask import render_template, session, request, jsonify
+from flask_cors import cross_origin
 
+
+import synanno
 from synanno import app
 
 from PIL import Image
@@ -9,7 +13,6 @@ import base64
 import json
 import re
 import os
-
 
 @app.route('/draw')
 def draw():
@@ -47,3 +50,19 @@ def save_canvas():
     final_json = jsonify(data=data[page][index])
 
     return final_json
+
+@app.route('/ng_bbox', methods=['POST'])
+@cross_origin()
+def neuro_click():
+    # retrive the coordinates
+    bottom_left = synanno.bottom_left
+    top_right = synanno.top_right
+
+    return jsonify({
+                    'blz': str(int(bottom_left[0])), 
+                    'bly': str(int(bottom_left[1])), 
+                    'blx': str(int(bottom_left[2])),
+                    'trz': str(int(top_right[0])), 
+                    'try': str(int(top_right[1])), 
+                    'trx': str(int(top_right[2]))
+                    })

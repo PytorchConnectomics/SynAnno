@@ -41,7 +41,20 @@ progress_bar_status = {"status":"Loading Source File", "percent":0}
 global proofread_time
 proofread_time = {"start_grid":None,"finish_grid":None,"difference_grid":None, "start_categorize":None,"finish_categorize":None,"difference_categorize":None}
 
+# neuroglancer instance
+global ng_viewer  # handle to the neurglancer viewer instance
+global ng_version  # versioning number for the neuroglancer instance
+ng_version = None # initialize the neuroglancer version number as noon
+
+# values for the custom fp bounding box
+global bottom_left # xy value of the bottom left corner of a fp bounding box
+global top_right # xy value of the top right corner of a fp bounding box
+
+bottom_left = 0
+top_right = 0
+
 from synanno.routes import annotation, finish, opendata, categorize, landingpage, manual_annotate
+
 
 @app.context_processor
 def handle_context():

@@ -74,9 +74,15 @@ def reset():
 
     # delete static images
     image_folder = './synanno/static/Images/'
-    if os.path.exists(image_folder):
+    if os.path.exists(os.path.join(image_folder, "Img")):
         try:
-            shutil.rmtree(image_folder)
+            shutil.rmtree(os.path.join(image_folder, "Img"))
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (file_path, e))
+
+    if os.path.exists(os.path.join(image_folder, "Syn")):
+        try:
+            shutil.rmtree(os.path.join(image_folder, "Syn"))
         except Exception as e:
             print('Failed to delete %s. Reason: %s' % (file_path, e))
 

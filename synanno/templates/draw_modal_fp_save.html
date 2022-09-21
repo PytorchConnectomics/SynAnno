@@ -1,0 +1,119 @@
+<!--View that opens up when clicking "Add New Instance". -->
+<div class="modal fade" id="drawModalFPSave" tabindex="-1" aria-labelledby="drawModalFPSave" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal">
+        <div class="modal-content">
+            
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalToggleLabel2">Bounding Box</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="row">
+                    <div class="col">
+
+                        <div class="row">
+                            <h5>Bottom Left</h5>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-2 my-auto">
+                                Z
+                            </div>
+                            <div class="col-8">
+                                <input type="text" id="bl_z" class="form-control" placeholder="Z (BL)">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-2 my-auto">
+                                Y
+                            </div>
+                            <div class="col-8">
+                                <input type="text" id="bl_y" class="form-control" placeholder="Y (BL)">
+                            </div>
+                        </div>
+                    
+                        <div class="row">
+                            <div class="col-2 my-auto">
+                                X
+                            </div>
+                            <div class="col-8">
+                                <input type="text" id="bl_x" class="form-control" placeholder="X (BL)">
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="col">
+                        <div class="row">
+                            <h5>Top Right</h5>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-2 my-auto">
+                                Z
+                            </div>
+                            <div class="col-8">
+                                <input type="text" id="tr_z" class="form-control" placeholder="Z (TR)">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-2 my-auto">
+                                Y
+                            </div>
+                            <div class="col-8">
+                                <input type="text" id="tr_y" class="form-control" placeholder="Y (TR)">
+                            </div>
+                        </div>
+                    
+                        <div class="row">
+                            <div class="col-2 my-auto">
+                                X
+                            </div>
+                            <div class="col-8">
+                                <input type="text" id="tr_x" class="form-control" placeholder="X (TR)">
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="col">
+                        <div class="row">
+                            <h5>Depth</h5>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-2 my-auto">
+                                Z1
+                            </div>
+                            <div class="col-8">
+                                <input type="text" id="d_z1" class="form-control" placeholder="Z1)">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-2 my-auto">
+                                Z2
+                            </div>
+                            <div class="col-8">
+                                <input type="text" id="d_z2" class="form-control" placeholder="Z2">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                    
+                  <div class="modal-footer">
+                      <button id="save_bbox"class="btn btn-primary" data-bs-target="#detailsModal" data-bs-toggle="modal"
+                          data-bs-dismiss="modal">Save</button>
+                  </div>
+                
+
+            </div>
+        </div>
+    </div>
+</div>

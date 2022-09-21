@@ -18,18 +18,13 @@ import synanno
 import json
 
 # neuroglancer dependent imports
-import neuroglancer
-import random
+import synanno.routes.utils.ng as ng
 
 # global variables
 global source_img  # path to the images
 global target_seg  # path to the segmentation masks
-global ng_viewer  # handle to the neurglancer viewer instance
-global neuro_version  # versioning number for the neuroglancer instance
 global draw_or_annotate # defines the downstream task; either draw or annotate
 
-# initialize the neuroglancer version number as noon
-neuro_version = None
 
 @app.route('/open_data', defaults={'task': 'annotate'})
 @app.route('/open_data/<string:task>', methods=['GET'])
@@ -37,7 +32,7 @@ def open_data(task):
     global draw_or_annotate
 
     draw_or_annotate = task
-    if os.path.isdir('./synanno/static/Images/'):
+    if os.path.isdir('./synanno/static/Images/Img'):
         flash('Click \"Reset Backend\" to clear the memory and start a new task.')
         return render_template('opendata.html', modecurrent='d-none', modenext='d-none', modereset='inline', mode=draw_or_annotate, filename=secure_filename(app.config['JSON']))
     return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate)
@@ -47,8 +42,6 @@ def open_data(task):
 def upload_file():
     global source_img
     global target_seg
-    global neuro_version
-    global ng_viewer
     global draw_or_annotate
 
     # Check if files folder exists, if not create it
@@ -102,31 +95,8 @@ def upload_file():
                     patch_size)
 
             # if the NG version number is None setup a new NG viewer
-            if neuro_version is None:
-                # generate a version number
-                neuro_version = str(random.randint(0, 32e+2))
-
-                # setup a Tornado web server and create viewer instance
-                neuroglancer.set_server_bind_address(
-                    bind_address=app.config['NG_IP'], bind_port=app.config['NG_PORT'])
-                ng_viewer = neuroglancer.Viewer(token=neuro_version)
-
-                # specify the NG coordinate space
-                res = neuroglancer.CoordinateSpace(
-                    names=['z', 'y', 'x'],
-                    units=['nm', 'nm', 'nm'],
-                    scales=[30, 8, 8])
-
-                # config viewer: Add image layer, add segmentation mask layer, define position
-                with ng_viewer.txn() as s:
-                    s.layers.append(name='im', layer=neuroglancer.LocalVolume(
-                        source_img, dimensions=res, volume_type='image', voxel_offset=[0, 0, 0]))
-                    s.layers.append(name='gt', layer=neuroglancer.LocalVolume(
-                        target_seg, dimensions=res, volume_type='segmentation', voxel_offset=[0, 0, 0]))
-                    s.position = [0, 0, 0]
-
-                print(
-                    f'Starting a Neuroglancer instance at {ng_viewer}, centered at x,y,x {0,0,0}')
+            if synanno.ng_version is None:
+                ng.setup_ng(source_img, target_seg)
 
         # test if the created/provided json is valid by loading it
         try:
@@ -153,23 +123,21 @@ def progress():
 @app.route('/neuro', methods=['POST'])
 @cross_origin()
 def neuro():
-    global neuro_version
-    global ng_viewer
 
     oz = int(request.form['cz0'])
     oy = int(request.form['cy0'])
     ox = int(request.form['cx0'])
 
-    if neuro_version is not None:
+    if synanno.ng_version is not None:
         # update the view center
-        with ng_viewer.txn() as s:
+        with synanno.ng_viewer.txn() as s:
             s.position = [oz, oy, ox]
     else:
         raise Exception('No NG instance running')
 
-    print(f'Neuroglancer instance running at {ng_viewer}, centered at x,y,x {oz,oy,ox}')
+    print(f'Neuroglancer instance running at {synanno.ng_viewer}, centered at x,y,x {oz,oy,ox}')
 
-    final_json = jsonify({'ng_link':'http://'+app.config['IP']+':9015/v/'+str(neuro_version)+'/'})
+    final_json = jsonify({'ng_link':'http://'+app.config['IP']+':9015/v/'+str(synanno.ng_version)+'/'})
 
     return final_json
 

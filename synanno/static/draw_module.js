@@ -34,32 +34,37 @@ $(document).ready(function () {
 
     $('#review_bbox').click(async function (e) {
         $.ajax({
-            url: '/ng_bbox',
+            url: '/ng_bbox_fp',
             type: 'POST',
-            data: { blz: 0, bly: 0, blx: 0, trz: 0, try: 0, trx: 0 }
+            data: { z1: 0, z2: 0, my: 0, mx: 0 }
         }).done(function (data) {
-            
-            $('#bl_z').val(data.blx)
-            $('#bl_y').val(data.bly)
-            $('#bl_x').val(data.blz)
-            
-            $('#tr_z').val(data.trx)
-            $('#tr_y').val(data.try)
-            $('#tr_x').val(data.trz)
 
-            if(parseInt(data.blz) > parseInt(data.trz)){
-                $('#d_z1').val(data.trz)
-                $('#d_z2').val(data.blz)
-            }else{
-                $('#d_z1').val(data.blz)
-                $('#d_z2').val(data.trz)
-            }
-            
+            $('#m_x').val(data.mx)
+            $('#m_y').val(data.my)
+
+            $('#d_z1').val(data.z1)
+            $('#d_z2').val(data.z2)
+
         });
     });
 
-    $("#save_bbox").click(function(){
-        $('#drawModalFPSave, #drawModalFP').modal('hide');
+
+
+    $("#save_bbox").click(function () {
+
+        // pass changes to backend
+        $.ajax({
+            url: '/ng_bbox_fp_save',
+            type: 'POST',
+            data: { z1: $('#d_z1').val(), z2: $('#d_z2').val(), my: $('#m_y').val(), mx: $('#m_x').val() }
+        }).done(function (data) {
+
+            // hide modules
+            $('#drawModalFPSave, #drawModalFP').modal('hide');
+
+            // refresh page
+            location.reload();
+        });
     });
 
 });

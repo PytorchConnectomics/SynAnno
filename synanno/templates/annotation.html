@@ -20,14 +20,14 @@
         <div class="legend-item"> <strong>Legend:</strong></div>
         <div class="legend-item"><span class="color-block" style="background-color: #abebc6;"></span>Right</div>
         <div class="legend-item"><span class="color-block" style="background-color: #f08080;"></span>Wrong</div>
-        <div class="legend-item"><span class="color-block"
-                style="background-color: #d7dbdd;"></span>Unsure</div>
+        <div class="legend-item"><span class="color-block" style="background-color: #d7dbdd;"></span>Unsure</div>
 
         <div class="btn-group btn-group-sm ms-auto" role="group" aria-label="Basic example">
             <span style="margin-right: 8px; margin-top: 2px;">Label opacity: </span>
             <button id="dec-opacity-grid" type="button" class="btn btn-primary rounded-start"
                 onclick="dec_opacity_grid()">-</button>
-            <span id="value-opacity-grid" type="button" class="btn btn-light" value="{{grid_opacity or '0.5'}}">{{grid_opacity or 0.5}}</span>
+            <span id="value-opacity-grid" type="button" class="btn btn-light"
+                value="{{grid_opacity or '0.5'}}">{{grid_opacity or 0.5}}</span>
             <button id="inc-opacity-grid" type="button" class="btn btn-primary" onclick="add_opacity_grid()">+</button>
         </div>
 
@@ -74,15 +74,15 @@
         <li style="padding: .375rem .75rem;">{{page+1}} / {{n_pages}} </li>
         {% if page+1 < n_pages %} <li class="page-item">
 
-            <li class="page-item">
-                <a type="button" class="page-link btn btn-primary" href="{{ url_for('annotation', page=page+1)}}">
-                    <i class="bi bi-arrow-right"></i>
-                </a>
-            </li>
+        <li class="page-item">
+            <a type="button" class="page-link btn btn-primary" href="{{ url_for('annotation', page=page+1)}}">
+                <i class="bi bi-arrow-right"></i>
+            </a>
+        </li>
 
-            {% else %}
-            <li class="page-item"><a class="page-link" href="{{ url_for('categorize') }}">Error Processing</a></li>
-            {% endif %}
+        {% else %}
+        <li class="page-item"><a class="page-link" href="{{ url_for('categorize') }}">Error Processing</a></li>
+        {% endif %}
     </ul>
 </nav>
 

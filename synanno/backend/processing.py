@@ -309,12 +309,12 @@ def visualize(syn, seg, img, sz, return_data=False, iterative_bbox=False, filena
             cropped_syn, syn_bbox, padding = crop_pad_data(syn, z_mid_total, crop_2d, mask=temp, return_box=True)
             cropped_img = crop_pad_data(img, z_mid_total, crop_2d, pad_val=128)
 
-            # calculate the padding for frontend display, later used for unpadding.
+            # calculate the padding for frontend display, later used for unpadding
             item["Adjusted_Bbox"] = [bbox[0], bbox[1]] + syn_bbox
 
             item["Padding"] = padding
 
-            # calculate and save the angle of rotation.
+            # calculate and save the angle of rotation
             angle, _ = calculate_rot(cropped_syn, return_overlap=False, mode='linear')
 
             img_dtype, syn_dtype = cropped_img.dtype, cropped_syn.dtype
@@ -425,9 +425,10 @@ def visualize(syn, seg, img, sz, return_data=False, iterative_bbox=False, filena
 
 def load_3d_files(im_file, gt_file, patch_size=142, filename_json=None):
     synanno.progress_bar_status['status'] = "Loading Source File"
-    im = readvol(im_file)  # The original image (EM)
+    synanno.im = readvol(im_file)  # The original image (EM)
     synanno.progress_bar_status['status'] = "Loading Target File"
     gt = readvol(gt_file)  # The mask annotation (GT: ground truth)
+    
 
     synanno.progress_bar_status['status'] = "Convert Polarity Prediction to Segmentation"
     if gt.ndim != 3:
@@ -440,24 +441,27 @@ def load_3d_files(im_file, gt_file, patch_size=142, filename_json=None):
         gt = polarity2instance(gt.astype(np.uint8), semantic=False, scale_factors=scales)
     synanno.progress_bar_status['percent'] = int(5) 
 
+    # set max dimensions
+    synanno.vol_dim_z, synanno.vol_dim_y, synanno.vol_dim_x = tuple([s-1 for s in gt.shape])
+
     synanno.progress_bar_status['status'] = "Retrive 2D patches from 3D volume"
     # Processing the 3D volume to get 2D patches.
-    syn, seg = process_syn(gt)
+    syn, synanno.seg = process_syn(gt)
 
 
     synanno.progress_bar_status['status'] = "Render Images"
     
     # if a json was provided process the data accordingly
     if filename_json is not None:
-        visualize(syn, seg, im, sz=patch_size, filename_json=filename_json)
+        visualize(syn, synanno.seg, synanno.im, sz=patch_size, filename_json=filename_json)
         synanno.progress_bar_status['percent'] = int(100) 
-        return None, im, gt
+        return None, synanno.im, gt
     # if no json was provided create a json file and process the data
     else:
-        synanno_json = visualize(syn, seg, im, sz=patch_size)
+        synanno_json = visualize(syn, synanno.seg, synanno.im, sz=patch_size)
         synanno.progress_bar_status['percent'] = int(100) 
         if os.path.isfile(synanno_json):
-            return synanno_json, im, gt
+            return synanno_json, synanno.im, gt
         else:
             # the json file should have been created by the visualize function
             raise FileNotFoundError(

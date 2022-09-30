@@ -16,6 +16,8 @@ import datetime
 # json dependent imports
 import json
 
+# import json util
+import synanno.routes.utils.json_util as json_util
 
 global grid_opacity
 grid_opacity = 0.5
@@ -68,6 +70,9 @@ def set_data(task='annotate',data_name='synAnno.json'):
     if task == 'annotate':
         return render_template('annotation.html', images=session.get('data')[0], page=0, n_pages=session.get('n_pages'), grid_opacity=grid_opacity)
     elif task == 'draw':
+        if synanno.new_json:
+            json_util.reload_json(path=os.path.join('.', 'synAnno.json'))
+            synanno.new_json = False
         return render_template('draw.html', pages=session.get('data'))
 
 
@@ -136,7 +141,7 @@ def save_slices():
     index = int(request.form['data_id']) - 1
 
     data = session.get('data')
-    slices_len = len(os.listdir('./synanno'+ data[page][index]['GT']+'/'))
+    slices_len = len(os.listdir('./synanno'+ data[page][index]['EM']+'/'))
     half_len = int(data[page][index]['Middle_Slice'])
 
     if(slices_len % 2 == 0):

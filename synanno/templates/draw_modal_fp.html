@@ -1,32 +1,30 @@
 <!--View that opens up when clicking "Add New Instance". -->
 <div class="modal fade" id="drawModalFP" tabindex="-1" aria-labelledby="drawModalFP" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content">
-            
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalToggleLabel2">Neuroglancer</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content">
 
-            <div class="modal-body">
-                  
-                    
-                    <div class="row">
-                      <iframe id="ng-iframe-fp" width="800" height="550" src="" title="Neuroglancer"></iframe>
-                    </div>
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalToggleLabel2">Neuroglancer</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
 
+      <div class="modal-body">
 
-                  <div class="modal-footer">
-                      <div class="row"> 
-                        <div class="col"> 
-                          <button id="review_bbox" class="btn btn-primary" type="button" data-bs-target="#drawModalFPSave"
-                            data-bs-toggle="modal">Review</button>
-                        </div>
-                      </div>
-                  </div>
-            </div>
+        <div class="row">
+          <iframe id="ng-iframe-fp" width="800" height="550" src="" title="Neuroglancer"></iframe>
         </div>
+
+        <div class="modal-footer">
+          <div class="row">
+            <div class="col">
+              <button id="review_bbox" class="btn btn-primary" type="button" data-bs-target="#drawModalFPSave"
+                data-bs-toggle="modal">Review</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
 </div>
 
 <!-- Modal for saving the bounding box of the false positve synapses -->

@@ -18,7 +18,10 @@ import synanno
 import json
 
 # neuroglancer dependent imports
-import synanno.routes.utils.ng as ng
+import synanno.routes.utils.ng_util as ng_util
+
+# import json util
+import synanno.routes.utils.json_util as json_util
 
 # global variables
 global source_img  # path to the images
@@ -96,7 +99,7 @@ def upload_file():
 
             # if the NG version number is None setup a new NG viewer
             if synanno.ng_version is None:
-                ng.setup_ng(source_img, target_seg)
+                ng_util.setup_ng(source_img, target_seg)
 
         # test if the created/provided json is valid by loading it
         try:

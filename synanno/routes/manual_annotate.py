@@ -71,11 +71,17 @@ def save_canvas():
 @app.route('/ng_bbox_fp', methods=['POST'])
 @cross_origin()
 def ng_bbox_fp():
-    # retrive the coordinates
+    ''' Ajax response used by static/draw_module.js. 
+        This function serves the coordinates of the center point of a newly marked FP to the front end, 
+        enabling the front end to depict the values and the user to manual update/correct them.
+    '''
 
+    # expand the bb in in z direction
+    # we expand the front and the back z value dependent on their proximity to the boarders
     cz1 = int(synanno.cz) - 10 if int(synanno.cz) - 10 > 0 else 0
     cz2 = int(synanno.cz) + 10 if int(synanno.cz) + 10 < synanno.vol_dim_z else synanno.vol_dim_z
 
+    # server the coordinates to the front end
     return jsonify({
                     'z1': str(cz1),
                     'z2': str(cz2),
@@ -87,6 +93,10 @@ def ng_bbox_fp():
 @app.route('/ng_bbox_fp_save', methods=['POST'])
 @cross_origin()
 def ng_bbox_fp_save():
+    ''' Ajax response used by static/draw_module.js that passes the manual updated/corrected 
+        bb coordinates to this backend function. This function creates a new item instance and 
+        updates the json file.
+    '''
 
     # retrieve manual correction of coordinates
     cz1 = int(request.form["z1"])

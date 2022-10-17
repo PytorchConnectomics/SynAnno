@@ -18,6 +18,7 @@ $(document).ready(function () {
     });
 
     $('#add_new_instance').click(async function (e) {
+        // open a new Neuroglancer view
         req_ng = $.ajax({
             url: '/neuro',
             type: 'POST',
@@ -26,13 +27,13 @@ $(document).ready(function () {
 
         req_ng.done(function (data) {
             ng_link = data.ng_link;
-            console.log(ng_link)
             $('#ng-iframe-fp').attr('src', ng_link)
 
         });
     });
 
     $('#review_bbox').click(async function (e) {
+        // retrieve the bb information from the backend
         $.ajax({
             url: '/ng_bbox_fp',
             type: 'POST',
@@ -49,10 +50,9 @@ $(document).ready(function () {
     });
 
 
-
     $("#save_bbox").click(function () {
-
-        // pass changes to backend
+        // update the bb information with the manuel corrections and pass them to the backend
+        // trigger the processing/save to Json process in the backend
         $.ajax({
             url: '/ng_bbox_fp_save',
             type: 'POST',

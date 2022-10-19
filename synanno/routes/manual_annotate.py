@@ -29,7 +29,7 @@ def draw():
     # overwrite data in session if json has been changed
 
     if synanno.new_json:
-        json_util.reload_json(path=os.path.join('.', 'synAnno.json'))
+        json_util.reload_json(path=os.path.join(os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']),app.config['JSON']))
         synanno.new_json = False
 
 
@@ -109,9 +109,9 @@ def ng_bbox_fp_save():
 
     # add to json
 
-    ## open json and retrieve data
-    filename_json = os.path.join('.', 'synAnno.json')
-    item_list = json.load(open(filename_json))["Data"]
+    # open json and retrieve data
+    path_json = os.path.join(os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']),app.config['JSON'])
+    item_list = json.load(open(path_json))["Data"]
 
     ## create new item
     item = dict()
@@ -185,7 +185,7 @@ def ng_bbox_fp_save():
     final_file = dict()
     final_file["Data"] = item_list
     json_obj = json.dumps(final_file, indent=4, cls=NpEncoder)
-    with open("synAnno.json", "w") as outfile:
+    with open(os.path.join(os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']),app.config['JSON']), "w") as outfile:
         outfile.write(json_obj)
 
     # mark that json was updated

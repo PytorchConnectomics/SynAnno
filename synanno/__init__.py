@@ -42,25 +42,24 @@ progress_bar_status = {"status":"Loading Source File", "percent":0}
 global im
 global seg
 
-im = None
-seg = None
+im, seg = None, None
 
 # document the time needed for proofreading
 global proofread_time
 proofread_time = {"start_grid":None,"finish_grid":None,"difference_grid":None, "start_categorize":None,"finish_categorize":None,"difference_categorize":None}
 
-# volume dimensions
+# record the max volume dimensions for the provided image volume
 global vol_dim_x
 global vol_dim_y
 global vol_dim_z
 
-vol_dim_x = 0
-vol_dim_y = 0
-vol_dim_z = 0
+vol_dim_x, vol_dim_y, vol_dim_z = 0,0,0
+
 
 # neuroglancer instance
 global ng_viewer  # handle to the neurglancer viewer instance
 global ng_version  # versioning number for the neuroglancer instance
+
 ng_version = None # initialize the neuroglancer version number as noon
 
 # backlog for the custom fp bounding boxes
@@ -73,10 +72,7 @@ global cz
 global cy
 global cx
 
-cz1 = 0
-cz2 = 0
-cy = 0
-cx = 0
+cz1, cz2, cy, cx = 0, 0, 0, 0
 
 # indicate whether the json was changed
 global new_json
@@ -86,5 +82,7 @@ from synanno.routes import annotation, finish, opendata, categorize, landingpage
 
 
 @app.context_processor
-def handle_context():
+def handle_context() -> dict:
+    # injects the os variable in to all templates
+    # enabling the use of it in jinja logic
     return dict(os=os)

@@ -34,8 +34,9 @@ def categorize():
 @app.route('/pass_flags', methods=['GET','POST'])
 @cross_origin()
 def pass_flags():
-    global delete_fp
+    global delete_fp # current default is False
 
+    # retrieve the  frontend data
     flags = request.get_json()['flags']
     data = session.get('data')
     pages = len(data)
@@ -65,17 +66,16 @@ def pass_flags():
     if synanno.proofread_time["finish_categorize"] is None:
         synanno.proofread_time["finish_categorize"] = datetime.datetime.now()
         synanno.proofread_time["difference_categorize"] = synanno.proofread_time["finish_categorize"] - synanno.proofread_time["start_categorize"]
-
-    # update the json
-    final_filename = 'results-' + session.get('filename')
+    
     # Exporting the final json and pop session
     if session.get('data') and session.get('n_pages'):
         final_file = dict()
         final_file['Data'] = sum(session['data'], [])
         final_file['Proofread Time'] = synanno.proofread_time
-        with open(os.path.join(app.config['PACKAGE_NAME'],os.path.join(app.config['UPLOAD_FOLDER']),final_filename), 'w') as f:
+        with open(os.path.join(app.config['PACKAGE_NAME'],os.path.join(app.config['UPLOAD_FOLDER']),app.config['JSON']), 'w') as f:
             json.dump(final_file, f, default=json_serial)
 
+        # 
         time.sleep(len(data)*0.3*session['per_page'])
 
         # pass the data to the session
@@ -84,7 +84,7 @@ def pass_flags():
         # returning a JSON formatted response to trigger the ajax success logic
         return json.dumps({'success':True}), 200, {'ContentType':'application/json'} 
     else:
-        return json.dumps({'success':True}), 400, {'ContentType':'application/json'} 
+        return json.dumps({'success':False}), 400, {'ContentType':'application/json'} 
 
 @app.route('/custom_flag', methods=['GET','POST'])
 @cross_origin()

@@ -1,32 +1,30 @@
-# flask 
-from flask import render_template, flash, request, jsonify, session
-from flask_cors import cross_origin
-
-# os and process dependent imports
-import os
-import os.path
-from werkzeug.utils import secure_filename
-
-# backend package
-import synanno.backend.processing as ip
-
-# import the package app 
-from synanno import app
+# import global configs
 import synanno
 
-# json dependent imports
+# import the package app
+from synanno import app
+
+# flask util functions
+from flask_cors import cross_origin
+from flask import render_template, flash, request, jsonify, session
+
+# access and remove files
+import os
+
+# backend package, load the image and target volume
+import synanno.backend.processing as ip
+
+# load existing json
 import json
 
-# neuroglancer dependent imports
+# setup and configuration of Neuroglancer instances
 import synanno.routes.utils.ng_util as ng_util
 
-# import json util
-import synanno.routes.utils.json_util as json_util
 
 # global variables
 global source_img  # path to the images
 global target_seg  # path to the segmentation masks
-global draw_or_annotate # defines the downstream task; either draw or annotate
+global draw_or_annotate  # defines the downstream task; either draw or annotate
 
 
 @app.route('/open_data', defaults={'task': 'annotate'})
@@ -36,8 +34,8 @@ def open_data(task):
 
     draw_or_annotate = task
     if os.path.isdir('./synanno/static/Images/Img'):
-        flash('Click \"Reset Backend\" to clear the memory and start a new task.')
-        return render_template('opendata.html', modecurrent='d-none', modenext='d-none', modereset='inline', mode=draw_or_annotate, filename=secure_filename(app.config['JSON']))
+        flash('Click \"Reset Backend\" to clear the memory, start a new task, and start up a Neuroglancer instance.')
+        return render_template('opendata.html', modecurrent='d-none', modenext='d-none', modereset='inline', mode=draw_or_annotate, path_json=os.path.join(os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']),app.config['JSON']))
     return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate)
 
 
@@ -48,8 +46,9 @@ def upload_file():
     global draw_or_annotate
 
     # Check if files folder exists, if not create it
-    if not os.path.exists(os.path.join('.', os.path.join(app.config['PACKAGE_NAME'],app.config['UPLOAD_FOLDER']))):
-        os.mkdir(os.path.join('.', os.path.join(app.config['PACKAGE_NAME'],app.config['UPLOAD_FOLDER'])))
+    if not os.path.exists(os.path.join('.', os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']))):
+        os.mkdir(os.path.join('.', os.path.join(
+            app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER'])))
 
     # retrive the file paths from the coresponding html fields
     file_original = request.files['file_original']
@@ -75,26 +74,26 @@ def upload_file():
         if original_name and gt_name:
 
             # remove existing json file
-            if os.path.isfile(os.path.join('.', app.config['JSON'])):
-                os.remove(os.path.join('.', app.config['JSON']))
+            if os.path.isfile(os.path.join(os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']),app.config['JSON'])):
+                os.remove(os.path.join(os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']),app.config['JSON']))
 
             # if a json got provided save it locally and process the data based on the JSON info
             if file_json.filename:
-                filename_json = save_file(file_json, app.config['JSON'], '.')
+                path_json = save_file(file_json, app.config['JSON'])
                 _, source_img, target_seg = ip.load_3d_files(
                     os.path.join(
-                        os.path.join(app.config['PACKAGE_NAME'],app.config['UPLOAD_FOLDER']), file_original.filename),
+                        os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']), file_original.filename),
                     os.path.join(
-                        os.path.join(app.config['PACKAGE_NAME'],app.config['UPLOAD_FOLDER']), file_gt.filename),
+                        os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']), file_gt.filename),
                     patch_size=patch_size,
-                    filename_json=filename_json)
+                    path_json=path_json)
             # else compute the bounding box information and write them to a json
             else:
-                filename_json, source_img, target_seg = ip.load_3d_files(
+                path_json, source_img, target_seg = ip.load_3d_files(
                     os.path.join(
-                        os.path.join(app.config['PACKAGE_NAME'],app.config['UPLOAD_FOLDER']), file_original.filename),
+                        os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']), file_original.filename),
                     os.path.join(
-                        os.path.join(app.config['PACKAGE_NAME'],app.config['UPLOAD_FOLDER']), file_gt.filename),
+                        os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']), file_gt.filename),
                     patch_size)
 
             # if the NG version number is None setup a new NG viewer
@@ -103,10 +102,10 @@ def upload_file():
 
         # test if the created/provided json is valid by loading it
         try:
-            with open(filename_json, 'r') as f:
+            with open(path_json, 'r') as f:
                 json.load(f)
             flash('Data ready!')
-            return render_template('opendata.html', filename=filename_json, modecurrent='disabled', modeform='formFileDisabled', mode=draw_or_annotate)
+            return render_template('opendata.html', path_json=path_json, modecurrent='disabled', modeform='formFileDisabled', mode=draw_or_annotate)
         except ValueError as e:
             flash('Something is wrong with the loaded JSON!', 'error')
             return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate)
@@ -119,9 +118,10 @@ def upload_file():
 @cross_origin()
 def progress():
     return jsonify({
-                    'status': synanno.progress_bar_status['status'], 
-                    'progress': synanno.progress_bar_status['percent']
-                    })
+        'status': synanno.progress_bar_status['status'],
+        'progress': synanno.progress_bar_status['percent']
+    })
+
 
 @app.route('/neuro', methods=['POST'])
 @cross_origin()
@@ -138,20 +138,23 @@ def neuro():
     else:
         raise Exception('No NG instance running')
 
-    print(f'Neuroglancer instance running at {synanno.ng_viewer}, centered at x,y,x {oz,oy,ox}')
+    print(
+        f'Neuroglancer instance running at {synanno.ng_viewer}, centered at x,y,x {oz,oy,ox}')
 
-    final_json = jsonify({'ng_link':'http://'+app.config['IP']+':9015/v/'+str(synanno.ng_version)+'/'})
+    final_json = jsonify(
+        {'ng_link': 'http://'+app.config['IP']+':9015/v/'+str(synanno.ng_version)+'/'})
 
     return final_json
 
-def save_file(file, filename, path=os.path.join(app.config['PACKAGE_NAME'],app.config['UPLOAD_FOLDER'])):
+
+def save_file(file, filename, path=os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER'])):
     global draw_or_annotate
-    filename = secure_filename(filename)
     file_ext = os.path.splitext(filename)[1]
     if file_ext not in app.config['UPLOAD_EXTENSIONS']:
         flash('Incorrect file format! Load again.', 'error')
-        render_template('opendata.html', modenext='disabled', mode=draw_or_annotate)
+        render_template('opendata.html', modenext='disabled',
+                        mode=draw_or_annotate)
         return 0
     else:
         file.save(os.path.join(path, filename))
-        return(filename)
+        return (os.path.join(path, filename))

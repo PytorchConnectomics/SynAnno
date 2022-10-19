@@ -26,10 +26,11 @@ def export_masks():
 @app.route('/export/<string:data_type>', methods=['GET'])
 def export_data(data_type):
     if data_type == 'json':
-        final_filename = 'results-' + session.get('filename')
+        path_json = session.get('path_json').split
         # Exporting the final json
         if session.get('data') and session.get('n_pages'):
-            return send_file(os.path.join(os.path.join(app.root_path,app.config['UPLOAD_FOLDER']),final_filename), as_attachment=True, attachment_filename=final_filename)
+
+            return send_file(os.path.join(os.path.join(app.root_path,app.config['UPLOAD_FOLDER']), app.config['JSON']), as_attachment=True, attachment_filename=app.config['JSON'])
         else:
             return render_template('export_json.html')
     elif data_type == 'mask':
@@ -69,8 +70,8 @@ def reset():
                 print('Failed to delete %s. Reason: %s' % (file_path, e))
 
     # delete json file.
-    if os.path.isfile(os.path.join('.', 'synAnno.json')):
-        os.remove(os.path.join('.', 'synAnno.json'))
+    if os.path.isfile(os.path.join(os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']),app.config['JSON'])):
+        os.remove(os.path.join(os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']),app.config['JSON']))
 
     # delete static images
     image_folder = './synanno/static/Images/'

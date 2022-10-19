@@ -22,15 +22,15 @@ import synanno.routes.utils.json_util as json_util
 global grid_opacity
 grid_opacity = 0.5
 
-@app.route('/set-data/<task>/<data_name>')
-@app.route('/set-data/<data_name>')
+@app.route('/set-data/<task>/<json_path>')
+@app.route('/set-data/<json_path>')
 @app.route('/set-data')
-def set_data(task='annotate',data_name='synAnno.json'):
+def set_data(task='annotate',json_path=os.path.join(os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']),app.config['JSON'])):
     """ Sets up the session and calculates the grid view for the annotation route.
     
         Args:
             task: Identifies and links the downstream process: annotate | draw
-            data_name: Name of the json file containing the label information
+            json_path: Path to the json file containing the label information
     """
     global grid_opacity
 
@@ -39,7 +39,7 @@ def set_data(task='annotate',data_name='synAnno.json'):
     session['per_page'] = per_page
 
     # open the json data and save it to the session
-    f = open(os.path.join('.', data_name))
+    f = open(json_path)
     data = json.load(f)
 
     # write the data to the session
@@ -48,7 +48,7 @@ def set_data(task='annotate',data_name='synAnno.json'):
                            for i in range(0, len(data['Data']), per_page)]
 
     # save the name of the json file to the session
-    session['filename'] = data_name
+    session['path_json'] = json_path
 
     # retrive the number of instances in the json {'Data': [ ... ]}
     number_images = len(data['Data'])
@@ -70,8 +70,9 @@ def set_data(task='annotate',data_name='synAnno.json'):
     if task == 'annotate':
         return render_template('annotation.html', images=session.get('data')[0], page=0, n_pages=session.get('n_pages'), grid_opacity=grid_opacity)
     elif task == 'draw':
+        # reload the json, if the user added new FP instances and by doing so updated the JSON
         if synanno.new_json:
-            json_util.reload_json(path=os.path.join('.', 'synAnno.json'))
+            json_util.reload_json(path=os.path.join(os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']),app.config['JSON']))
             synanno.new_json = False
         return render_template('draw.html', pages=session.get('data'))
 

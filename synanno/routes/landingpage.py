@@ -1,10 +1,15 @@
+
+# import the package app
 from synanno import app
 
-from jinja2 import Template # for function type hint
-from flask import render_template  # to render the template
+# flask util functions
+from flask import render_template
+
+# for type hinting
+from jinja2 import Template
 
 
-@app.route("/")
+@app.route('/')
 def landing() -> Template:
     # render the template of the landing page
-    return render_template("landingpage.html") 
+    return render_template('landingpage.html')

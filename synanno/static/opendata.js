@@ -37,6 +37,7 @@ $(document).ready(function(){
         var json = false;
     }
 
+    // enable the 'submit' button if all required files got provided
     $('#formFile').on("change", function(){
         json = true;
 
@@ -45,6 +46,7 @@ $(document).ready(function(){
         }
     });
 
+    // enable the 'submit' button if all required files got provided
     $('#originalFile').on("change", function(){
         source = true;
 
@@ -53,6 +55,7 @@ $(document).ready(function(){
         }
     });
 
+    // enable the 'submit' button if all required files got provided
     $('#gtFile').on("change", function(){
         target = true;
 

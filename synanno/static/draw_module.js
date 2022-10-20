@@ -3,10 +3,13 @@ $(document).ready(function () {
     $('[id^="drawButton-"]').click(async function () {
         var [page, data_id, label] = $($(this)).attr('id').replace(/drawButton-/, '').split('-')
 
+        // we only require the path to load a single slice
+        var mode = "single" 
+
         req_data = $.ajax({
-            url: '/save_slices',
+            url: '/get_instance',
             type: 'POST',
-            data: { data_id: data_id, page: page }
+            data: { mode: mode, data_id: data_id, page: page }
         });
 
         await req_data.done(function (data) {

@@ -9,6 +9,8 @@ $(document).ready(function () {
 });
 
 function ping_backend() {
+  // pulls the process status from the backend
+  // and controls the loading screen
   setTimeout(function () {
     $.ajax({
       url: "/progress",

@@ -44,6 +44,11 @@ global seg
 
 im, seg = None, None
 
+# grid opacity for the annotation view
+global grid_opacity
+
+grid_opacity = 0.5
+
 # document the time needed for proofreading
 global proofread_time
 proofread_time = {"start_grid":None,"finish_grid":None,"difference_grid":None, "start_categorize":None,"finish_categorize":None,"difference_categorize":None}
@@ -78,6 +83,7 @@ cz1, cz2, cy, cx = 0, 0, 0, 0
 global new_json
 new_json = False
 
+# load all views - avoid cycle load
 from synanno.routes import annotation, finish, opendata, categorize, landingpage, manual_annotate
 
 

@@ -88,11 +88,14 @@ def reset() -> Template:
     for key in list(session.keys()):
         session.pop(key)
 
+    # upload folder
+    upload_folder = os.path.join(app.config['PACKAGE_NAME'],app.config['UPLOAD_FOLDER'])
+
     # delete all the uploaded h5 files
-    if os.path.exists(os.path.join('.', os.path.join(app.config['PACKAGE_NAME'],app.config['UPLOAD_FOLDER']))):
-        for filename in os.listdir(os.path.join('.', os.path.join(app.config['PACKAGE_NAME'],app.config['UPLOAD_FOLDER']))):
+    if os.path.exists(os.path.join('.', upload_folder)):
+        for filename in os.listdir(os.path.join('.', upload_folder)):
             file_path = os.path.join(
-                os.path.join('.', os.path.join(app.config['PACKAGE_NAME'],app.config['UPLOAD_FOLDER'])), filename)
+                os.path.join('.', upload_folder), filename)
             try:
                 if os.path.isfile(file_path) or os.path.islink(file_path):
                     os.unlink(file_path)
@@ -106,29 +109,31 @@ def reset() -> Template:
         os.remove(os.path.join(os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']),app.config['JSON']))
 
     # delete static images
-    image_folder = './synanno/static/Images/'
+    static_folder = os.path.join(app.config['PACKAGE_NAME'], app.config['STATIC_FOLDER'])
+    image_folder = os.path.join(static_folder, 'Images')
+    
     if os.path.exists(os.path.join(image_folder, 'Img')):
         try:
             shutil.rmtree(os.path.join(image_folder, 'Img'))
         except Exception as e:
-            print('Failed to delete %s. Reason: %s' % (file_path, e))
+            print('Failed to delete %s. Reason: %s' % (image_folder, e))
 
     if os.path.exists(os.path.join(image_folder, 'Syn')):
         try:
             shutil.rmtree(os.path.join(image_folder, 'Syn'))
         except Exception as e:
-            print('Failed to delete %s. Reason: %s' % (file_path, e))
+            print('Failed to delete %s. Reason: %s' % (image_folder, e))
 
     # delete masks zip file.
-    if os.path.isfile(os.path.join('./synanno/static/', 'custom_masks.zip')):
-        os.remove(os.path.join('./synanno/static/', 'custom_masks.zip'))
+    if os.path.isfile(os.path.join(static_folder, 'custom_masks.zip')):
+        os.remove(os.path.join(static_folder, 'custom_masks.zip'))
 
     # delete custom masks
-    image_folder = './synanno/static/custom_masks/'
-    if os.path.exists(image_folder):
+    mask_folder = os.path.join(static_folder, 'custom_masks')
+    if os.path.exists(mask_folder):
         try:
-            shutil.rmtree(image_folder)
+            shutil.rmtree(mask_folder)
         except Exception as e:
-            print('Failed to delete %s. Reason: %s' % (file_path, e))
+            print('Failed to delete %s. Reason: %s' % (mask_folder, e))
 
     return render_template('landingpage.html')

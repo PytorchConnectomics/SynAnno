@@ -18,13 +18,17 @@ app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
+''' DANGER! 
+    The following three path variables are used by finish.py for deletion.
+    Changing them might lead to unwanted loss of files.
+'''
 app.config['PACKAGE_NAME'] = 'synanno/'
 
-app.config['UPLOAD_FOLDER'] = 'files/' # carful with changing this as it is used for deletion
-
-app.config['UPLOAD_EXTENSIONS'] = ['.json', '.h5']
+app.config['UPLOAD_FOLDER'] = 'files/' 
 
 app.config['STATIC_FOLDER'] = 'static/'
+
+app.config['UPLOAD_EXTENSIONS'] = ['.json', '.h5']
 
 app.config['JSON'] = 'synAnno.json'
 
@@ -67,17 +71,22 @@ global ng_version  # versioning number for the neuroglancer instance
 
 ng_version = None # initialize the neuroglancer version number as noon
 
-# backlog for the custom fp bounding boxes
+# backlog for the custom FN bounding boxes
 global cus_fp_bbs
 
 cus_fp_bbs = []
 
-# values for the current custom fp bounding box
+# values for the current custom FN bounding box
 global cz
 global cy
 global cx
 
 cz1, cz2, cy, cx = 0, 0, 0, 0
+
+# default values expansion of the z bound for the custom FN bounding box
+global z_default
+
+z_default = 10
 
 # indicate whether the json was changed
 global new_json

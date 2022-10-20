@@ -1,16 +1,19 @@
 $(document).ready(function() {
 
+    // update the instance specific values 
     $('.image-card-btn').on('click', function() {
         var data_id = $(this).attr('data_id')
         var page = $(this).attr('page')
         var label = $(this).attr('label')
 
+        // update the label in the backend 
         req = $.ajax({
             url: '/update-card',
             type: 'POST',
             data: {data_id: data_id, page: page, label: label}
         });
 
+        // update the label in the frontend
         req.done(function (data){
             if(label==='Unsure'){
                 $('#id'+data_id).removeClass('unsure').addClass('correct');
@@ -25,24 +28,36 @@ $(document).ready(function() {
         });
     });
 
-    var ng_link; // link to the neuroglancer, edited when ever right clicking an middleslice
+    // link to the NG, edited when ever right clicking an instance in the grid view
+    var ng_link; 
+
+    // variables for the coordinates of the focus of the view with in the NG 
     var cz0;
     var cy0;
     var cx0;
 
+    // retrieve and set the information for the modal instance view
     $('.image-card-btn').bind('contextmenu', async function(e){
         e.preventDefault();
+
+        // instance identifiers
         var data_id = $(this).attr('data_id')
         var page = $(this).attr('page')
-        var label = $(this).attr('label')
-        var strSlice = 0;
 
+        // the instance label
+        var label = $(this).attr('label')
+        
+        // we require the information about the whole instance
+        var mode = 'full'
+
+        // retrieve the info from the backend
         req_data = $.ajax({
-            url: '/save_slices',
+            url: '/get_instance',
             type: 'POST',
-            data: {data_id: data_id, page: page, slice: strSlice}
+            data: {mode: mode, data_id: data_id, page: page}
         });
 
+        // update the modal
         await req_data.done(function (data) {
             $('#rangeSlices').attr('min', data.range_min);
             $('#rangeSlices').attr('max', data.range_min + data.slices_len-1);
@@ -64,6 +79,7 @@ $(document).ready(function() {
 
         });
 
+        // retrieve the updated NG link
         req_ng = $.ajax({
             url: '/neuro',
             type: 'POST',
@@ -77,22 +93,32 @@ $(document).ready(function() {
     });
 
     $('#ng-link').on('click', function (){
+        // update the NG link on click
         $('#ng-iframe').attr('src', ng_link)
     });
 
 
+    // with in the modal view retrieve the instance specific data
+    // to switch between the slices 
     $('#rangeSlices').on('input', function() {
+        // the current slice index
         var rangeValue = $(this).val();
 
+        // the instance identifiers
         var data_id = $(this).attr('data_id')
         var page = $(this).attr('page')
 
+        // we only require the path to load a single slice and the corresponding GT
+        var mode = "single" 
+
+        // retrieve the information from the backend
         req = $.ajax({
-            url: '/get_slice',
+            url: '/get_instance',
             type: 'POST',
-            data: {data_id: data_id, page: page, slice: rangeValue}
+            data: {mode: mode, data_id: data_id, page: page}
         });
 
+        // update the slice and GT that is depicted
         req.done(function (data){
             $('#imgDetails-EM').attr('src',  data.data.EM +'/'+ rangeValue + '.png');
             $('#imgDetails-GT').attr('src',  data.data.GT +'/'+ rangeValue + '.png');
@@ -101,7 +127,7 @@ $(document).ready(function() {
     })
 });
 
-
+// modal view: decrease the opacity of the GT mask
 function dec_opacity() {
     var value = $('#value-opacity').attr('value');
     var new_value = value - 0.1;
@@ -114,6 +140,7 @@ function dec_opacity() {
 
 }
 
+// modal view: increase the opacity of the GT mask
 function add_opacity() {
     var value = $('#value-opacity').attr('value');
     var new_value = parseFloat(value) + 0.1;
@@ -125,7 +152,7 @@ function add_opacity() {
     $('#imgDetails-GT').css('opacity', new_value);
 }
 
-// reduce the opacity of all instances in the current grid view
+// grid view: decrease the opacity of the GT masks
 function dec_opacity_grid() {
     var value = $('#value-opacity-grid').attr('value');
     var new_value = value - 0.1;
@@ -146,10 +173,11 @@ function dec_opacity_grid() {
     });
 }
 
-// increase the opacity of all instances in the current grid view
+// grid view: increase the opacity of the GT masks
 function add_opacity_grid() {
     var value = $('#value-opacity-grid').attr('value');
     var new_value = parseFloat(value) + 0.1;
+    console.log(new_value)
     if(new_value>=1){
         new_value = 1;
     }
@@ -163,11 +191,12 @@ function add_opacity_grid() {
     req = $.ajax({
         url: '/set_grid_opacity',
         type: 'POST',
-        data: {grid_opacity:value}
+        data: {grid_opacity:new_value}
     });
 
 }
 
+// toggle the GT mask in the modal view
 function check_gt(){
     var checkbox = document.getElementById('check-gt');
     if(checkbox.checked==false){
@@ -179,6 +208,7 @@ function check_gt(){
     }
 }
 
+// toggle the image in the modal view
 function check_em(){
     var checkbox = document.getElementById('check-em');
     if(checkbox.checked==false){

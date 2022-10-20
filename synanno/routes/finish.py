@@ -1,36 +1,62 @@
-# flask 
-from flask import render_template, session, send_file
-
-# os and process dependent imports
-import os
-import os.path
-import shutil
-
-# import the package app 
-from synanno import app
+# import global configs
 import synanno
+
+# import the package app
+from synanno import app
+
+# flask util functions
+from flask import render_template, session, send_file, flash
+
+# flask ajax requests
+from flask_cors import cross_origin
+
+# for type hinting
+from jinja2 import Template 
+# enable multiple return types
+from typing import Union
+
+# manage paths and files
+import os
 
 # to zip folder
 import shutil
 
 
-
 @app.route('/export_json')
-def export_json():
+def export_json() -> Template:
+    ''' Renders final view of the annotation process that lets the user download the JSON.
+
+        Return:
+            Export-JSON view
+    '''
     return render_template('export_json.html')
 
 @app.route('/export_masks')
-def export_masks():
+def export_masks() -> Template:
+    ''' Renders final view of the draw process that lets the user download the custom masks.
+
+        Return:
+            Export-masks view
+    '''
     return render_template('export_masks.html')
 
 @app.route('/export/<string:data_type>', methods=['GET'])
-def export_data(data_type):
+def export_data(data_type) -> Union[Template, app.response_class]:
+    ''' Download the JSON or the custom masks.
+
+        Args:
+            data_type: Specifies the data type for download | json, or masks
+
+        Return:
+            Either sends the JSON or the masks to the users download folder
+            or rerenders the export view if there is now file that could be downloaded
+    '''
     if data_type == 'json':
-        final_filename = 'results-' + session.get('filename')
-        # Exporting the final json
+        # exporting the final json
         if session.get('data') and session.get('n_pages'):
-            return send_file(os.path.join(os.path.join(app.root_path,app.config['UPLOAD_FOLDER']),final_filename), as_attachment=True, attachment_filename=final_filename)
+            return send_file(os.path.join(os.path.join(app.root_path,app.config['UPLOAD_FOLDER']), app.config['JSON']), as_attachment=True, attachment_filename=app.config['JSON'])
         else:
+            flash('Now file - session data is empty.', 'error')
             return render_template('export_json.html')
     elif data_type == 'mask':
         total_folder_path = os.path.join(os.path.join(app.root_path,app.config['STATIC_FOLDER']),'custom_masks')
@@ -39,14 +65,21 @@ def export_data(data_type):
             shutil.make_archive(total_folder_path, 'zip', total_folder_path)
             return send_file(os.path.join(os.path.join(app.root_path,app.config['STATIC_FOLDER']), 'custom_masks.zip'), as_attachment=True)
         else:
+            flash('The folder containing custom masks is empty. Did you draw custom masks?', 'error')
             return render_template('export_masks.html')    
 
 
 @app.route('/reset')
-def reset():
+def reset() -> Template:
+    ''' Resets all process by pooping all the session content, resting the process bar, resting the timer,
+        deleting the h5 source and target file, deleting the JSON, the images, masks and zip folder.
+
+        Return:
+            Renders the landing-page view.
+    '''
 
     # reset progress bar 
-    synanno.progress_bar_status = {"status":"Loading Source File", "percent":0}
+    synanno.progress_bar_status = {'status':'Loading Source File', 'percent':0}
 
     # reset time
     synanno.proofread_time = dict.fromkeys(synanno.proofread_time, None)
@@ -55,11 +88,14 @@ def reset():
     for key in list(session.keys()):
         session.pop(key)
 
+    # upload folder
+    upload_folder = os.path.join(app.config['PACKAGE_NAME'],app.config['UPLOAD_FOLDER'])
+
     # delete all the uploaded h5 files
-    if os.path.exists(os.path.join('.', os.path.join(app.config['PACKAGE_NAME'],app.config['UPLOAD_FOLDER']))):
-        for filename in os.listdir(os.path.join('.', os.path.join(app.config['PACKAGE_NAME'],app.config['UPLOAD_FOLDER']))):
+    if os.path.exists(os.path.join('.', upload_folder)):
+        for filename in os.listdir(os.path.join('.', upload_folder)):
             file_path = os.path.join(
-                os.path.join('.', os.path.join(app.config['PACKAGE_NAME'],app.config['UPLOAD_FOLDER'])), filename)
+                os.path.join('.', upload_folder), filename)
             try:
                 if os.path.isfile(file_path) or os.path.islink(file_path):
                     os.unlink(file_path)
@@ -69,27 +105,35 @@ def reset():
                 print('Failed to delete %s. Reason: %s' % (file_path, e))
 
     # delete json file.
-    if os.path.isfile(os.path.join('.', 'synAnno.json')):
-        os.remove(os.path.join('.', 'synAnno.json'))
+    if os.path.isfile(os.path.join(os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']),app.config['JSON'])):
+        os.remove(os.path.join(os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']),app.config['JSON']))
 
     # delete static images
-    image_folder = './synanno/static/Images/'
-    if os.path.exists(image_folder):
+    static_folder = os.path.join(app.config['PACKAGE_NAME'], app.config['STATIC_FOLDER'])
+    image_folder = os.path.join(static_folder, 'Images')
+    
+    if os.path.exists(os.path.join(image_folder, 'Img')):
         try:
-            shutil.rmtree(image_folder)
+            shutil.rmtree(os.path.join(image_folder, 'Img'))
         except Exception as e:
-            print('Failed to delete %s. Reason: %s' % (file_path, e))
+            print('Failed to delete %s. Reason: %s' % (image_folder, e))
+
+    if os.path.exists(os.path.join(image_folder, 'Syn')):
+        try:
+            shutil.rmtree(os.path.join(image_folder, 'Syn'))
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (image_folder, e))
 
     # delete masks zip file.
-    if os.path.isfile(os.path.join('./synanno/static/', 'custom_masks.zip')):
-        os.remove(os.path.join('./synanno/static/', 'custom_masks.zip'))
+    if os.path.isfile(os.path.join(static_folder, 'custom_masks.zip')):
+        os.remove(os.path.join(static_folder, 'custom_masks.zip'))
 
     # delete custom masks
-    image_folder = './synanno/static/custom_masks/'
-    if os.path.exists(image_folder):
+    mask_folder = os.path.join(static_folder, 'custom_masks')
+    if os.path.exists(mask_folder):
         try:
-            shutil.rmtree(image_folder)
+            shutil.rmtree(mask_folder)
         except Exception as e:
-            print('Failed to delete %s. Reason: %s' % (file_path, e))
+            print('Failed to delete %s. Reason: %s' % (mask_folder, e))
 
     return render_template('landingpage.html')

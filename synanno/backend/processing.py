@@ -47,8 +47,9 @@ from scipy.ndimage import find_objects
 
 from .utils import *
 
-import synanno
 
+import synanno # import global configs
+from synanno import app # import the package app
 
 # Processing the synpases using binary dilation as well as by removing small objects.
 def process_syn(gt, small_thres=16):
@@ -235,13 +236,13 @@ def calculate_rot(syn, struct_sz=3, return_overlap=False, mode='linear'):
     return angle, slope
 
 
-def visualize(syn, seg, img, sz, return_data=False, iterative_bbox=False, filename_json=None):
+def visualize(syn, seg, img, sz, return_data=False, iterative_bbox=False, path_json=None):
     crop_size = int(sz * 1.415) # considering rotation 
 
     item_list, data_dict = [], {}
 
-    if filename_json is not None:
-        item_list = json.load(open(filename_json))["Data"]
+    if path_json is not None:
+        item_list = json.load(open(path_json))["Data"]
     else:
         seg_idx = np.unique(seg)[1:] # ignore background
         if not iterative_bbox:
@@ -252,7 +253,7 @@ def visualize(syn, seg, img, sz, return_data=False, iterative_bbox=False, filena
 
     # specify the list we iterate over (index list or json)
     instance_list = []
-    if filename_json is not None:
+    if path_json is not None:
         instance_list = item_list
     else:
         instance_list = seg_idx
@@ -264,7 +265,7 @@ def visualize(syn, seg, img, sz, return_data=False, iterative_bbox=False, filena
     # iterate over the synapses. save the middle slices and before/after ones for navigation.
     for i, inst in enumerate(instance_list):
 
-        if filename_json is not None:
+        if path_json is not None:
             idx = inst["Image_Index"]
         else:
             idx = inst
@@ -274,7 +275,7 @@ def visualize(syn, seg, img, sz, return_data=False, iterative_bbox=False, filena
         temp = (seg == idx) # binary mask of the current synapse
 
         # create a new item for the JSON file with defaults.
-        if filename_json is None:
+        if path_json is None:
             item = dict()
             item["Image_Index"] = int(idx)
             item["GT"] = "/"+"/".join(syn_all.strip(".\\").split("/")[2:])
@@ -309,12 +310,12 @@ def visualize(syn, seg, img, sz, return_data=False, iterative_bbox=False, filena
             cropped_syn, syn_bbox, padding = crop_pad_data(syn, z_mid_total, crop_2d, mask=temp, return_box=True)
             cropped_img = crop_pad_data(img, z_mid_total, crop_2d, pad_val=128)
 
-            # calculate the padding for frontend display, later used for unpadding.
+            # calculate the padding for frontend display, later used for unpadding
             item["Adjusted_Bbox"] = [bbox[0], bbox[1]] + syn_bbox
 
             item["Padding"] = padding
 
-            # calculate and save the angle of rotation.
+            # calculate and save the angle of rotation
             angle, _ = calculate_rot(cropped_syn, return_overlap=False, mode='linear')
 
             img_dtype, syn_dtype = cropped_img.dtype, cropped_syn.dtype
@@ -409,25 +410,30 @@ def visualize(syn, seg, img, sz, return_data=False, iterative_bbox=False, filena
         return data_dict
 
     # create and export the JSON File
-    if filename_json is None:
+    if path_json is None:
         final_file = dict()
         final_file["Data"] = item_list
         json_obj = json.dumps(final_file, indent=4, cls=NpEncoder)
-        with open("synAnno.json", "w") as outfile:
+
+        path_json = os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER'])
+        name_json = app.config['JSON']
+
+        with open(os.path.join(path_json, name_json), "w") as outfile:
             outfile.write(json_obj)
 
-        synanno_json = os.path.join('.', 'synAnno.json')
+        synanno_json = os.path.join(path_json, name_json)
         return synanno_json
     else:
         return
 
 
 
-def load_3d_files(im_file, gt_file, patch_size=142, filename_json=None):
+def load_3d_files(im_file, gt_file, patch_size=142, path_json=None):
     synanno.progress_bar_status['status'] = "Loading Source File"
-    im = readvol(im_file)  # The original image (EM)
+    synanno.im = readvol(im_file)  # The original image (EM)
     synanno.progress_bar_status['status'] = "Loading Target File"
     gt = readvol(gt_file)  # The mask annotation (GT: ground truth)
+    
 
     synanno.progress_bar_status['status'] = "Convert Polarity Prediction to Segmentation"
     if gt.ndim != 3:
@@ -440,24 +446,27 @@ def load_3d_files(im_file, gt_file, patch_size=142, filename_json=None):
         gt = polarity2instance(gt.astype(np.uint8), semantic=False, scale_factors=scales)
     synanno.progress_bar_status['percent'] = int(5) 
 
+    # set max dimensions
+    synanno.vol_dim_z, synanno.vol_dim_y, synanno.vol_dim_x = tuple([s-1 for s in gt.shape])
+
     synanno.progress_bar_status['status'] = "Retrive 2D patches from 3D volume"
     # Processing the 3D volume to get 2D patches.
-    syn, seg = process_syn(gt)
+    syn, synanno.seg = process_syn(gt)
 
 
     synanno.progress_bar_status['status'] = "Render Images"
     
     # if a json was provided process the data accordingly
-    if filename_json is not None:
-        visualize(syn, seg, im, sz=patch_size, filename_json=filename_json)
+    if path_json is not None:
+        visualize(syn, synanno.seg, synanno.im, sz=patch_size, path_json=path_json)
         synanno.progress_bar_status['percent'] = int(100) 
-        return None, im, gt
+        return None, synanno.im, gt
     # if no json was provided create a json file and process the data
     else:
-        synanno_json = visualize(syn, seg, im, sz=patch_size)
+        synanno_json = visualize(syn, synanno.seg, synanno.im, sz=patch_size)
         synanno.progress_bar_status['percent'] = int(100) 
         if os.path.isfile(synanno_json):
-            return synanno_json, im, gt
+            return synanno_json, synanno.im, gt
         else:
             # the json file should have been created by the visualize function
             raise FileNotFoundError(

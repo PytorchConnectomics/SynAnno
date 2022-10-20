@@ -83,10 +83,7 @@ $(document).ready(function () {
                 resolve(flags) 
             }
 
-            if (nr_elements==0){
-                resolve(flags) 
-            }
-            
+            // update the error ids of the faulty instances
             $('[id^="id_error_"]').each(function (index) {
                 var [page, img_id] = $($(this)).attr('id').replace(/id_error_/, '').split('_')
                 if ($('[id^="falsePositive_"]', $(this)).is(":checked")) {
@@ -107,13 +104,11 @@ $(document).ready(function () {
                 if (index==nr_elements-1){
                     resolve(flags)
                 }
-                console.log(index)
             });
         })
 
         promise_error.then( (data) => {
-            console.log(data)
-
+            
             // update the backend
             req = $.ajax({
                 url: '/pass_flags',
@@ -125,7 +120,6 @@ $(document).ready(function () {
 
             req.success(function(){
                 window.location.href = "export_json"
-                //console.log("done")
             })
 
             req.error(function(xhr, status, error) {

@@ -1,7 +1,12 @@
 {% extends "templatebase.html" %}
 
 {% block help_content %}
-<p class="text-muted">TEXT MISSING</p>
+<p class="text-muted">
+    The view depicts the "Incorrect" and "Unsure" labeled samples. 
+    The top of each card displays the error description, and the image depicts the sample's center slice and corresponding mask. Clicking "Add New Instance" on the bottom of the first card opens the Neuroglancer (NG) and lets you add False Negatives (FN). FNs are added by moving the mouse pointer to the center of the so far undetected instance in the NG and clicking the key "c" (for center). This leaves a yellow marker in the NG. When clicking on review, the corresponding coordinates are depicted and can be manually adjusted. By clicking "Save," a new card is added at the end of the row of cards, marked as "Incorrect" (red), labeled as "False Negative," and only depicting the image.
+    Clicking on "Draw Mask" on any of the cards, except the first one, opens an instance-specific module that lets you redraw the mask for the center slice of the instance. After activating the canvas in the draw module, you start tracing the synaptic cleft by setting keypoints through right mouse clicks. After placing at least three key points, the line can be filled - coloring one side in turkeys and one in pink. Clicking "Switch" switches the colors. Moving the lever at the bottom, adjust the thickness of the filled-in line. Clicking "Revise" lets you scrap the created line. This enables you, for example, to split it into two. Pressing "Save" overwrites the existing mask for the center slice with the newly drawn one.
+    You can later download the nearly created center slices when clicking "Submit and Finish." Such a newly drawn mask is then named based on the index of the instance, the z value of the middle slice of the instance, and the bounding box.
+</p>
 {% endblock %}
 
 {% block content %}
@@ -12,10 +17,27 @@
     <div class="container-fluid py-2">
         <div class="d-flex flex-row flex-nowrap overflow-auto">
 
-            <p>{% if os.path.exists('./synanno/static/custom_masks/idx_12_ms_4_cor_2_6_1129_1329_0_153.png') %} "HIIIIII" {%endif%} </p>
+            <div class="card border rounded card-body card-body-proof-read text-center"
+                style="border-width:4px !important;">
+                <h5 class="card-header border-bottom-0 mb-2">False Negative</h5>
+                <div class="card-block border-0 p-1 image-card-btn unsure mt-auto" label="Unsure">
+                    <div class="main-image-categorize">
+                        <img class="img_categorize" src="/static/Images/place_holder_fp.png" width="64px" height="64px">
+                    </div>
+                </div>
+                <div class="card-block mt-2 mt-auto">
+                    <div class="col justify-content-center">
+                        <button id="add_new_instance" class="btn btn-primary" type="button"
+                            data-bs-target="#drawModalFP" data-bs-toggle="modal" data-bs-dismiss="modal">Add New
+                            Instance</button>
+                    </div>
+                </div>
+            </div>
+
             {% for images in pages%}
+
             {% set pages_loop = loop %}
-            {% for image in images %}            
+            {% for image in images %}
 
             {% if (image.Label == 'Incorrect' or image.Label == 'Unsure') %}
 
@@ -24,29 +46,40 @@
             {% set custom_mask_path_check =  './synanno/static/custom_masks/' ~ custom_mask_name %}
             {% set custom_mask_path_load =  '/static/custom_masks/' ~ custom_mask_name %}
 
-            <div class="card border rounded card-body card-body-proof-read text-center" style="border-width:4px !important;" id="id_error-{{pages_loop.index-1}}_{{loop.index}}">
+            <div class="card border rounded card-body card-body-proof-read text-center"
+                style="border-width:4px !important;" id="id_error-{{pages_loop.index-1}}_{{loop.index}}">
                 <h5 class="card-header border-bottom-0 mb-2">{{image.Error_Description}}</h5>
                 <div class="card-block border-0 p-1 image-card-btn {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}"
                     page="{{pages_loop.index - 1 }}" data_id="{{ loop.index }}"
                     label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}">
                     <div class="main-image-categorize">
+                        {% if image.Error_Description != "False Negatives"%}
                         <img id="imgEM-GT-{{pages_loop.index-1}}-{{loop.index}}" class="img_categorize"
-                            src="{% if os.path.exists(custom_mask_path_check) %} {{custom_mask_path_load}} {% else %} {{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"  width="64px" height="64px"
-                            style="opacity: 0.5; ">
+                            src="{% if os.path.exists(custom_mask_path_check) %} {{custom_mask_path_load}} {% else %} {{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
+                            width="64px" height="64px" style="opacity: 0.5; ">
+                        {% else %}
+                        <img id="imgEM-GT-{{pages_loop.index-1}}-{{loop.index}}" class="img_categorize"
+                            src="{% if os.path.exists(custom_mask_path_check) %} {{custom_mask_path_load}} {% else %} {{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
+                            width="64px" height="64px" style="opacity: 0.5; ">
+                        {% endif %}
                         <img id="imgGT-{{pages_loop.index-1}}-{{loop.index}}" class="img_categorize"
                             src="{{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}}" width="64px" height="64px">
                     </div>
                 </div>
                 <div class="card-block mt-2">
                     <div class="col justify-content-center">
-                        <button class="btn btn-primary" id="drawButton-{{pages_loop.index-1}}-{{loop.index}}-{{image.Label}}" type="button" data-bs-target="#drawModal"
-                            data-bs-toggle="modal" data-bs-dismiss="modal">Draw Mask</button>
+                        <button class="btn btn-primary"
+                            id="drawButton-{{pages_loop.index-1}}-{{loop.index}}-{{image.Label}}" type="button"
+                            data-bs-target="#drawModal" data-bs-toggle="modal" data-bs-dismiss="modal">Draw
+                            Mask</button>
                     </div>
                 </div>
             </div>
             {% endif %}
             {% endfor %}
             {% endfor %}
+
+
         </div>
     </div>
     <!-- Show in case no data was detected -->
@@ -59,8 +92,11 @@
     </div>
 </div>
 
-<!-- Modal for synapse slice-->
+<!-- Modal for synapse mask correction -->
 {% include "draw_modal.html" %}
+
+<!-- Modal for adding false positve synapses -->
+{% include "draw_modal_fp.html" %}
 
 <script src="{{ url_for('static', filename='draw_module.js') }}"></script>
 

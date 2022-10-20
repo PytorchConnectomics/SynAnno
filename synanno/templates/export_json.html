@@ -1,8 +1,8 @@
 {% extends "templatebase.html" %}
 
 {% block help_content %}
-<p class="text-muted"> 
-    Click "Save Results" to download the JSON. 
+<p class="text-muted">
+    Click "Save Results" to download the JSON.
     Click "Start New Process" to go back to the root page and start proofreading a new dataset.
     Click "Edit Bad Labels" to redraw the center label for the instances marked as "Wrong" or "Unsure".
 
@@ -17,7 +17,8 @@
     <p> Click "Open new data" to go back to the import page.</p>
 </div>
 <div class="mt-4">
-    <a type="button" class="btn btn-primary {{ btn_status }}" href="{{ url_for('export_data',  data_type ='json')}}">Download JSON</a>
+    <a type="button" class="btn btn-primary {{ btn_status }}"
+        href="{{ url_for('export_data',  data_type ='json')}}">Download JSON</a>
     <a type="button" class="btn btn-secondary ml-2 " href="{{ url_for('reset')}}">Start New Process</a>
     <a type="button" class="btn btn-secondary ml-2 " href="{{ url_for('draw')}}">Edit Bad Labels</a>
 </div>

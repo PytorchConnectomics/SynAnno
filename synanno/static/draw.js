@@ -160,6 +160,7 @@ $(document).ready(function () {
     // switch the polarity
     $("#canvasButtonPolarity").on("click", function () {
         ctx.restore() // restore default settings
+        split_mask = false; // turn of eraser
         // switch the colors based on the toggle value
         if (color_toggle == 0) {
             color_1 = pink
@@ -177,6 +178,7 @@ $(document).ready(function () {
     // create the mask based on the drawn spline
     $("#canvasButtonCreate").on("click", function () {
         ctx.restore() // restore default settings
+        split_mask = false; // turn of eraser
         draw_mask = false; // do not let the user draw any more points
         fill_clip(color_1, color_2, thickness) // draw the mask
         // activate all options for manipulating and saving the mask
@@ -189,6 +191,7 @@ $(document).ready(function () {
     // adapt the thickness of the spline
     $('#thickness_range').on('input', function () { 
         ctx.restore() // restore default settings
+        split_mask = false; // turn of eraser
         thickness = $(this).val() // retrieve the current thickness value
         fill_clip(color_1, color_2, thickness, sample=false) // redraw the mask
     });

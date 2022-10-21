@@ -5,9 +5,10 @@ from random import randint
 import synanno
 from synanno import app
 
+# for type hinting
+import numpy as np
 
-
-def setup_ng(source_img, target_seg):
+def setup_ng(source_img: np.typing.NDArray, target_seg: np.typing.NDArray) -> None:
     ''' Setup function for the Neuroglancer (ng) that enables the recording and depiction 
         of center markers for newly identified FN instances.
 

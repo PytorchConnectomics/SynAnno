@@ -4,7 +4,7 @@ $(document).ready(function () {
         var [page, data_id, label] = $($(this)).attr('id').replace(/drawButton-/, '').split('-')
 
         // we only require the path to load a single slice
-        var mode = "single" 
+        var mode = 'single' 
 
         req_data = $.ajax({
             url: '/get_instance',
@@ -25,7 +25,7 @@ $(document).ready(function () {
         req_ng = $.ajax({
             url: '/neuro',
             type: 'POST',
-            data: { cz0: 0, cy0: 0, cx0: 0 }
+            data: { cz0: 0, cy0: 0, cx0: 0, mode: 'draw' }
         });
 
         req_ng.done(function (data) {
@@ -53,7 +53,7 @@ $(document).ready(function () {
     });
 
 
-    $("#save_bbox").click(function () {
+    $('#save_bbox').click(function () {
         // update the bb information with the manuel corrections and pass them to the backend
         // trigger the processing/save to Json process in the backend
         $.ajax({

@@ -1,11 +1,11 @@
 $(document).ready(function () {
 
     // retrieve canvas and set 2D context
-    var canvas = $("canvas.coveringCanvas");
-    var ctx = canvas.get(0).getContext("2d");
+    var canvas = $('canvas.coveringCanvas');
+    var ctx = canvas.get(0).getContext('2d');
 
     // set red as default color; used for the control points
-    ctx.fillStyle = "#FF0000";
+    ctx.fillStyle = '#FF0000';
 
     // initialize mouse position to zero
     var mousePosition = {
@@ -53,8 +53,8 @@ $(document).ready(function () {
     const custom_mask_path = '/static/custom_masks/'
 
     // make sure that the modal is reset every time it get closed
-    $(".modal").on("hidden.bs.modal", function(){
-        $("canvas.coveringCanvas").addClass('d-none')
+    $('.modal').on('hidden.bs.modal', function(){
+        $('canvas.coveringCanvas').addClass('d-none')
     });
 
     // setup/reset the canvas when ever a draw button is clicked
@@ -64,11 +64,11 @@ $(document).ready(function () {
         [page, data_id, label] = $($(this)).attr('id').replace(/drawButton-/, '').split('-')
 
         // ensure that all options except the activate canvas button are disabled at start
-        $("#canvasButtonCreate").prop("disabled", true);
-        $("#canvasButtonPolarity").prop("disabled", true);
-        $("#thickness_range").prop("disabled", true);
-        $("#canvasButtonSplit").prop("disabled", true);
-        $("#canvasButtonSave").prop("disabled", true);
+        $('#canvasButtonCreate').prop('disabled', true);
+        $('#canvasButtonPolarity').prop('disabled', true);
+        $('#thickness_range').prop('disabled', true);
+        $('#canvasButtonSplit').prop('disabled', true);
+        $('#canvasButtonSave').prop('disabled', true);
         
         ctx.restore() // restore default settings
 
@@ -76,10 +76,10 @@ $(document).ready(function () {
         height = canvas.get(0).height // retrieve the width of the canvas
 
         // set red as default color; used for the control points
-        ctx.fillStyle = "#FF0000";
+        ctx.fillStyle = '#FF0000';
 
         // reset activation button
-        $("#canvasButtonActivate").text("Activate");
+        $('#canvasButtonActivate').text('Activate');
         
         
         clear_canvas() // clear previous output
@@ -97,15 +97,15 @@ $(document).ready(function () {
 
 
     // on click activate canvas
-    $("#canvasButtonActivate").on("click", function () {
+    $('#canvasButtonActivate').on('click', function () {
         
         ctx.restore() // restore default settings
 
         // activate canvas for the first time after clicking a 'Draw Mask' button
-        if ($("canvas.coveringCanvas").hasClass('d-none')){
-            $("#canvasButtonActivate").text("Reset"); // switch the button label to 'Reset'
-            $("canvas.coveringCanvas").removeClass('d-none') // change the visibility of the canvas
-            rect = $("canvas.coveringCanvas").get(0).getBoundingClientRect() // get absolute rect. of canvas
+        if ($('canvas.coveringCanvas').hasClass('d-none')){
+            $('#canvasButtonActivate').text('Reset'); // switch the button label to 'Reset'
+            $('canvas.coveringCanvas').removeClass('d-none') // change the visibility of the canvas
+            rect = $('canvas.coveringCanvas').get(0).getBoundingClientRect() // get absolute rect. of canvas
             width = canvas.get(0).width // retrieve the width of the canvas
             height = canvas.get(0).height // retrieve the width of the canvas
             split_mask = false // deactivate mask splitting
@@ -113,11 +113,11 @@ $(document).ready(function () {
         // reset canvas
         }else{
             // disable all options except the activate canvas button
-            $("#canvasButtonCreate").prop("disabled", true);
-            $("#canvasButtonPolarity").prop("disabled", true);
-            $("#thickness_range").prop("disabled", true);
-            $("#canvasButtonSplit").prop("disabled", true);
-            $("#canvasButtonSave").prop("disabled", true);
+            $('#canvasButtonCreate').prop('disabled', true);
+            $('#canvasButtonPolarity').prop('disabled', true);
+            $('#thickness_range').prop('disabled', true);
+            $('#canvasButtonSplit').prop('disabled', true);
+            $('#canvasButtonSave').prop('disabled', true);
 
             clear_canvas() // clear previous output
             points = [] // reset the point list
@@ -130,14 +130,14 @@ $(document).ready(function () {
 
 
     // activate event for splitting/erasing the curve
-    $("#canvasButtonSplit").on("click", function () {
+    $('#canvasButtonSplit').on('click', function () {
         ctx.save() // save the canvas settings
         ctx.globalCompositeOperation = 'destination-out'; // change the settings such that new input overwrites existing one
         split_mask = true; 
     });
 
     // if split_mask is set to true turns the mouse pointer in to a circular eraser
-    $("canvas.coveringCanvas").mousemove(function( event ){
+    $('canvas.coveringCanvas').mousemove(function( event ){
         if (split_mask){
             // detect possible changes in mouse position
             if ((mousePosition.x != event.clientX  || mousePosition.y != event.clientY) && event.buttons == 1) {
@@ -148,7 +148,7 @@ $(document).ready(function () {
                 var pos = getXY(this, event)
                 var x = pos.x
                 var y = pos.y
-                ctx.strokeStyle = "#000";
+                ctx.strokeStyle = '#000';
                 ctx.beginPath();
                 ctx.moveTo(x + thickness, y)
                 ctx.ellipse(x, y, thickness, Math.floor(thickness/2), 0, 0, Math.PI * 2)
@@ -158,7 +158,7 @@ $(document).ready(function () {
      })
 
     // switch the polarity
-    $("#canvasButtonPolarity").on("click", function () {
+    $('#canvasButtonPolarity').on('click', function () {
         ctx.restore() // restore default settings
         split_mask = false; // turn of eraser
         // switch the colors based on the toggle value
@@ -177,7 +177,7 @@ $(document).ready(function () {
     });
 
     // create the mask based on the drawn spline
-    $("#canvasButtonCreate").on("click", function () {
+    $('#canvasButtonCreate').on('click', function () {
         ctx.restore() // restore default settings
         split_mask = false; // turn of eraser
         draw_mask = false; // do not let the user draw any more points
@@ -191,10 +191,10 @@ $(document).ready(function () {
         }
 
         // activate all options for manipulating and saving the mask
-        $("#canvasButtonPolarity").prop("disabled", false);
-        $("#thickness_range").prop("disabled", false);
-        $("#canvasButtonSplit").prop("disabled", false);
-        $("#canvasButtonSave").prop("disabled", false);
+        $('#canvasButtonPolarity').prop('disabled', false);
+        $('#thickness_range').prop('disabled', false);
+        $('#canvasButtonSplit').prop('disabled', false);
+        $('#canvasButtonSave').prop('disabled', false);
     });
 
     // adapt the thickness of the spline
@@ -210,8 +210,8 @@ $(document).ready(function () {
         var dataURL = canvas.get(0).toDataURL(); // retrieve the image from the canvas as a base64 encoding
         // send the base64 encoded image to the backend
         await $.ajax({
-            type: "POST",
-            url: "/save_canvas",
+            type: 'POST',
+            url: '/save_canvas',
             type: 'POST',
             data: {imageBase64: dataURL, data_id: data_id, page: page}
              // update the depicted mask with the newly drawn mask
@@ -236,7 +236,7 @@ $(document).ready(function () {
     })
 
     // set start, end, and control points for curve that draws the mask
-    $("canvas.coveringCanvas").on("click", function (e) {
+    $('canvas.coveringCanvas').on('click', function (e) {
         if (draw_mask){
             clear_canvas() // clear canvas
             ctx.beginPath() // init path
@@ -253,7 +253,7 @@ $(document).ready(function () {
             if (points.length > 2) {
                 draw_quad_line(points)
                 // activate the fill button should the length of point be greater 2
-                $("#canvasButtonCreate").prop("disabled", false);
+                $('#canvasButtonCreate').prop('disabled', false);
             }
             // if the list only contains two points draw straight light
             else if (points.length > 1) {
@@ -358,7 +358,7 @@ $(document).ready(function () {
 
         }
         else{
-            console.log("A mask needs at least 3 points")
+            console.log('A mask needs at least 3 points')
         }
     };
 
@@ -425,32 +425,32 @@ $(document).ready(function () {
 
         if (int_start.d == int_end.d) {
             ctx.lineTo(int_start.x, int_start.y) // if both ends go through the same boarder
-        } else if (int_start.d == "bot" && int_end.d == "top") {
+        } else if (int_start.d == 'bot' && int_end.d == 'top') {
             ctx.lineTo(0, 0) // top left corner
             ctx.lineTo(0, height) // bottom left corner
             ctx.lineTo(int_start.x, int_start.y) // intersection
-        } else if (int_start.d == "top" && int_end.d == "bot") {
+        } else if (int_start.d == 'top' && int_end.d == 'bot') {
             ctx.lineTo(0, height) // bottom left corner
             ctx.lineTo(0, 0) // top left corner
             ctx.lineTo(int_start.x, int_start.y) // intersection
-        } else if (int_start.d == "right" && int_end.d == "left") {
+        } else if (int_start.d == 'right' && int_end.d == 'left') {
             ctx.lineTo(0, 0) // top left corner
             ctx.lineTo(width, 0) // top right corner
             ctx.lineTo(int_start.x, int_start.y) // intersection
-        } else if (int_start.d == "left" && int_end.d == "right") {
+        } else if (int_start.d == 'left' && int_end.d == 'right') {
             ctx.lineTo(width, 0) // top right corner
             ctx.lineTo(0, 0) // top left corner
             ctx.lineTo(int_start.x, int_start.y) // intersection
-        } else if (int_start.d == "top" && int_end.d == "right" || int_start.d == "right" && int_end.d == "top") {
+        } else if (int_start.d == 'top' && int_end.d == 'right' || int_start.d == 'right' && int_end.d == 'top') {
             ctx.lineTo(width, 0) // top right corner
             ctx.lineTo(int_start.x, int_start.y) // intersection
-        } else if (int_start.d == "top" && int_end.d == "left" || int_start.d == "left" && int_end.d == "top") {
+        } else if (int_start.d == 'top' && int_end.d == 'left' || int_start.d == 'left' && int_end.d == 'top') {
             ctx.lineTo(0, 0) // top left corner
             ctx.lineTo(int_start.x, int_start.y) // intersection
-        } else if (int_start.d == "bot" && int_end.d == "right" || int_start.d == "right" && int_end.d == "bot") {
+        } else if (int_start.d == 'bot' && int_end.d == 'right' || int_start.d == 'right' && int_end.d == 'bot') {
             ctx.lineTo(width, height) // top right corner
             ctx.lineTo(int_start.x, int_start.y) // intersection
-        } else if (int_start.d == "bot" && int_end.d == "left" || int_start.d == "left" && int_end.d == "bot") {
+        } else if (int_start.d == 'bot' && int_end.d == 'left' || int_start.d == 'left' && int_end.d == 'bot') {
             ctx.lineTo(0, height) // top right corner
             ctx.lineTo(int_start.x, int_start.y) // intersection
         }
@@ -470,7 +470,7 @@ $(document).ready(function () {
             if (y2 < y1) {
                 x = (0 - b) / m
                 if (x <= width && x >= 0) {
-                    return { x: x, y: 0, d: "top" }
+                    return { x: x, y: 0, d: 'top' }
                 }
             }
 
@@ -478,34 +478,34 @@ $(document).ready(function () {
             if (y2 > y1) {
                 x = (height - b) / m
                 if (x <= width && x >= 0) {
-                    return { x: x, y: height, d: "bot" }
+                    return { x: x, y: height, d: 'bot' }
                 }
             }
 
             // intersection with the right border
             y = width * m + b
             if (y <= height && y >= 0) {
-                return { x: width, y: y, d: "right" }
+                return { x: width, y: y, d: 'right' }
             }
         } else{
             // intersection with the top border 
             if (y2 < y1) {
                 x = (0 - b) / m
                 if (x <= width && x >= 0) {
-                    return { x: x, y: 0, d: "top" }
+                    return { x: x, y: 0, d: 'top' }
                 }
             }
             // intersection with bottom border
             if (y2 > y1) {
                 x = (height - b) / m
                 if (x <= width && x >= 0) {
-                    return { x: x, y: height, d: "bot" }
+                    return { x: x, y: height, d: 'bot' }
                 }
             }
             // intersection with the left border
             y = 0 * m + b
             if (y <= height && y >= 0) {
-                return { x: 0, y: y, d: "left" }
+                return { x: 0, y: y, d: 'left' }
             }
 
         }

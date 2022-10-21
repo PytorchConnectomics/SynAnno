@@ -2,13 +2,13 @@ $(document).ready(function () {
 
     // check and complete the custom error fields based on the provided json
     $('[id^="customFlag_"]').each(function () {
-        if ($(this).hasClass("checked")) {
+        if ($(this).hasClass('checked')) {
             var [page, img_id] = $($(this)).attr('id').replace(/customFlag_/, '').split('_')
             var customFlagButton = '#customFlagButton_' + page + '_' + img_id
             var customFlagInput = '#customFlagInput_' + page + '_' + img_id
             $(customFlagButton).prop('checked', true);
-            $(customFlagInput).prop("disabled", false);
-            $(customFlagInput).prop('placeholder', "RANDOM");
+            $(customFlagInput).prop('disabled', false);
+            $(customFlagInput).prop('placeholder', 'RANDOM');
 
             // ajax call to retrieve the text of the custom flag button
             req = $.ajax({
@@ -28,16 +28,16 @@ $(document).ready(function () {
 
     // check "bad fit" fields based on the provided json
     $('[id^="badFit_"]').each(function () {
-        if ($(this).hasClass("checked")) {
-            $(this).removeClass("checked");
+        if ($(this).hasClass('checked')) {
+            $(this).removeClass('checked');
             $(this).prop('checked', true);
         }
     });
 
     // check "polarity" switch fields based on the provided json
     $('[id^="polaritySwitch_"]').each(function () {
-        if ($(this).hasClass("checked")) {
-            $(this).removeClass("checked");
+        if ($(this).hasClass('checked')) {
+            $(this).removeClass('checked');
             $(this).prop('checked', true);
         }
     });
@@ -46,32 +46,32 @@ $(document).ready(function () {
     $('[id^="customFlagButton_"]').change(function () {
         var [page, img_id] = $($(this)).attr('id').replace(/customFlagButton_/, '').split('_')
         var customFlagId = '#customFlagInput_' + page + '_' + img_id
-        $(customFlagId).prop("disabled", false);
+        $(customFlagId).prop('disabled', false);
     });
 
     $('[id^="falsePositive_"]').change(function () {
         var [page, img_id] = $($(this)).attr('id').replace(/falsePositive_/, '').split('_')
         var customFlagId = '#customFlagInput_' + page + '_' + img_id
-        $(customFlagId).prop("disabled", true);
+        $(customFlagId).prop('disabled', true);
     });
 
     $('[id^="badFit_"]').change(function () {
         var [page, img_id] = $($(this)).attr('id').replace(/badFit_/, '').split('_')
         var customFlagId = '#customFlagInput_' + page + '_' + img_id
-        $(customFlagId).prop("disabled", true);
+        $(customFlagId).prop('disabled', true);
     });
 
     $('[id^="polaritySwitch_"]').change(function () {
         var [page, img_id] = $($(this)).attr('id').replace(/polaritySwitch_/, '').split('_')
         var customFlagId = '#customFlagInput_' + page + '_' + img_id
-        $(customFlagId).prop("disabled", true);
+        $(customFlagId).prop('disabled', true);
     });
 
     // process the flags: [[pager number, image number, flag], ..., [pager number, image number, flag]]
     $('#submit_button').click(async function () {
         
         // show loading screen 
-        $('#progressModal').modal("show");
+        $('#progressModal').modal('show');
 
         var promise_error = new Promise ((resolve,reject) =>{
             var flags = []
@@ -86,20 +86,20 @@ $(document).ready(function () {
             // update the error ids of the faulty instances
             $('[id^="id_error_"]').each(function (index) {
                 var [page, img_id] = $($(this)).attr('id').replace(/id_error_/, '').split('_')
-                if ($('[id^="falsePositive_"]', $(this)).is(":checked")) {
-                    flags.push({ page: page, idx: img_id, flag: "falsePositive" })
+                if ($('[id^="falsePositive_"]', $(this)).is(':checked')) {
+                    flags.push({ page: page, idx: img_id, flag: 'falsePositive' })
                 }
-                else if ($('[id^="badFit_"]', $(this)).is(":checked")) {
-                    flags.push({ page: page, idx: img_id, flag: "badFit" })
+                else if ($('[id^="badFit_"]', $(this)).is(':checked')) {
+                    flags.push({ page: page, idx: img_id, flag: 'badFit' })
                 }
-                else if ($('[id^="polaritySwitch_"]', $(this)).is(":checked")) {
-                    flags.push({ page: page, idx: img_id, flag: "polaritySwitch" })
+                else if ($('[id^="polaritySwitch_"]', $(this)).is(':checked')) {
+                    flags.push({ page: page, idx: img_id, flag: 'polaritySwitch' })
                 }
-                else if ($('[id^="customFlagButton_"]', $(this)).is(":checked")) {
+                else if ($('[id^="customFlagButton_"]', $(this)).is(':checked')) {
                     flags.push({ page: page, idx: img_id, flag: $('[id^="customFlagInput_"]', $(this)).val() })
                 }
                 else {
-                    flags.push({ page: page, idx: img_id, flag: "None" })
+                    flags.push({ page: page, idx: img_id, flag: 'None' })
                 }
                 if (index==nr_elements-1){
                     resolve(flags)
@@ -119,11 +119,11 @@ $(document).ready(function () {
             });
 
             req.success(function(){
-                window.location.href = "export_json"
+                window.location.href = 'export_json'
             })
 
             req.error(function(xhr, status, error) {
-                var err = eval("(" + xhr.responseText + ")");
+                var err = eval('(' + xhr.responseText + ')');
                 alert(err.Message);
             })
         });

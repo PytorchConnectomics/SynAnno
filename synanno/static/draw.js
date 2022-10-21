@@ -405,6 +405,7 @@ $(document).ready(function () {
                 // intersection with boundary
                 intersection_end = intersection(points[pl - 1].x, points[pl - 1].y, points[pl].x, points[pl].y)
                 intersection_start = intersection(points[1].x, points[1].y, points[0].x, points[0].y)
+                close_intersection(intersection_start, intersection_end)
                 ctx.closePath()
             }else{
                 ctx.lineTo(line_intersection.x, line_intersection.y)

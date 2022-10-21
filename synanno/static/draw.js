@@ -160,6 +160,7 @@ $(document).ready(function () {
     // switch the polarity
     $("#canvasButtonPolarity").on("click", function () {
         ctx.restore() // restore default settings
+        split_mask = false; // turn of eraser
         // switch the colors based on the toggle value
         if (color_toggle == 0) {
             color_1 = pink
@@ -171,14 +172,24 @@ $(document).ready(function () {
             color_toggle = 0
         }
         // redraw the curve
-        fill_clip(color_1, color_2, thickness)
+        // do not sample new points along the line
+        fill_clip(color_1, color_2, thickness, sample=false)
     });
 
     // create the mask based on the drawn spline
     $("#canvasButtonCreate").on("click", function () {
         ctx.restore() // restore default settings
+        split_mask = false; // turn of eraser
         draw_mask = false; // do not let the user draw any more points
-        fill_clip(color_1, color_2, thickness) // draw the mask
+
+        if (!(pointsQBez.length > 0)) {
+            // sample points along splines and draw the mask
+            fill_clip(color_1, color_2, thickness, sample = true) 
+        } else {
+            // draw the mask, reuse sampled points
+            fill_clip(color_1, color_2, thickness, sample = false) 
+        }
+
         // activate all options for manipulating and saving the mask
         $("#canvasButtonPolarity").prop("disabled", false);
         $("#thickness_range").prop("disabled", false);
@@ -189,6 +200,7 @@ $(document).ready(function () {
     // adapt the thickness of the spline
     $('#thickness_range').on('input', function () { 
         ctx.restore() // restore default settings
+        split_mask = false; // turn of eraser
         thickness = $(this).val() // retrieve the current thickness value
         fill_clip(color_1, color_2, thickness, sample=false) // redraw the mask
     });
@@ -272,7 +284,7 @@ $(document).ready(function () {
     }
 
     // converts the mask line in to a volume mask with polarity indication
-    function fill_clip(color_1, color_2, thickness, sample=true) {
+    function fill_clip(color_1, color_2, thickness, sample=false) {
         
         clear_canvas() // clear the canvas
         ctx.beginPath() // init new path
@@ -284,8 +296,8 @@ $(document).ready(function () {
 
             // sample lines along the created quadratic curve
             if (sample){
-                ax = points[0].x // retrieve start point
-                ay = points[0].y // retrieve end point
+                ax = points[0].x // retrieve start point x
+                ay = points[0].y // retrieve start point y
                 // iterate over all intermediate points
                 for (i = 1; i < pl - 2; i++) {
                     
@@ -295,7 +307,8 @@ $(document).ready(function () {
                     by = (points[i].y + points[i + 1].y)/2
 
                     // sample the current line segment
-                    plotQBez(pointsQBez, 100, ax, ay, cx, cy, bx, by)
+                    // the number of samples per line segment depends on the length of the segment
+                    plotQBez(pointsQBez, Math.floor(Math.abs(ax-bx) + Math.abs(ay-by)), ax, ay, cx, cy, bx, by)
 
                     ax = bx
                     ay = by
@@ -305,7 +318,9 @@ $(document).ready(function () {
                 by = points[pl-1].y
                 cx = points[pl-2].x
                 cy = points[pl-2].y
-                plotQBez(pointsQBez, 100, ax, ay, cx, cy, bx, by)
+                // sample the last line segment
+                // the number of samples per line segment depends on the length of the segment
+                plotQBez(pointsQBez, Math.floor(Math.abs(ax-bx) + Math.abs(ay-by)), ax, ay, cx, cy, bx, by)
             }            
             
             ctx.save(); // save the current settings
@@ -340,7 +355,6 @@ $(document).ready(function () {
             // fill the closed shape with the second color - will only fill the clipping region with in the closed shape
             ctx.fill()
             ctx.restore();
-
 
         }
         else{
@@ -499,7 +513,8 @@ $(document).ready(function () {
     }
 
     function slope(startX, endX, startY, endY) {
-        return (endY - startY) / (endX - startX)
+        // adding EPSILON to avoid division through zero
+        return (endY - startY) / ((endX - startX) + Number.EPSILON)
     }
 
     function offset(x, y, m) {

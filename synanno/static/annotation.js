@@ -83,7 +83,7 @@ $(document).ready(function() {
         req_ng = $.ajax({
             url: '/neuro',
             type: 'POST',
-            data: {cz0: cz0, cy0: cy0, cx0: cx0}
+            data: {cz0: cz0, cy0: cy0, cx0: cx0, mode: 'annotate'}
         });
 
         req_ng.done(function (data){
@@ -109,7 +109,7 @@ $(document).ready(function() {
         var page = $(this).attr('page')
 
         // we only require the path to load a single slice and the corresponding GT
-        var mode = "single" 
+        var mode = 'single' 
 
         // retrieve the information from the backend
         req = $.ajax({
@@ -201,10 +201,10 @@ function check_gt(){
     var checkbox = document.getElementById('check-gt');
     if(checkbox.checked==false){
         $('#imgDetails-GT').css('display', 'none');
-        $('#check-em').prop("disabled", true);
+        $('#check-em').prop('disabled', true);
     } else {
         $('#imgDetails-GT').css('display', 'block');
-        $('#check-em').prop("disabled", false);
+        $('#check-em').prop('disabled', false);
     }
 }
 
@@ -214,10 +214,10 @@ function check_em(){
     if(checkbox.checked==false){
         $('#imgDetails-GT').css('background-color', 'black');
         $('#imgDetails-GT').css('opacity', '1');
-        $('#check-gt').prop("disabled", true);
+        $('#check-gt').prop('disabled', true);
     } else {
         $('#imgDetails-GT').css('background-color', 'transparent');
         $('#imgDetails-GT').css('opacity', '1');
-        $('#check-gt').prop("disabled", false);
+        $('#check-gt').prop('disabled', false);
     }
 }

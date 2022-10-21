@@ -2,7 +2,7 @@ from flask import session
 import json
 
 
-def reload_json(path):
+def reload_json(path: str) -> None:
     ''' Loads the Json and overwrites the current session information with its content
 
         Args:

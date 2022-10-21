@@ -232,10 +232,17 @@ def neuro() -> dict[str, object]:
     '''
 
     # unpack the coordinates for the new focus point of the view
-    oz = int(request.form['cz0'])
-    oy = int(request.form['cy0'])
-    ox = int(request.form['cx0'])
+    mode = str(request.form['mode'])
 
+    if mode == "annotate":
+        oz = int(request.form['cz0'])
+        oy = int(request.form['cy0'])
+        ox = int(request.form['cx0'])
+    elif mode == 'draw':
+        oz = synanno.vol_dim_z // 2
+        oy = synanno.vol_dim_y // 2
+        ox = synanno.vol_dim_x // 2
+        
     if synanno.ng_version is not None:
         # update the view focus of the running NG instance
         with synanno.ng_viewer.txn() as s:

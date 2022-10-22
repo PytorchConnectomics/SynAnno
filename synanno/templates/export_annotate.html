@@ -2,7 +2,7 @@
 
 {% block help_content %}
 <p class="text-muted">
-    Click "Save Results" to download the JSON.
+    Click "Download JSON" to download the JSON.
     Click "Start New Process" to go back to the root page and start proofreading a new dataset.
     Click "Edit Bad Labels" to redraw the center label for the instances marked as "Wrong" or "Unsure".
 
@@ -13,14 +13,16 @@
 
 <div>
     <h2 class="mb-1">You finalized the proofreading of your data! </h2>
-    <p> Click "Save results" to export a json file containing the final labels of the your data.</p>
-    <p> Click "Open new data" to go back to the import page.</p>
+    <p> </p>
 </div>
 <div class="mt-4">
-    <a type="button" class="btn btn-primary {{ btn_status }}"
+    <a id="dl_annotate_json" type="button" class="btn btn-primary {{ btn_status }}"
         href="{{ url_for('export_data',  data_type ='json')}}">Download JSON</a>
-    <a type="button" class="btn btn-secondary ml-2 " href="{{ url_for('reset')}}">Start New Process</a>
-    <a type="button" class="btn btn-secondary ml-2 " href="{{ url_for('draw')}}">Edit Bad Labels</a>
+    <a type="button" class="btn btn-secondary ml-2" href="{{ url_for('draw')}}">Edit Bad Labels</a>
+    <a id="annotate_new_process" type="button" class="btn btn-secondary ml-2 {{disable_snp}}" href="{{ url_for('reset')}}">Start New Process</a>
 </div>
+
+
+<script src="{{ url_for('static', filename='export.js') }}"></script>
 
 {% endblock %}

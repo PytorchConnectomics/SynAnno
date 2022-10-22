@@ -107,7 +107,7 @@ def pass_flags() -> dict[str, object]:
             json.dump(final_file, f, default=json_serial)
 
         # provide sufficient time for the json update
-        time.sleep(len(data)*0.2*session['per_page'])
+        time.sleep(len(data)*0.01*session['per_page'])
 
         # pass the data to the session
         session['data'] = data

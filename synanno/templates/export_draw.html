@@ -1,0 +1,30 @@
+{% extends "templatebase.html" %}
+
+{% block help_content %}
+<p class="text-muted">
+    Click "Download Masks" to export the manually drawn segmentation masks.
+    Click "Download JSON" to export a JSON file containing the detail to all instances - including the newly added FNs.
+    Click "Start New Process" to return to the landing page.
+</p>
+{% endblock %}
+
+{% block content %}
+
+<div>
+    <h2 class="mb-1">You finalized the proofreading of your data! </h2>
+    <p> </p>
+</div>
+<div class="mt-4">
+
+    <a id="dl_draw_masks" type="button" class="btn btn-primary {{ btn_status }}"
+        href="{{ url_for('export_data', data_type ='mask')}}">Download Masks</a>
+
+    <a id="dl_draw_JSON" type="button" class="btn btn-primary {{ btn_status }}"
+        href="{{ url_for('export_data', data_type ='json')}}">Download JSON</a>
+
+    <a id="draw_new_process" type="button" class="btn btn-secondary ml-2 {{disable_snp}}" href="{{ url_for('reset')}}">Start New Process</a>
+</div>
+
+<script src="{{ url_for('static', filename='export.js') }}"></script>
+
+{% endblock %}

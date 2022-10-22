@@ -119,7 +119,7 @@ $(document).ready(function () {
             });
 
             req.success(function(){
-                window.location.href = 'export_json'
+                window.location.href = 'export_annotate'
             })
 
             req.error(function(xhr, status, error) {

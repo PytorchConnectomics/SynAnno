@@ -32,7 +32,6 @@ from werkzeug.datastructures import MultiDict
 # global variables
 global draw_or_annotate  # defines the downstream task; either draw or annotate
 
-
 @app.route('/open_data', defaults={'task': 'annotate'})
 @app.route('/open_data/<string:task>', methods=['GET'])
 def open_data(task: str) -> Template:

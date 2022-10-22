@@ -2,12 +2,11 @@
 
 {% block help_content %}
 <p class="text-muted">Categorize the faulty labels. Scroll sideways to see all cards.
-    After categorizing all instances, click on "Submit and Finish".</p>
+    After categorizing all instances, click on "Submit and Finish." You will be prompted with a dialog asking if the Instances marked as False Positive (FP) should be deleted.
+    If you select yes, such instances will be removed entirely from the JSON.</p>
 
 <p class="text-muted">Note: Right-click an instance to enlarge the patch, navigate surrounding slices, and open the
     Neuroglancer at that instance position.</p>
-
-<p class="text-muted">Warning: Instances marked as False Positive (FP) will be fully removed from the JSON.</p>
 
 {% endblock %}
 
@@ -17,6 +16,7 @@
 <div class="container-fluid content-row mt-5 ">
 
     <div class="container-fluid py-2">
+        
         <div class="d-flex flex-row flex-nowrap overflow-auto">
             {% for images in pages%}
             {% set pages_loop = loop %}
@@ -26,9 +26,11 @@
 
             <div class="card card-body card-body-proof-read border rounded" style="border-width:4px !important;"
                 id="id_error_{{pages_loop.index-1}}_{{loop.index-1}}">
+                
                 <div class="card-block border-0 p-1 image-card-btn {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}"
                     page="{{pages_loop.index - 1 }}" data_id="{{ loop.index }}"
                     label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}">
+                    
                     <div class="main-image-categorize">
                         <img id="imgEM-GT-{{loop.index-1}}" class="img_categorize"
                             src="{{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}}" width="64px" height="64px"
@@ -36,9 +38,12 @@
                         <img id="imgGT-{{loop.index-1}}" class="img_categorize"
                             src="{{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}}" width="64px" height="64px">
                     </div>
+
                 </div>
                 <div class="card-block">
+
                     <div class="form">
+                        
                         <div class="form-check m-2">
                             <input class="form-check-input" type="radio"
                                 name="select_{{pages_loop.index-1}}_{{loop.index-1}}"
@@ -46,6 +51,7 @@
                             <label class="form-check-label" for="falsePositive"></label>
                             False Positive
                         </div>
+                        
                         <div class="form-check m-2">
                             <input
                                 class="form-check-input {% if image.Error_Description == 'badFit' %}checked{% endif %}"
@@ -54,6 +60,7 @@
                             <label class="form-check-label" for="badFit"></label>
                             Bad Fit
                         </div>
+                        
                         <div class="form-check m-2">
                             <input
                                 class="form-check-input {% if image.Error_Description == 'polaritySwitch' %}checked{% endif %}"
@@ -62,56 +69,46 @@
                             <label class="form-check-label" for="polaritySwitch"></label>
                             Polarity Switch
                         </div>
+                        
                         <div class="input-group {% if (image.Error_Description != 'polaritySwitch') and (image.Error_Description != 'badFit') and (image.Error_Description != 'None') %}checked{% endif %}"
                             id="customFlag_{{pages_loop.index-1}}_{{loop.index-1}}">
+                            
                             <div class="input-group-text">
                                 <input type="radio" name="select_{{pages_loop.index-1}}_{{loop.index-1}}"
                                     id="customFlagButton_{{pages_loop.index-1}}_{{loop.index-1}}"
                                     aria-label="Radio button for following text input">
                             </div>
+
                             <input type="text" class="form-control disabled"
                                 id="customFlagInput_{{pages_loop.index-1}}_{{loop.index-1}}"
                                 aria-label="Text input with radio button" placeholder="Custom Flag" disabled>
                         </div>
+
                     </div>
+
                 </div>
 
             </div>
+
             {% endif %}
             {% endfor %}
             {% endfor %}
+
         </div>
+
     </div>
+
     <!-- Show in case no data was detected -->
     <div class="p-5 mb-2 bg-secondary text-white text-center d-none">No instances were marked as faulty!</div>
 
 
-    <div class="m-4 p-1">
-        <a type="button" id="submit_button" class="btn btn-primary {{ modenext }}">Submit and Finish</a>
+     <div class="m-4 p-1">
+            <a type="button" id="submit_button" class="btn btn-primary {{ modenext }}" data-bs-target="#categorizeModalFPSave"
+            data-bs-toggle="modal">Submit and Finish</a>
     </div>
+
 </div>
 
-
-<!-- Modal with progress bar -->
-<div class="modal fade" id="progressModal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="exampleModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-body">
-                <div class="spinner d-flex flex-column align-items-center justify-content-center">
-                    <div class="row">
-                        <div class="spinner-border" role="status">
-                            <span class="sr-only">Loading...</span>
-                        </div>
-                    </div>
-                    <div class="row" id="spinnerText">
-                        <strong>Updating JSON</strong>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Modal for synapse slice-->
 {% include "annotation_single.html" %}
@@ -119,6 +116,11 @@
 <!-- Modal for neuroglancer slice-->
 {% include "annotation_neuro.html" %}
 
+<!-- Modal for FP deletion-->
+{% include "categorize_modal_dl_fp.html" %}
+
+<!-- Modal for progress bar-->
+{% include "categorize_modal_progress.html" %}
 
 <script src="{{ url_for('static', filename='categorize.js') }}"></script>
 

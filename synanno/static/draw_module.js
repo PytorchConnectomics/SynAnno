@@ -4,7 +4,7 @@ $(document).ready(function () {
         var [page, data_id, label] = $($(this)).attr('id').replace(/drawButton-/, '').split('-')
 
         // we only require the path to load a single slice
-        var mode = 'single' 
+        var mode = 'single'
 
         req_data = $.ajax({
             url: '/get_instance',

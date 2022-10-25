@@ -45,8 +45,8 @@
                     <div class="form">
                         
                         <div class="form-check m-2">
-                            <input class="form-check-input" type="radio"
-                                name="select_{{pages_loop.index-1}}_{{loop.index-1}}"
+                            <input class="form-check-input {% if image.Error_Description == 'falsePositive' %}checked{% endif %}" 
+                                type="radio" name="select_{{pages_loop.index-1}}_{{loop.index-1}}"
                                 id="falsePositive_{{pages_loop.index-1}}_{{loop.index-1}}" value="option1">
                             <label class="form-check-label" for="falsePositive"></label>
                             False Positive
@@ -67,10 +67,10 @@
                                 type="radio" name="select_{{pages_loop.index-1}}_{{loop.index-1}}"
                                 id="polaritySwitch_{{pages_loop.index-1}}_{{loop.index-1}}" value="option3">
                             <label class="form-check-label" for="polaritySwitch"></label>
-                            Polarity Switch
+                            Polarity Switchs
                         </div>
                         
-                        <div class="input-group {% if (image.Error_Description != 'polaritySwitch') and (image.Error_Description != 'badFit') and (image.Error_Description != 'None') %}checked{% endif %}"
+                        <div class="input-group {% if (image.Error_Description != 'polaritySwitch') and (image.Error_Description != 'falsePositive') and (image.Error_Description != 'badFit') and (image.Error_Description != 'None')  %}checked{% endif %}"
                             id="customFlag_{{pages_loop.index-1}}_{{loop.index-1}}">
                             
                             <div class="input-group-text">

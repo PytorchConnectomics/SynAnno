@@ -20,7 +20,7 @@ $(document).ready(function () {
             });
 
             req.done(function (data){
-                $(customFlagInput).prop('placeholder', data.message);
+                $(customFlagInput).val(data.message);
             });
 
         }
@@ -36,6 +36,14 @@ $(document).ready(function () {
 
     // check "polarity" switch fields based on the provided json
     $('[id^="polaritySwitch_"]').each(function () {
+        if ($(this).hasClass('checked')) {
+            $(this).removeClass('checked');
+            $(this).prop('checked', true);
+        }
+    });
+
+    // check "polarity" switch fields based on the provided json
+    $('[id^="falsePositive_"]').each(function () {
         if ($(this).hasClass('checked')) {
             $(this).removeClass('checked');
             $(this).prop('checked', true);

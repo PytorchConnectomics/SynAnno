@@ -28,9 +28,9 @@ from werkzeug.datastructures import MultiDict
 
 
 # global variable defining if instances marked as false positives are directly discarded
-global delete_fp
+global delete_fps
 
-delete_fp = False
+delete_fps = False
 
 @app.route('/categorize')
 def categorize() -> Template:
@@ -65,10 +65,11 @@ def pass_flags() -> dict[str, object]:
     '''
 
     # variable specifying if instances marked as FP are discarded, the default is False
-    global delete_fp 
+    global delete_fps 
 
     # retrieve the  frontend data
     flags = request.get_json()['flags']
+    delete_fps = bool(request.get_json()['delete_fps'])
     data = session.get('data')
     pages = len(data)
 
@@ -79,12 +80,12 @@ def pass_flags() -> dict[str, object]:
     for flag in flags:
         page_nr, img_nr, f = dict(flag).values()
         # deleting false positives
-        if f == 'falsePositive' and delete_fp:
+        if f == 'falsePositive' and delete_fps:
             false_positives[int(page_nr)].append(int(img_nr))
         else:
             data[int(page_nr)][int(img_nr)]['Error_Description'] = str(f)
 
-    if delete_fp:
+    if delete_fps:
         # delete the FPs
         for p in range(0,pages):
             # sort the indexes that should be deleted
@@ -107,7 +108,7 @@ def pass_flags() -> dict[str, object]:
             json.dump(final_file, f, default=json_serial)
 
         # provide sufficient time for the json update
-        time.sleep(len(data)*0.2*session['per_page'])
+        time.sleep(len(data)*0.01*session['per_page'])
 
         # pass the data to the session
         session['data'] = data

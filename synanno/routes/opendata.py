@@ -30,8 +30,8 @@ from jinja2 import Template
 from werkzeug.datastructures import MultiDict
 
 # global variables
-global draw_or_annotate  # defines the downstream task; either draw or annotate
-
+global draw_or_annotate  # defines the downstream task; either draw or annotate - default to annotate
+draw_or_annotate = 'annotate'
 
 @app.route('/open_data', defaults={'task': 'annotate'})
 @app.route('/open_data/<string:task>', methods=['GET'])

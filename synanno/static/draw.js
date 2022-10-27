@@ -36,7 +36,7 @@ $(document).ready(function () {
     // define colors
     const turquoise = 'rgba(51, 255, 240)';
     const pink = 'rgba(252, 14, 249)';
-    
+
     // set polarity default
     var color_1 = turquoise
     var color_2 = pink
@@ -53,7 +53,7 @@ $(document).ready(function () {
     const custom_mask_path = '/static/custom_masks/'
 
     // make sure that the modal is reset every time it get closed
-    $('.modal').on('hidden.bs.modal', function(){
+    $('.modal').on('hidden.bs.modal', function () {
         $('canvas.coveringCanvas').addClass('d-none')
     });
 
@@ -69,7 +69,7 @@ $(document).ready(function () {
         $('#thickness_range').prop('disabled', true);
         $('#canvasButtonSplit').prop('disabled', true);
         $('#canvasButtonSave').prop('disabled', true);
-        
+
         ctx.restore() // restore default settings
 
         width = canvas.get(0).width // retrieve the width of the canvas
@@ -80,8 +80,8 @@ $(document).ready(function () {
 
         // reset activation button
         $('#canvasButtonActivate').text('Activate');
-        
-        
+
+
         clear_canvas() // clear previous output
         points = [] // reset the point list
         pointsQBez = [] // reset the pointsQBez list
@@ -98,11 +98,11 @@ $(document).ready(function () {
 
     // on click activate canvas
     $('#canvasButtonActivate').on('click', function () {
-        
+
         ctx.restore() // restore default settings
 
         // activate canvas for the first time after clicking a 'Draw Mask' button
-        if ($('canvas.coveringCanvas').hasClass('d-none')){
+        if ($('canvas.coveringCanvas').hasClass('d-none')) {
             $('#canvasButtonActivate').text('Reset'); // switch the button label to 'Reset'
             $('canvas.coveringCanvas').removeClass('d-none') // change the visibility of the canvas
             rect = $('canvas.coveringCanvas').get(0).getBoundingClientRect() // get absolute rect. of canvas
@@ -110,8 +110,8 @@ $(document).ready(function () {
             height = canvas.get(0).height // retrieve the width of the canvas
             split_mask = false // deactivate mask splitting
             draw_mask = true // activate mask drawing
-        // reset canvas
-        }else{
+            // reset canvas
+        } else {
             // disable all options except the activate canvas button
             $('#canvasButtonCreate').prop('disabled', true);
             $('#canvasButtonPolarity').prop('disabled', true);
@@ -124,7 +124,7 @@ $(document).ready(function () {
             pointsQBez = [] // reset the pointsQBez list
             split_mask = false // deactivate mask splitting
             draw_mask = true // activate mask drawing
-            
+
         }
     });
 
@@ -133,14 +133,14 @@ $(document).ready(function () {
     $('#canvasButtonSplit').on('click', function () {
         ctx.save() // save the canvas settings
         ctx.globalCompositeOperation = 'destination-out'; // change the settings such that new input overwrites existing one
-        split_mask = true; 
+        split_mask = true;
     });
 
     // if split_mask is set to true turns the mouse pointer in to a circular eraser
-    $('canvas.coveringCanvas').mousemove(function( event ){
-        if (split_mask){
+    $('canvas.coveringCanvas').mousemove(function (event) {
+        if (split_mask) {
             // detect possible changes in mouse position
-            if ((mousePosition.x != event.clientX  || mousePosition.y != event.clientY) && event.buttons == 1) {
+            if ((mousePosition.x != event.clientX || mousePosition.y != event.clientY) && event.buttons == 1) {
                 mousePosition.x = event.clientX;
                 mousePosition.y = event.clientY;
 
@@ -151,11 +151,11 @@ $(document).ready(function () {
                 ctx.strokeStyle = '#000';
                 ctx.beginPath();
                 ctx.moveTo(x + thickness, y)
-                ctx.ellipse(x, y, thickness, Math.floor(thickness/2), 0, 0, Math.PI * 2)
-                ctx.fill();                    
+                ctx.ellipse(x, y, thickness, Math.floor(thickness / 2), 0, 0, Math.PI * 2)
+                ctx.fill();
             }
         }
-     })
+    })
 
     // switch the polarity
     $('#canvasButtonPolarity').on('click', function () {
@@ -173,7 +173,7 @@ $(document).ready(function () {
         }
         // redraw the curve
         // do not sample new points along the line
-        fill_clip(color_1, color_2, thickness, sample=false)
+        fill_clip(color_1, color_2, thickness, sample = false)
     });
 
     // create the mask based on the drawn spline
@@ -184,10 +184,10 @@ $(document).ready(function () {
 
         if (!(pointsQBez.length > 0)) {
             // sample points along splines and draw the mask
-            fill_clip(color_1, color_2, thickness, sample = true) 
+            fill_clip(color_1, color_2, thickness, sample = true)
         } else {
             // draw the mask, reuse sampled points
-            fill_clip(color_1, color_2, thickness, sample = false) 
+            fill_clip(color_1, color_2, thickness, sample = false)
         }
 
         // activate all options for manipulating and saving the mask
@@ -198,53 +198,53 @@ $(document).ready(function () {
     });
 
     // adapt the thickness of the spline
-    $('#thickness_range').on('input', function () { 
+    $('#thickness_range').on('input', function () {
         ctx.restore() // restore default settings
         split_mask = false; // turn of eraser
         thickness = $(this).val() // retrieve the current thickness value
-        fill_clip(color_1, color_2, thickness, sample=false) // redraw the mask
+        fill_clip(color_1, color_2, thickness, sample = false) // redraw the mask
     });
 
     // save the current mask
-    $('#canvasButtonSave').on('click', async function(){
+    $('#canvasButtonSave').on('click', async function () {
         var dataURL = canvas.get(0).toDataURL(); // retrieve the image from the canvas as a base64 encoding
         // send the base64 encoded image to the backend
         await $.ajax({
             type: 'POST',
             url: '/save_canvas',
             type: 'POST',
-            data: {imageBase64: dataURL, data_id: data_id, page: page}
-             // update the depicted mask with the newly drawn mask
-            }).done(function(data) {
+            data: { imageBase64: dataURL, data_id: data_id, page: page }
+            // update the depicted mask with the newly drawn mask
+        }).done(function (data) {
 
-                // handle to ground truth image of the instance module
-                var save = '#imgEM-GT-' + page+ '-' + data_id
+            // handle to ground truth image of the instance module
+            var save = '#imgEM-GT-' + page + '-' + data_id
 
-                // create path to image
-                var coordinates = data.data.Adjusted_Bbox.join('_') 
-                var middle_slice = data.data.Middle_Slice
-                var img_index =  data.data.Image_Index
-                img_name = 'idx_'+img_index +'_ms_'+ middle_slice +'_cor_'+coordinates+'.png'
-                image_path = custom_mask_path + img_name
+            // create path to image
+            var coordinates = data.data.Adjusted_Bbox.join('_')
+            var middle_slice = data.data.Middle_Slice
+            var img_index = data.data.Image_Index
+            img_name = 'idx_' + img_index + '_ms_' + middle_slice + '_cor_' + coordinates + '.png'
+            image_path = custom_mask_path + img_name
 
-                // load the image and add cache breaker
-                $(new Image()).attr('src',image_path+'?'+Date.now()).load(function() {
-                    $(save).attr('src', this.src);
-                });
+            // load the image and add cache breaker
+            $(new Image()).attr('src', image_path + '?' + Date.now()).load(function () {
+                $(save).attr('src', this.src);
+            });
 
         });
     })
 
     // set start, end, and control points for curve that draws the mask
     $('canvas.coveringCanvas').on('click', function (e) {
-        if (draw_mask){
+        if (draw_mask) {
             clear_canvas() // clear canvas
             ctx.beginPath() // init path
 
             // get click position
-            var pos = getXY(this, e) 
+            var pos = getXY(this, e)
             var x = pos.x
-            var y = pos.y            
+            var y = pos.y
 
             // add new point to points list
             points.push({ x, y })
@@ -284,45 +284,45 @@ $(document).ready(function () {
     }
 
     // converts the mask line in to a volume mask with polarity indication
-    function fill_clip(color_1, color_2, thickness, sample=false) {
-        
+    function fill_clip(color_1, color_2, thickness, sample = false) {
+
         clear_canvas() // clear the canvas
         ctx.beginPath() // init new path
-        
+
         pl = points.length // retrieve length of points list 
 
         // if the points list contains more then two points
         if (pl > 2) {
 
             // sample lines along the created quadratic curve
-            if (sample){
+            if (sample) {
                 ax = points[0].x // retrieve start point x
                 ay = points[0].y // retrieve start point y
                 // iterate over all intermediate points
                 for (i = 1; i < pl - 2; i++) {
-                    
+
                     cx = points[i].x
                     cy = points[i].y
-                    bx = (points[i].x + points[i + 1].x)/2
-                    by = (points[i].y + points[i + 1].y)/2
+                    bx = (points[i].x + points[i + 1].x) / 2
+                    by = (points[i].y + points[i + 1].y) / 2
 
                     // sample the current line segment
                     // the number of samples per line segment depends on the length of the segment
-                    plotQBez(pointsQBez, Math.floor(Math.abs(ax-bx) + Math.abs(ay-by)), ax, ay, cx, cy, bx, by)
+                    plotQBez(pointsQBez, Math.floor(Math.abs(ax - bx) + Math.abs(ay - by)), ax, ay, cx, cy, bx, by)
 
                     ax = bx
                     ay = by
                 }
                 // sample the last line segment
-                bx = points[pl-1].x
-                by = points[pl-1].y
-                cx = points[pl-2].x
-                cy = points[pl-2].y
+                bx = points[pl - 1].x
+                by = points[pl - 1].y
+                cx = points[pl - 2].x
+                cy = points[pl - 2].y
                 // sample the last line segment
                 // the number of samples per line segment depends on the length of the segment
-                plotQBez(pointsQBez, Math.floor(Math.abs(ax-bx) + Math.abs(ay-by)), ax, ay, cx, cy, bx, by)
-            }            
-            
+                plotQBez(pointsQBez, Math.floor(Math.abs(ax - bx) + Math.abs(ay - by)), ax, ay, cx, cy, bx, by)
+            }
+
             ctx.save(); // save the current settings
 
             let region_1 = new Path2D(); // define new region
@@ -332,7 +332,7 @@ $(document).ready(function () {
                 // the normal aspect ratio of a html5 canvas is 2/1 
                 // since we have equal width and height, y is distorted by factor 2
                 region_1.moveTo(pointsQBez[j].x + thickness, pointsQBez[j].y) // move to next sampled point
-                region_1.ellipse(pointsQBez[j].x, pointsQBez[j].y, thickness, Math.floor(thickness/2), 0, 0, Math.PI * 2) // draw the ellipse
+                region_1.ellipse(pointsQBez[j].x, pointsQBez[j].y, thickness, Math.floor(thickness / 2), 0, 0, Math.PI * 2) // draw the ellipse
             }
             // create the region as clipping region
             ctx.clip(region_1)
@@ -357,7 +357,7 @@ $(document).ready(function () {
             ctx.restore();
 
         }
-        else{
+        else {
             console.log('A mask needs at least 3 points')
         }
     };
@@ -401,13 +401,13 @@ $(document).ready(function () {
 
             // intersection with it self inside the canvas
             line_intersection = line_intersect(points[pl - 1].x, points[pl - 1].y, points[pl].x, points[pl].y, points[1].x, points[1].y, points[0].x, points[0].y)
-            if (!line_intersection){
+            if (!line_intersection) {
                 // intersection with boundary
                 intersection_end = intersection(points[pl - 1].x, points[pl - 1].y, points[pl].x, points[pl].y)
                 intersection_start = intersection(points[1].x, points[1].y, points[0].x, points[0].y)
                 close_intersection(intersection_start, intersection_end)
                 ctx.closePath()
-            }else{
+            } else {
                 ctx.lineTo(line_intersection.x, line_intersection.y)
                 ctx.lineTo(points[0].x, points[0].y)
                 ctx.closePath()
@@ -487,7 +487,7 @@ $(document).ready(function () {
             if (y <= height && y >= 0) {
                 return { x: width, y: y, d: 'right' }
             }
-        } else{
+        } else {
             // intersection with the top border 
             if (y2 < y1) {
                 x = (0 - b) / m
@@ -525,11 +525,11 @@ $(document).ready(function () {
         var iT = 1 - t;
         return iT * iT * p1 + 2 * iT * t * p2 + t * t * p3;
     }
-    
+
     function getQuadraticCurvePoint(startX, startY, cpX, cpY, endX, endY, position) {
         return {
-            x:  _getQBezierValue(position, startX, cpX, endX),
-            y:  _getQBezierValue(position, startY, cpY, endY)
+            x: _getQBezierValue(position, startX, cpX, endX),
+            y: _getQBezierValue(position, startY, cpY, endY)
         };
     }
 
@@ -552,43 +552,43 @@ $(document).ready(function () {
         if ((x1 === x2 && y1 === y2) || (x3 === x4 && y3 === y4)) {
             return false
         }
-    
+
         denominator = ((y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1))
         // Lines are parallel
         if (denominator === 0) {
             return false
         }
-    
+
         let ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denominator
         let ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denominator
-    
+
         // is the intersection along the segments
         if (ua < 0 || ua > 1 || ub < 0 || ub > 1) {
             return false
         }
-    
+
         // Return a object with the x and y coordinates of the intersection
         let x = x1 + ua * (x2 - x1)
         let y = y1 + ua * (y2 - y1)
 
         // check if intersection is inside boundaries
-        if ((x > 0) && (x < width) && ((y > 0) && (y < height))){
+        if ((x > 0) && (x < width) && ((y > 0) && (y < height))) {
             // only return the intersection if it is inside of the curve
-            if ((x > x2) && (x > x4)){
-                if ((x2 > x1) && (x4 > x3)){
-                    return {x:x, y:y}
-                }else{
+            if ((x > x2) && (x > x4)) {
+                if ((x2 > x1) && (x4 > x3)) {
+                    return { x: x, y: y }
+                } else {
                     return false
                 }
-            }else if ((x < x2) && (x < x4)){
-                if ((x2 < x1) && (x4 < x3)){
-                    return {x:x, y:y}
-                }else{
+            } else if ((x < x2) && (x < x4)) {
+                if ((x2 < x1) && (x4 < x3)) {
+                    return { x: x, y: y }
+                } else {
                     return false
                 }
             }
             return false
-        }   
+        }
     }
 
 });

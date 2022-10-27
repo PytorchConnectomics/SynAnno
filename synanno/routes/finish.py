@@ -22,25 +22,31 @@ import os
 import shutil
 
 
-@app.route('/export_json')
-def export_json() -> Template:
+@app.route('/export_annotate')
+def export_annotate() -> Template:
     ''' Renders final view of the annotation process that lets the user download the JSON.
 
         Return:
-            Export-JSON view
+            Export-annotate view
     '''
-    return render_template('export_json.html')
 
-@app.route('/export_masks')
-def export_masks() -> Template:
+    # disable the 'Start New Process' button as long as the user did not download the masks or JSON
+    # the user can always interrupt a process using the home button, but we want to prevent data loss
+    return render_template('export_annotate.html', disable_snp='disabled')
+
+@app.route('/export_draw')
+def export_draw() -> Template:
     ''' Renders final view of the draw process that lets the user download the custom masks.
 
         Return:
-            Export-masks view
+            Export-draw view
     '''
-    return render_template('export_masks.html')
+    
+    # disable the 'Start New Process' button as long as the user did not download the masks or JSON
+    # the user can always interrupt a process using the home button, but we want to prevent data loss
+    return render_template('export_draw.html', disable_snp='disabled')
 
-@app.route('/export/<string:data_type>', methods=['GET'])
+@app.route('/export_data/<string:data_type>', methods=['GET'])
 def export_data(data_type) -> Union[Template, app.response_class]:
     ''' Download the JSON or the custom masks.
 
@@ -57,7 +63,8 @@ def export_data(data_type) -> Union[Template, app.response_class]:
             return send_file(os.path.join(os.path.join(app.root_path,app.config['UPLOAD_FOLDER']), app.config['JSON']), as_attachment=True, attachment_filename=app.config['JSON'])
         else:
             flash('Now file - session data is empty.', 'error')
-            return render_template('export_json.html')
+            # rerender export-draw and enable the 'Start New Process' button
+            return render_template('export_annotate.html', disable_snp=' ')
     elif data_type == 'mask':
         total_folder_path = os.path.join(os.path.join(app.root_path,app.config['STATIC_FOLDER']),'custom_masks')
         if os.path.exists(total_folder_path):
@@ -66,7 +73,8 @@ def export_data(data_type) -> Union[Template, app.response_class]:
             return send_file(os.path.join(os.path.join(app.root_path,app.config['STATIC_FOLDER']), 'custom_masks.zip'), as_attachment=True)
         else:
             flash('The folder containing custom masks is empty. Did you draw custom masks?', 'error')
-            return render_template('export_masks.html')    
+            # rerender export-draw and enable the 'Start New Process' button
+            return render_template('export_draw.html', disable_snp=' ')    
 
 
 @app.route('/reset')

@@ -1,7 +1,7 @@
-$(document).ready(function() {
+$(document).ready(function () {
 
     // update the instance specific values 
-    $('.image-card-btn').on('click', function() {
+    $('.image-card-btn').on('click', function () {
         var data_id = $(this).attr('data_id')
         var page = $(this).attr('page')
         var label = $(this).attr('label')
@@ -10,18 +10,18 @@ $(document).ready(function() {
         req = $.ajax({
             url: '/update-card',
             type: 'POST',
-            data: {data_id: data_id, page: page, label: label}
+            data: { data_id: data_id, page: page, label: label }
         });
 
         // update the label in the frontend
-        req.done(function (data){
-            if(label==='Unsure'){
-                $('#id'+data_id).removeClass('unsure').addClass('correct');
-                $('#id-a-'+data_id).attr('label', 'Correct');
-            }else if(label==='Incorrect'){
-                $('#id'+data_id).removeClass('incorrect').addClass('unsure');
-                $('#id-a-'+data_id).attr('label', 'Unsure');
-            }else if(label==='Correct'){
+        req.done(function (data) {
+            if (label === 'Unsure') {
+                $('#id' + data_id).removeClass('unsure').addClass('correct');
+                $('#id-a-' + data_id).attr('label', 'Correct');
+            } else if (label === 'Incorrect') {
+                $('#id' + data_id).removeClass('incorrect').addClass('unsure');
+                $('#id-a-' + data_id).attr('label', 'Unsure');
+            } else if (label === 'Correct') {
                 $('#id' + data_id).removeClass('correct').addClass('incorrect');
                 $('#id-a-' + data_id).attr('label', 'Incorrect');
             }
@@ -29,7 +29,7 @@ $(document).ready(function() {
     });
 
     // link to the NG, edited when ever right clicking an instance in the grid view
-    var ng_link; 
+    var ng_link;
 
     // variables for the coordinates of the focus of the view with in the NG 
     var cz0;
@@ -37,7 +37,7 @@ $(document).ready(function() {
     var cx0;
 
     // retrieve and set the information for the modal instance view
-    $('.image-card-btn').bind('contextmenu', async function(e){
+    $('.image-card-btn').bind('contextmenu', async function (e) {
         e.preventDefault();
 
         // instance identifiers
@@ -46,7 +46,7 @@ $(document).ready(function() {
 
         // the instance label
         var label = $(this).attr('label')
-        
+
         // we require the information about the whole instance
         var mode = 'full'
 
@@ -54,23 +54,23 @@ $(document).ready(function() {
         req_data = $.ajax({
             url: '/get_instance',
             type: 'POST',
-            data: {mode: mode, data_id: data_id, page: page}
+            data: { mode: mode, data_id: data_id, page: page }
         });
 
         // update the modal
         await req_data.done(function (data) {
             $('#rangeSlices').attr('min', data.range_min);
-            $('#rangeSlices').attr('max', data.range_min + data.slices_len-1);
+            $('#rangeSlices').attr('max', data.range_min + data.slices_len - 1);
             $('#rangeSlices').val(data.halflen);
             $('#rangeSlices').attr('data_id', data_id);
             $('#rangeSlices').attr('page', page);
 
             $('#minSlice').html(0);
-            $('#maxSlice').html(data.slices_len-1);
+            $('#maxSlice').html(data.slices_len - 1);
 
             $('#imgDetails-EM').addClass(label.toLowerCase());
-            $('#imgDetails-EM').attr('src', data.data.EM +'/'+ data.data.Middle_Slice + '.png');
-            $('#imgDetails-GT').attr('src', data.data.GT +'/'+ data.data.Middle_Slice + '.png');
+            $('#imgDetails-EM').attr('src', data.data.EM + '/' + data.data.Middle_Slice + '.png');
+            $('#imgDetails-GT').attr('src', data.data.GT + '/' + data.data.Middle_Slice + '.png');
             $('#detailsModal').modal('show');
 
             cz0 = data.data.cz0
@@ -83,16 +83,16 @@ $(document).ready(function() {
         req_ng = $.ajax({
             url: '/neuro',
             type: 'POST',
-            data: {cz0: cz0, cy0: cy0, cx0: cx0, mode: 'annotate'}
+            data: { cz0: cz0, cy0: cy0, cx0: cx0, mode: 'annotate' }
         });
 
-        req_ng.done(function (data){
+        req_ng.done(function (data) {
             ng_link = data.ng_link;
         });
 
     });
 
-    $('#ng-link').on('click', function (){
+    $('#ng-link').on('click', function () {
         // update the NG link on click
         $('#ng-iframe').attr('src', ng_link)
     });
@@ -100,7 +100,7 @@ $(document).ready(function() {
 
     // with in the modal view retrieve the instance specific data
     // to switch between the slices 
-    $('#rangeSlices').on('input', function() {
+    $('#rangeSlices').on('input', function () {
         // the current slice index
         var rangeValue = $(this).val();
 
@@ -109,19 +109,19 @@ $(document).ready(function() {
         var page = $(this).attr('page')
 
         // we only require the path to load a single slice and the corresponding GT
-        var mode = 'single' 
+        var mode = 'single'
 
         // retrieve the information from the backend
         req = $.ajax({
             url: '/get_instance',
             type: 'POST',
-            data: {mode: mode, data_id: data_id, page: page}
+            data: { mode: mode, data_id: data_id, page: page }
         });
 
         // update the slice and GT that is depicted
-        req.done(function (data){
-            $('#imgDetails-EM').attr('src',  data.data.EM +'/'+ rangeValue + '.png');
-            $('#imgDetails-GT').attr('src',  data.data.GT +'/'+ rangeValue + '.png');
+        req.done(function (data) {
+            $('#imgDetails-EM').attr('src', data.data.EM + '/' + rangeValue + '.png');
+            $('#imgDetails-GT').attr('src', data.data.GT + '/' + rangeValue + '.png');
         });
 
     })
@@ -131,7 +131,7 @@ $(document).ready(function() {
 function dec_opacity() {
     var value = $('#value-opacity').attr('value');
     var new_value = value - 0.1;
-    if(new_value<0){
+    if (new_value < 0) {
         new_value = 0;
     }
     $('#value-opacity').attr('value', new_value);
@@ -144,7 +144,7 @@ function dec_opacity() {
 function add_opacity() {
     var value = $('#value-opacity').attr('value');
     var new_value = parseFloat(value) + 0.1;
-    if(new_value>=1){
+    if (new_value >= 1) {
         new_value = 1;
     }
     $('#value-opacity').attr('value', new_value);
@@ -156,7 +156,7 @@ function add_opacity() {
 function dec_opacity_grid() {
     var value = $('#value-opacity-grid').attr('value');
     var new_value = value - 0.1;
-    if(new_value<0){
+    if (new_value < 0) {
         new_value = 0;
     }
     $('#value-opacity-grid').attr('value', new_value);
@@ -169,7 +169,7 @@ function dec_opacity_grid() {
     req = $.ajax({
         url: '/set_grid_opacity',
         type: 'POST',
-        data: {grid_opacity:new_value}
+        data: { grid_opacity: new_value }
     });
 }
 
@@ -178,7 +178,7 @@ function add_opacity_grid() {
     var value = $('#value-opacity-grid').attr('value');
     var new_value = parseFloat(value) + 0.1;
     console.log(new_value)
-    if(new_value>=1){
+    if (new_value >= 1) {
         new_value = 1;
     }
     $('#value-opacity-grid').attr('value', new_value);
@@ -191,15 +191,15 @@ function add_opacity_grid() {
     req = $.ajax({
         url: '/set_grid_opacity',
         type: 'POST',
-        data: {grid_opacity:new_value}
+        data: { grid_opacity: new_value }
     });
 
 }
 
 // toggle the GT mask in the modal view
-function check_gt(){
+function check_gt() {
     var checkbox = document.getElementById('check-gt');
-    if(checkbox.checked==false){
+    if (checkbox.checked == false) {
         $('#imgDetails-GT').css('display', 'none');
         $('#check-em').prop('disabled', true);
     } else {
@@ -209,9 +209,9 @@ function check_gt(){
 }
 
 // toggle the image in the modal view
-function check_em(){
+function check_em() {
     var checkbox = document.getElementById('check-em');
-    if(checkbox.checked==false){
+    if (checkbox.checked == false) {
         $('#imgDetails-GT').css('background-color', 'black');
         $('#imgDetails-GT').css('opacity', '1');
         $('#check-gt').prop('disabled', true);

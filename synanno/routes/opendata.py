@@ -28,6 +28,9 @@ import os
 # for type hinting
 from jinja2 import Template
 from werkzeug.datastructures import MultiDict
+from typing import Dict
+
+
 
 # global variables
 global draw_or_annotate  # defines the downstream task; either draw or annotate - default to annotate
@@ -208,7 +211,7 @@ def set_data(task: str = 'annotate', json_name: str = app.config['JSON']) -> Tem
 
 @app.route('/progress', methods=['POST'])
 @cross_origin()
-def progress() -> dict[str, object]:
+def progress() -> Dict[str, object]:
     ''' Serves an Ajax request from progressbar.js passing information about the loading
         process to the frontend.
 
@@ -223,7 +226,7 @@ def progress() -> dict[str, object]:
 
 @app.route('/neuro', methods=['POST'])
 @cross_origin()
-def neuro() -> dict[str, object]:
+def neuro() -> Dict[str, object]:
     ''' Serves an Ajax request from annotation.js or draw_module.js, shifting the view focus with
         in the running NG instance and passing the link for the instance to the frontend.
 

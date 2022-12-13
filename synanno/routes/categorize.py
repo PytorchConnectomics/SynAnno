@@ -25,6 +25,8 @@ import os
 # for type hinting
 from jinja2 import Template 
 from werkzeug.datastructures import MultiDict 
+from typing import Dict
+
 
 
 # global variable defining if instances marked as false positives are directly discarded
@@ -56,7 +58,7 @@ def categorize() -> Template:
 
 @app.route('/pass_flags', methods=['GET','POST'])
 @cross_origin()
-def pass_flags() -> dict[str, object]:
+def pass_flags() -> Dict[str, object]:
     ''' Serves an Ajax request from categorize.js, retrieving the new error tags from the
         frontend and updating the session information as well as the JSON.
 
@@ -120,7 +122,7 @@ def pass_flags() -> dict[str, object]:
 
 @app.route('/custom_flag', methods=['GET','POST'])
 @cross_origin()
-def custom_flag() -> dict[str, object]:
+def custom_flag() -> Dict[str, object]:
     # used by frontend to retrieve custom error messages from the JSON
     page = request.get_json()['page']
     img_id = request.get_json()['img_id']

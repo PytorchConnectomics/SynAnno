@@ -1,0 +1,32 @@
+name: synanno
+
+channels:
+- conda-forge
+
+dependencies:
+- python=3.9  ## specify desired version
+- pip
+- jupyter>=1.0
+- scipy>=1.4.1
+- scikit-learn>=0.23.1
+- scikit-image>=0.17.2
+- matplotlib>=3.3.0
+- Cython==0.29.21
+- h5py>=2.10.0
+- imageio>=2.9.0
+- einops>=0.3.0
+- flask>=2.0.0
+- flask-cors
+- Flask-Session>= 0.4.0
+- jsonschema>=3.2.0
+- imageio>=2.22.4
+
+- pip: ## PyPI packages
+    - cloud-volume>=8.17.2
+    - opencv-python>=4.6.0.66
+    - neuroglancer>=2.32
+    - Flask-Session>=0.4.0
+    - Flask-Cors>=3.0.10
+    - scipy>=1.9.3
+    - scikit-image>=0.19.3
+    - h5py>=3.7.0

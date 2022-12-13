@@ -21,6 +21,8 @@ import json
 
 # for type hinting
 from jinja2 import Template
+from typing import Dict
+
 
 
 @app.route('/annotation')
@@ -44,7 +46,7 @@ def annotation(page: int = 0) -> Template:
 
 @app.route('/set_grid_opacity', methods=['POST'])
 @cross_origin()
-def set_grid_opacity() -> dict[str, object]:
+def set_grid_opacity() -> Dict[str, object]:
     ''' Serves and Ajax request from annotation.js updating the grid's opacity value
 
         Return:
@@ -58,7 +60,7 @@ def set_grid_opacity() -> dict[str, object]:
 
 @app.route('/update-card', methods=['POST'])
 @cross_origin()
-def update_card() -> dict[str, object]:
+def update_card() -> Dict[str, object]:
     ''' Updates the label of an instance. The labels switch from Correct, Incorrect to Unsure
 
         Return:
@@ -82,7 +84,7 @@ def update_card() -> dict[str, object]:
 
 @app.route('/get_instance', methods=['POST'])
 @cross_origin()
-def save_slices() -> dict[str, object]:
+def save_slices() -> Dict[str, object]:
     ''' Serves one of two Ajax calls from annotation.js, passing instance specific information 
 
         Return:

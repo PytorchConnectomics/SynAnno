@@ -60,7 +60,7 @@ def export_data(data_type) -> Union[Template, app.response_class]:
     if data_type == 'json':
         # exporting the final json
         if session.get('data') and session.get('n_pages'):
-            return send_file(os.path.join(os.path.join(app.root_path,app.config['UPLOAD_FOLDER']), app.config['JSON']), as_attachment=True, attachment_filename=app.config['JSON'])
+            return send_file(os.path.join(os.path.join(app.root_path,app.config['UPLOAD_FOLDER']), app.config['JSON']), as_attachment=True, download_name=app.config['JSON'])
         else:
             flash('Now file - session data is empty.', 'error')
             # rerender export-draw and enable the 'Start New Process' button

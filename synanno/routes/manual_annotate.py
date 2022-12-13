@@ -40,6 +40,8 @@ import synanno.routes.utils.json_util as json_util
 
 # for type hinting
 from jinja2 import Template
+from typing import Dict
+
 
 @app.route('/draw')
 def draw() -> Template:
@@ -60,7 +62,7 @@ def draw() -> Template:
 
 
 @app.route('/save_canvas', methods=['POST'])
-def save_canvas() -> dict[str, object]:
+def save_canvas() -> Dict[str, object]:
     ''' Serves an Ajax request from draw.js, downloading, converting, and saving
         the canvas as image.
 
@@ -109,7 +111,7 @@ def save_canvas() -> dict[str, object]:
 
 @app.route('/ng_bbox_fp', methods=['POST'])
 @cross_origin()
-def ng_bbox_fp()-> dict[str, object]:
+def ng_bbox_fp()-> Dict[str, object]:
     ''' Serves an Ajax request by draw_module.js, passing the coordinates of the center point of a newly marked FP to the front end, 
         enabling the front end to depict the values and the user to manual update/correct them.
 
@@ -135,7 +137,7 @@ def ng_bbox_fp()-> dict[str, object]:
 
 @app.route('/ng_bbox_fp_save', methods=['POST'])
 @cross_origin()
-def ng_bbox_fp_save()-> dict[str, object]:
+def ng_bbox_fp_save()-> Dict[str, object]:
     ''' Serves an Ajax request by draw_module.js, that passes the manual updated/corrected bb coordinates
         to this backend function. Additionally, the function creates a new item instance and 
         updates the json file.

@@ -17,7 +17,7 @@ SynAnno is a tool for synaptic polarity annotation from electron microscopy (EM)
 **Download and unzip SynAnno**
 
 Download SynAnno and unzip it into a folder of your choice.
-We assume that you have unzipped the folder under `/home/user/SynAnno`.
+We assume you have unzipped the folder under `/home/user/SynAnno`.
 
 **Anaconda (https://www.anaconda.com/)**
 
@@ -26,13 +26,13 @@ It provides an easy and stable means to set up an environment with all of SynAnn
 To run SynAnno, even the lightweight version MiniConda is sufficient.
 
 To download and install MiniConda, go to [here](https://docs.conda.io/en/latest/miniconda.html#latest-miniconda-installer-links) and select the latest version for your Operation System.
-For MacOs, this would be "Miniconda3 MacOSX 64-bit pkg" or "Miniconda3 macOS Apple M1 64-bit pkg," depending on your Mac's chip architecture. Make sure to select the "... pkg" version and not the "... bash" version.
-After downloading the package, simply double-click it and follow the steps described by the install manager.
+For MacOs, this would be "Miniconda3 MacOSX 64-bit pkg" or "Miniconda3 macOS Apple M1 64-bit pkg," depending on your Mac's chip architecture. Select the "... pkg" version, not the "... bash" version.
+After downloading the package, double-click it and follow the steps described by the install manager.
 
 **Setup the SynAnno environment**
 
 1. Open a terminal
-    - On a Mac, this can be achieved by opening the spotlight (command + space), entering "Terminal", and pressing enter.
+    - On a Mac, this can be achieved by opening the spotlight (command + space), entering "Terminal," and pressing enter.
 
 2. Navigate to you the SynAnno folder
     - In a bash terminal, we use `cd` to navigate and `ls` to show the content
@@ -40,27 +40,26 @@ After downloading the package, simply double-click it and follow the steps descr
     - You can check the content of the folder by writing `ls` and pressing enter
 
 3. Check the Miniconda installation
-    - To check if you correctly installed Miniconda write `conda     -version` into terminal and press enter
+    - To check if you correctly installed Miniconda write `conda --version` into terminal and press enter
     - The terminal should depict the version of Miniconda.
 
 4. Setup the environment
-    - We want to install SynAnno-specific dependencies - Python libraries. To make sure that we do not run into conflicts with already installed, or in the future to be installed, decencies, we logically isolate the SynAnno dependencies by putting them into an environment.
-    - To create the environment, write `conda create -y     -name SynAnno python=3.7` into the terminal and press enter
-    - To install the requirements into the newly created `SynAnno` environment, write `conda install -y     -name SynAnno     -file requirements.txt` into the terminal and press enter. The flags in the command stand for, `-y`: Yes, do not ask for confirmation, `    -name`: Name of the environment, `    -file`: File from which to install the requirements. Important, the command only works if you are inside `/home/user/SynAnno` since we are referencing the `requirements.txt` file located in the folder.
-    - To activate the environment, write `conda activate SynAnno` into the terminal and press enter
+    - We want to install SynAnno-specific dependencies - Python libraries. To make sure that we avoid conflicts with already installed, or in the future to be installed, dependencies, we logically isolate the SynAnno dependencies by putting them into an environment.
+    - To create the environment, write `conda env create -n synanno -f synanno_env_requirements.yaml` into the terminal and press enter. The flags in the command stand for: `-n`: Name of the environment, `-f`: File from which to install the requirements. Important, the command only works if you are inside `/home/user/SynAnno` since we are referencing the `synanno_env_requirements.yaml` file located in the folder.
+    - To activate the environment, write `conda activate synanno` into the terminal and press enter
 
 ## Start up SynAnno tool
 
 1. Open a terminal 
 2. Navigate to your `SynAnno` folder within the terminal (cd `/home/user/SynAnno`)
-3. Activate the conda environment (`conda activate SynAnno`)
+3. Activate the conda environment (`conda activate synanno`)
 4. Start the app by writing `python run.py` in the terminal and pressing enter
-5. On startup, the tool will write a URL to the terminal. The default URL is `http://127.0.0.1:5000/`. Go to your browser and enter the URL.
+5. The tool will write a URL to the terminal on startup. The default URL is `http://127.0.0.1:5000/`. Go to your browser and enter the URL.
 
 
 ## Using SynAnno
 
-*On each page click the question mark in the top right corner should you be unsure how to proceed.*
+*On each page, click the question mark in the top right corner should you need help with how to proceed.*
 
 1. Go to the App's URL (root path `http://127.0.0.1:5000/`) and upload the data 
     - Select an h5 source and target file, click `Submit`, and when submitted successfully, click `Start Data Proofread.`
@@ -75,8 +74,8 @@ After downloading the package, simply double-click it and follow the steps descr
     [![App proof read page][2]][2]
 
     - Should you be unsure for of an instance's mask, you can right-click the instance to enlarge the patch and navigate surrounding slices. In this view, you can also click `View in NG` to view the instance in the Neuroglancer. 
-    - After evaluating the segmentation masks for all instances on the current page, click the `Next` button at the bottom to evaluate the next set of segmentation masks.
-    - When you are done proof reading all instances, click `Error Processing` at the bottom of the page (this button will show on the last proofreading page).
+    - After evaluating the segmentation masks for all instances on the current page, click the `Next` button at the bottom of the page to evaluate the next set of segmentation masks.
+    - When you are done proofreading all instances, click `Error Processing` at the bottom of the page (this button will show on the last proofreading page).
 
 
 

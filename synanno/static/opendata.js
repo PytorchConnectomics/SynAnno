@@ -45,7 +45,7 @@ $(document).ready(function () {
     });
 
     // enable the 'submit' button if all required files got provided
-    $('#originalFile').on('change', function () {
+    $('#source_file').on('change', function () {
         source = true;
 
         if (source && target && json) {
@@ -54,7 +54,7 @@ $(document).ready(function () {
     });
 
     // enable the 'submit' button if all required files got provided
-    $('#gtFile').on('change', function () {
+    $('#target_file').on('change', function () {
         target = true;
 
         if (source && target && json) {
@@ -62,6 +62,37 @@ $(document).ready(function () {
         }
     });
 
+    // enable the 'submit' button if all required files got provided
+    $('#source_url').on('input', function () {
 
+            source = true;          
+
+            if (source && target) {
+                $('#processData').removeClass('disabled')
+            }
+    
+    });
+
+    // enable the 'submit' button if all required files got provided
+    $('#target_url').on('input', function () {
+
+            target = true;
+
+            if (source && target) {
+                $('#processData').removeClass('disabled')
+            }
+
+    });
+
+    // toggle between local and cloud upload form
+    $('input[type="radio"]').change(function() {
+        if ($(this).val() === 'local') {
+            $('#local-form').show();
+            $('#cloud-form').hide();
+        } else if ($(this).val() === 'cloud') {
+            $('#local-form').hide();
+            $('#cloud-form').show();
+        }
+    });
 
 });

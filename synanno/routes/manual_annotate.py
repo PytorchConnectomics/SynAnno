@@ -205,7 +205,7 @@ def ng_bbox_fp_save()-> Dict[str, object]:
     image_list = []
     crop_2d = item['Original_Bbox'][2:]
     for z_index in range(item['Original_Bbox'][0], item['Original_Bbox'][1]+1):
-        cropped_img = crop_pad_data(synanno.im, z_index, crop_2d, pad_val=0)
+        cropped_img = crop_pad_data(synanno.source, z_index, crop_2d, pad_val=0)
         image_list.append(cropped_img)
     vis_image = np.stack(image_list, 0)
 

@@ -27,10 +27,10 @@ Metadata JSON file structure:
     ]
 }
 '''
-from typing import Optional, Union, List, Tuple
+from typing import Union, Tuple
 from collections import OrderedDict
 
-from typing import Optional, Union, List, Tuple
+from typing import Union, Tuple
 from collections import OrderedDict
 
 import os
@@ -50,6 +50,9 @@ from .utils import *
 
 import synanno # import global configs
 from synanno import app # import the package app
+
+from cloudvolume import CloudVolume
+
 
 # Processing the synpases using binary dilation as well as by removing small objects.
 def process_syn(gt, small_thres=16):
@@ -427,13 +430,83 @@ def visualize(syn, seg, img, sz, return_data=False, iterative_bbox=False, path_j
         return
 
 
-
-def load_3d_files(im_file, gt_file, patch_size=142, path_json=None):
+def load_3d_files(im_file, gt_file):
+    """Load the 3D image and ground truth files.
+    
+    Args:
+        im_file (str): path to the image file.
+        gt_file (str): path to the ground truth file.
+        
+    Returns:
+        source (np.ndarray): the original image (EM).
+        gt (np.ndarray): the mask annotation (GT: ground truth).
+    """
     synanno.progress_bar_status['status'] = "Loading Source File"
-    synanno.im = readvol(im_file)  # The original image (EM)
+    img = readvol(im_file)  # The original image (EM)
+
+
     synanno.progress_bar_status['status'] = "Loading Target File"
     gt = readvol(gt_file)  # The mask annotation (GT: ground truth)
+
+    return img, gt
+
+def load_3d_cloud_volume(im_file, gt_file, x1, x2, y1, y2, z1, z2):
+    """Load the 3D image and ground truth volumes.
     
+    Args:
+        im_file (str): path to the image file.
+        gt_file (str): path to the ground truth file.
+        x1 (int): x1 coordinate of the bounding box.
+        x2 (int): x2 coordinate of the bounding box.
+        y1 (int): y1 coordinate of the bounding box.
+        y2 (int): y2 coordinate of the bounding box.
+        z1 (int): z1 coordinate of the bounding box.
+        z2 (int): z2 coordinate of the bounding box.
+        
+    Returns:
+        source (np.ndarray): the original image (EM).
+        gt (np.ndarray): the mask annotation (GT: ground truth).
+    """
+    
+    synanno.progress_bar_status['status'] = "Loading Source File"
+
+    # handle to cloud volume
+    source = CloudVolume(im_file)
+
+    if x2 == -1:
+        x2 = source.info['scales'][0]['size'][2]
+
+    if y2 == -1:
+        y2 = source.info['scales'][0]['size'][1]
+    
+    if z2 == -1:
+        z2 = source.info['scales'][0]['size'][0]
+
+    # retrieve the subvolume
+    img = np.squeeze(source[z1:z2, y1:y2, x1:x2])
+
+    # remove the first 128 pixels from the x axis, as they got weirdly shifted by cloudvolume
+    img = img[:,:,128:]
+    img_np = np.zeros(img.shape).astype(np.uint8)
+    img_np[:,:,:] = img[:,:,:]
+
+
+    synanno.progress_bar_status['status'] = "Loading Target File"
+
+    # handle to cloud volume
+    gt = CloudVolume(gt_file)
+
+    
+    gt = np.squeeze(gt[z1:z2, y1:y2, x1:x2])
+
+    # remove the first 128 pixels from the x axis, as they got weirdly shifted by cloudvolume
+    gt = gt[:,:,128:]
+    gt_np = np.zeros(gt.shape).astype(np.uint8)
+    gt_np[:,:,:] = gt[:,:,:]
+
+    return img, gt
+
+def process_3d_data(im, gt, patch_size=142, path_json=None):
 
     synanno.progress_bar_status['status'] = "Convert Polarity Prediction to Segmentation"
     if gt.ndim != 3:
@@ -451,22 +524,22 @@ def load_3d_files(im_file, gt_file, patch_size=142, path_json=None):
 
     synanno.progress_bar_status['status'] = "Retrive 2D patches from 3D volume"
     # Processing the 3D volume to get 2D patches.
-    syn, synanno.seg = process_syn(gt)
+    syn, synanno.target = process_syn(gt)
 
 
     synanno.progress_bar_status['status'] = "Render Images"
     
     # if a json was provided process the data accordingly
     if path_json is not None:
-        visualize(syn, synanno.seg, synanno.im, sz=patch_size, path_json=path_json)
+        visualize(syn, synanno.target, im, sz=patch_size, path_json=path_json)
         synanno.progress_bar_status['percent'] = int(100) 
-        return None, synanno.im, gt
+        return None, im, gt
     # if no json was provided create a json file and process the data
     else:
-        synanno_json = visualize(syn, synanno.seg, synanno.im, sz=patch_size)
+        synanno_json = visualize(syn, synanno.target,im, sz=patch_size)
         synanno.progress_bar_status['percent'] = int(100) 
         if os.path.isfile(synanno_json):
-            return synanno_json, synanno.im, gt
+            return synanno_json, im, gt
         else:
             # the json file should have been created by the visualize function
             raise FileNotFoundError(

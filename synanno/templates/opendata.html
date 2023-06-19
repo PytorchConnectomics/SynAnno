@@ -54,18 +54,21 @@
     <p><input class="form-control" type="url" id="source_url" name="source_url" placeholder="Cloud Volume Bucket - file://<path_to_your_file>"></p>
     <label for="formFileMultiple" class="form-label">Target bucket (precomputed: Neuroglancer's native format) - Required</label>
     <p><input class="form-control" type="url" id="target_url" name="target_url" placeholder="Cloud Volume Bucket - file://<path_to_your_file>"></p>
-
+      
       <label for="formFileMultiple" class="form-label">Slicing indices for the Subvolume</label>
-
+      
       <div class="number-container">
-    <input class="number-dims" type="number" id="x1" name="x1" placeholder="X1 - Default: 0">
-    <input class="number-dims" type="number" id="x2" name="x2" placeholder="X2 - Default: max(X)">
-    <input class="number-dims" type="number" id="y1" name="y1" placeholder="Y1 - Default: 0">
-    <input class="number-dims" type="number" id="y2" name="y2" placeholder="Y2 - Default: max(Y)">
-    <input class="number-dims" type="number" id="z1" name="z1" placeholder="Z1 - Default: 0">
-    <input class="number-dims" type="number" id="z2" name="z2" placeholder="Z2 - Default: max(Z)">
-    </div>
-
+        <input class="number-dims" type="number" id="x1" name="x1" placeholder="X1 - Default: 0">
+        <input class="number-dims" type="number" id="x2" name="x2" placeholder="X2 - Default: max(X)">
+        <input class="number-dims" type="number" id="y1" name="y1" placeholder="Y1 - Default: 0">
+        <input class="number-dims" type="number" id="y2" name="y2" placeholder="Y2 - Default: max(Y)">
+        <input class="number-dims" type="number" id="z1" name="z1" placeholder="Z1 - Default: 0">
+        <input class="number-dims" type="number" id="z2" name="z2" placeholder="Z2 - Default: max(Z)">
+      </div>
+      
+      <div class="mb-3"></div>
+      <label for="formFileMultiple" class="form-label">Secrets (File containing the bucket secrets, defaults to looking in .cloudvolume/secrets)</label>
+      <p><input class="form-control" type="file" id="secrets_file" name="secrets_file"></p>
   </div>
 
     <label for="formFileMultiple" class="form-label">SynAnno JSON file {% if mode == 'draw'%}-

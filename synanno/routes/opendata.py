@@ -104,7 +104,14 @@ def upload_file() -> Template:
         z2 = request.form.get('z2') if request.form.get('z2') else -1
 
         if any( bucket in source_url for bucket in app.config['CLOUD_VOLUME_BUCKETS']) and any(bucket in target_url for bucket in app.config['CLOUD_VOLUME_BUCKETS']):
-            source, raw_target = ip.load_3d_cloud_volume(source_url, target_url, x1, x2, y1, y2, z1, z2)
+            
+            # retrieve the bucket secret if the user provided one
+            if bucket_secret:= request.files['secrets_file']:
+                bucket_secret_bytes = bucket_secret.read()  # Read the file contents
+                bucket_secret_json = json.loads(bucket_secret_bytes)  # Parse JSON into dictionary
+                source, raw_target = ip.load_3d_cloud_volume(source_url, target_url, x1, x2, y1, y2, z1, z2, bucket_secret_json)
+            else:
+                source, raw_target = ip.load_3d_cloud_volume(source_url, target_url, x1, x2, y1, y2, z1, z2)
         else:
             flash('Please provide at least the paths to valid source and target cloud volume buckets!', 'error')
             return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate)

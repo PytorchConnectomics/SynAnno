@@ -54,8 +54,8 @@ def open_data(task: str) -> Template:
 
     if os.path.isdir('./synanno/static/Images/Img'):
         flash('Click \"Reset Backend\" to clear the memory, start a new task, and start up a Neuroglancer instance.')
-        return render_template('opendata.html', modecurrent='d-none', modenext='d-none', modereset='inline', mode=draw_or_annotate, json_name=app.config['JSON'], origin='local')
-    return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate, origin='local')
+        return render_template('opendata.html', modecurrent='d-none', modenext='d-none', modereset='inline', mode=draw_or_annotate, json_name=app.config['JSON'], origin='local', centric='view')
+    return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate, origin='local', centric='view')
 
 
 @app.route('/upload', methods=['GET', 'POST'])
@@ -94,29 +94,38 @@ def upload_file() -> Template:
 
         source_url = request.form.get('source_url')
         target_url = request.form.get('target_url')
-    
-        # retrieve the bounding box information from the corresponding html fields, if not provided set to -1
-        x1 = request.form.get('x1') if request.form.get('x1') else 0
-        x2 = request.form.get('x2') if request.form.get('x2') else -1
-        y1 = request.form.get('y1') if request.form.get('y1') else 0
-        y2 = request.form.get('y2') if request.form.get('y2') else -1
-        z1 = request.form.get('z1') if request.form.get('z1') else 0
-        z2 = request.form.get('z2') if request.form.get('z2') else -1
 
         if any( bucket in source_url for bucket in app.config['CLOUD_VOLUME_BUCKETS']) and any(bucket in target_url for bucket in app.config['CLOUD_VOLUME_BUCKETS']):
             
+            centric = request.form.get('centric')
+
+            if centric == 'view':
+                # retrieve the bounding box information from the corresponding html fields, if not provided set to -1
+                bbox_fields = ['x1', 'x2', 'y1', 'y2', 'z1', 'z2']
+                bbox_values = [request.form.get(field, 0) or 0 for field in bbox_fields]
+                x1, x2, y1, y2, z1, z2 = bbox_values
+
+            elif centric == 'neuron':
+                preid = request.form.get('preid')
+                postid = request.form.get('postid')
+
             # retrieve the bucket secret if the user provided one
-            if bucket_secret:= request.files['secrets_file']:
-                bucket_secret_bytes = bucket_secret.read()  # Read the file contents
-                bucket_secret_json = json.loads(bucket_secret_bytes)  # Parse JSON into dictionary
-                source, raw_target = ip.load_3d_cloud_volume(source_url, target_url, x1, x2, y1, y2, z1, z2, bucket_secret_json)
+            bucket_secret = request.files.get('secrets_file')
+            if bucket_secret:
+                bucket_secret_bytes = bucket_secret.read()
+                bucket_secret_json = json.loads(bucket_secret_bytes)
+                source, raw_target = ip.view_centric_cloud_volume(source_url, target_url, x1, x2, y1, y2, z1, z2, bucket_secret_json) if centric == 'view' else ip.neuro_centric_cloud_volume_(source_url, target_url, preid, postid, bucket_secret_json)
             else:
-                source, raw_target = ip.load_3d_cloud_volume(source_url, target_url, x1, x2, y1, y2, z1, z2)
+                source, raw_target = ip.view_centric_cloud_volume(source_url, target_url, x1, x2, y1, y2, z1, z2) if centric == 'view' else ip.neuro_centric_cloud_volume_(source_url, target_url, preid, postid)
+
         else:
             flash('Please provide at least the paths to valid source and target cloud volume buckets!', 'error')
             return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate)
         
     elif origin == 'local':
+
+        # default value for centric
+        centric = 'view'
 
         source_file = request.files['source_file']
         target_file = request.files['target_file']
@@ -160,7 +169,7 @@ def upload_file() -> Template:
         with open(path_json, 'r') as f:
             json.load(f)
         flash('Data ready!')
-        return render_template('opendata.html', json_name=path_json.split('/')[-1], modecurrent='disabled', modeform='formFileDisabled', origin=origin, mode=draw_or_annotate)
+        return render_template('opendata.html', json_name=path_json.split('/')[-1], modecurrent='disabled', modeform='formFileDisabled', origin=origin, centric=centric, mode=draw_or_annotate)
     except ValueError as e:
         flash('Something is wrong with the loaded JSON!', 'error')
         return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate)

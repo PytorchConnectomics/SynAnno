@@ -54,25 +54,27 @@ from synanno import app # import the package app
 from cloudvolume import CloudVolume
 
 
-# Processing the synpases using binary dilation as well as by removing small objects.
 def process_syn(gt: np.ndarray, small_thres: int = 16) -> Tuple[np.ndarray, np.ndarray]:
-    """Process the synapses using binary dilation as well as by removing small objects.
-
+    """ Convert the semantic segmentation to instance-level segmentation on synapse level and pre/post synaptic level.
+    
     Args:
-        gt (np.ndarray): the binary mask of the synapse.
+        gt (np.ndarray): the semantic or instance-level segmentation.
         small_thres (int): the threshold for removing small objects.
 
     Returns:
-        syn (np.ndarray): the binary mask of the synapse.
-        seg (np.ndarray): the binary mask of the segmentation.
+        syn (np.ndarray): the instance-level segmentation where each pre and post synaptic region is labeled with an individual index.
+        seg (np.ndarray): the instance-level segmentation where each synapse is labeled with an individual index.
     """
     indices = np.unique(gt)
     is_semantic = len(indices) == 3 and (indices==[0,1,2]).all()
     if not is_semantic: # already an instance-level segmentation
+        # merge the pre- and post-synaptic index into a single index for each synapse
         syn, seg = gt, (gt.copy() + 1) // 2
         return syn, seg
 
+    # convert the semantic segmentation to instance-level segmentation
     with warnings.catch_warnings():
+        # create the synapse based instance segmentation
         warnings.simplefilter("ignore", category=UserWarning)
         seg = binary_dilation(gt.copy() != 0)
         synanno.progress_bar_status['percent'] = int(8) 
@@ -82,6 +84,7 @@ def process_syn(gt: np.ndarray, small_thres: int = 16) -> Tuple[np.ndarray, np.n
         seg = remove_small_objects(seg, small_thres)
         synanno.progress_bar_status['percent'] = int(12) 
 
+        # create the pre- and post-synaptic based instance segmentation
         c2 = (gt.copy() == 2).astype(int)
         c1 = (gt.copy() == 1).astype(int)
 
@@ -561,7 +564,22 @@ def load_3d_files(im_file: str, gt_file: str) -> Tuple[np.ndarray, np.ndarray]:
 
     return img, gt
 
-def load_3d_cloud_volume(im_file: str, gt_file: str, x1: int, x2: int, y1: int, y2: int, z1: int, z2: int, bucket_secret_json: json = '~/.cloudvolume/secrets'):
+def neuro_centric_cloud_volume_(im_file: str, gt_file: str, preid: int, postid: int) -> Tuple[np.ndarray, np.ndarray]:
+    """ Use the materialization engine to query the synapse table based on the pre and post synaptic neuron ids.
+
+    Args:
+        im_file (str): path to the image file.
+        gt_file (str): path to the ground truth file.
+        preid (int): the pre synaptic neuron id.
+        postid (int): the post synaptic neuron id.
+    
+    Returns:
+        source (np.ndarray): the original image (EM).
+        gt (np.ndarray): the mask annotation (GT: ground truth).
+    """
+    pass
+
+def view_centric_cloud_volume(im_file: str, gt_file: str, x1: int, x2: int, y1: int, y2: int, z1: int, z2: int, bucket_secret_json: json = '~/.cloudvolume/secrets') -> Tuple[np.ndarray, np.ndarray]:
     """Load the 3D image and ground truth volumes.
     
     Args:
@@ -619,11 +637,13 @@ def load_3d_cloud_volume(im_file: str, gt_file: str, x1: int, x2: int, y1: int, 
 
     return img, gt
 
-def process_3d_data(im: np.ndarray, gt: np.ndarray, patch_size: int = 142, path_json: str = None):
+def process_3d_data(im: np.ndarray, gt: np.ndarray, patch_size: int = 142, path_json: str = None) -> Union[str, Tuple[np.ndarray, np.ndarray]]:
 
     synanno.progress_bar_status['status'] = "Convert Polarity Prediction to Segmentation"
+
+
     if gt.ndim != 3:
-        # If the gt is not segmentation mask but predicted polarity, generate
+        # If the gt is not a segmentation mask but predicted polarity, generate
         # the individual synapses using the polarity2instance function from
         # https://github.com/zudi-lin/pytorch_connectomics/blob/master/connectomics/utils/process.py
         assert (gt.ndim == 4 and gt.shape[0] == 3)
@@ -636,9 +656,8 @@ def process_3d_data(im: np.ndarray, gt: np.ndarray, patch_size: int = 142, path_
     synanno.vol_dim_z, synanno.vol_dim_y, synanno.vol_dim_x = tuple([s-1 for s in gt.shape])
 
     synanno.progress_bar_status['status'] = "Retrive 2D patches from 3D volume"
-    # Processing the 3D volume to get 2D patches.
+    
     syn, synanno.target = process_syn(gt)
-
 
     synanno.progress_bar_status['status'] = "Render Images"
     

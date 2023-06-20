@@ -561,7 +561,7 @@ def load_3d_files(im_file: str, gt_file: str) -> Tuple[np.ndarray, np.ndarray]:
 
     return img, gt
 
-def load_3d_cloud_volume(im_file: str, gt_file: str, x1: int, x2: int, y1: int, y2: int, z1: int, z2: int, bucket_secret_json: json = '.cloudvolume/secrets'):
+def load_3d_cloud_volume(im_file: str, gt_file: str, x1: int, x2: int, y1: int, y2: int, z1: int, z2: int, bucket_secret_json: json = '~/.cloudvolume/secrets'):
     """Load the 3D image and ground truth volumes.
     
     Args:

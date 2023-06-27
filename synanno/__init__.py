@@ -47,11 +47,10 @@ app.config['NG_PORT'] = '9015'
 global progress_bar_status
 progress_bar_status = {"status":"Loading Source File", "percent":0}
 
-# handle to the loaded image and gt data
+# handle to the loaded image
 global source
-global target
 
-source, target = None, None
+source = None
 
 # grid opacity for the annotation view
 global grid_opacity

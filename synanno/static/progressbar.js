@@ -6,7 +6,14 @@ $(document).ready(function () {
     $('#progressModal').modal('show');
     ping_backend()
   });
+
+  // for scrolling pages during view_style 'neuron'
+  $('.nav-anno').click(function() {
+    $('#progressModal').modal('show');
+    ping_backend()
+  });
 });
+
 
 function ping_backend() {
   // pulls the process status from the backend

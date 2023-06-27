@@ -102,7 +102,6 @@ $(document).ready(function () {
             $('#view-form').show();
             $('#neuron-form').hide();
         } else if ($(this).val() === 'neuron') {
-            console.log("HIIIIIIIIIIIII")
             $('#view-form').hide();
             $('#neuron-form').show();
         }

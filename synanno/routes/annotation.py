@@ -23,25 +23,44 @@ import json
 from jinja2 import Template
 from typing import Dict
 
+import synanno.backend.processing as ip
 
 
-@app.route('/annotation')
+@app.route('/annotation/<int:page>/<string:view_style>')
 @app.route('/annotation/<int:page>')
-def annotation(page: int = 0) -> Template:
+@app.route('/annotation')
+def annotation(page: int = 0, view_style: str = 'view') -> Template:
     ''' Start the proofreading timer and load the annotation view.
 
         Args:
             page: The current data page that is depicted in the grid view
+            view_style: Identifies the view style: view | neuron
 
         Return:
             The annotation view
     '''
 
+    if (view_style == 'neuron'):
+    # check if the data for the current page is already loaded
+        if session.get('data')[page] is None:
+            # compute the data for the current page
+            ip.visualize_cv_instances(session.get('patch_size'), session.get('path_json'), page)
+
+            # update the session data
+            session.get('data')[page] = None
+        
+            # open the json data and save it to the session
+            f = open(session.get('path_json'))
+            data = json.load(f)
+            
+            session['data'][page] = data[str(page)]
+            
+
     # start the timer for the annotation process
     if synanno.proofread_time['start_grid'] is None:
         synanno.proofread_time['start_grid'] = datetime.datetime.now()
 
-    return render_template('annotation.html', images=session.get('data')[page], page=page, n_pages=session.get('n_pages'), grid_opacity=synanno.grid_opacity)
+    return render_template('annotation.html', images=session.get('data')[page], page=page, n_pages=session.get('n_pages'), grid_opacity=synanno.grid_opacity, view_style=view_style)
 
 
 @app.route('/set_grid_opacity', methods=['POST'])

@@ -57,17 +57,19 @@
       
 
     <label class="form-check-label">
-        <input type="radio" class="form-check-input" name="centric" value="view" {% if centric == 'view' %} checked {% endif %}>
+        <input type="radio" class="form-check-input" name="view_style" value="view" {% if view_style == 'view' %} checked {% endif %}>
         View Centric
     </label>
     <label class="form-check-label">
-        <input type="radio" class="form-check-input" name="centric" value="neuron" {% if centric == 'neuron' %} checked {% endif %}>
+        <input type="radio" class="form-check-input" name="view_style" value="neuron" {% if view_style == 'neuron' %} checked {% endif %}>
         Neuron Centric
     </label>
 
     <div class="mb-1"></div>
 
-      <div id="neuron-form" {% if centric == 'view' %} class="hidden-form" {% endif %}>
+      <div id="neuron-form" {% if view_style == 'view' %} class="hidden-form" {% endif %}>
+        <label for="formFileMultiple" class="form-label">Materialization (url/name of the table containing the ID association and bounding box information)</label>
+        <p><input class="form-control" type="text" id="materialization_url" name="materialization_url" placeholder="Materialization - synapses"></p>
         <label for="formFileMultiple" class="form-label">Pre- and postsynaptic IDs</label>
         <div class="number-container">
           <input class="number-dims" type="number" id="preid" name="Presynaptic" placeholder="Presynaptic ID">
@@ -75,7 +77,7 @@
         </div>
       </div>
       
-      <div id="view-form" {% if centric == 'neuron' %} class="hidden-form" {% endif %}>
+      <div id="view-form" {% if view_style == 'neuron' %} class="hidden-form" {% endif %}>
       <label for="formFileMultiple" class="form-label">Slicing indices for the Subvolume</label>
       <div class="coordinate-container">
         <input class="coordinate-dims" type="number" id="x1" name="x1" placeholder="X1 - Default: 0">
@@ -100,7 +102,7 @@
     <p class="mt-4">
       <input id="processData" type="submit" class="btn btn-secondary {{ modecurrent }} disabled" value="Submit">
       <a type="button" class="btn btn-primary {{ modenext }}"
-        href="{{ url_for('set_data', task=mode, json_name=json_name) }}">
+        href="{{ url_for('set_data', task=mode, view_style=view_style, json_name=json_name) }}">
         {% if mode == 'draw'%} Start Drawing {% elif mode == 'annotate'%}Start Data Proofread{% endif %}
       </a>
     </p>
@@ -108,7 +110,7 @@
       <a type="button" id='resetButton' class="btn btn-outline-danger d-{{ modereset or 'none'}}"
         href="{{ url_for('reset') }}">Reset Backend</a>
       <a type="button" id='continueButton' class="btn btn-outline-warning d-{{ modereset or 'none'}}"
-        href="{{ url_for('set_data', task=mode, json_name=json_name) }}">Continue Previous Task</a>
+        href="{{ url_for('set_data', task=mode, view_style=view_style, json_name=json_name) }}">Continue Previous Task</a>
     </p>
   </form>
 

@@ -1,5 +1,5 @@
 from __future__ import print_function, division
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Dict
 
 import os
 import cv2
@@ -267,3 +267,6 @@ def getSegType(mid):
     elif mid < 2**32:
         m_type = np.uint32
     return m_type
+
+def get_sub_dict_within_range(dictionary: Dict, start_key: int, end_key: int) -> Dict:
+    return {key: value for key, value in dictionary.items() if start_key <= int(key) <= end_key}

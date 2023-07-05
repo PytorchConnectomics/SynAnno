@@ -1,22 +1,14 @@
 # Importing the required libraries
 import itertools
 import numpy as np
-from skimage.morphology import binary_dilation, remove_small_objects
-from skimage.measure import label as label_cc 
 from matplotlib import pyplot as plt
 import cv2
-import os, sys
-import io
-from util import bfly, rotateIm, readvol
+import os
+from util import rotateIm, readvol
 import PIL
 from PIL import Image
 import json
-import util
-import base64
 import h5py
-from matplotlib.pyplot import imread, imsave
-import shutil
-from scipy.stats import linregress
 from datetime import datetime
 
 # Calculating the bounding boxes for every synpase in N-dimensions (3D as well as 2D)

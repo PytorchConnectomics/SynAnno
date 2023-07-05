@@ -28,6 +28,11 @@ app.config['UPLOAD_FOLDER'] = 'files/'
 
 app.config['STATIC_FOLDER'] = 'static/'
 
+'''
+    The following two variables are used by opendata.py for loading the data.
+'''
+app.config['CLOUD_VOLUME_BUCKETS'] = ['gs:', 's3:', 'file:']   
+
 app.config['UPLOAD_EXTENSIONS'] = ['.json', '.h5']
 
 app.config['JSON'] = 'synAnno.json'
@@ -43,10 +48,10 @@ global progress_bar_status
 progress_bar_status = {"status":"Loading Source File", "percent":0}
 
 # handle to the loaded image and gt data
-global im
-global seg
+global source
+global target
 
-im, seg = None, None
+source, target = None, None
 
 # grid opacity for the annotation view
 global grid_opacity

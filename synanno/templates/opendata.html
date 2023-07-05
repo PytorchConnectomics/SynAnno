@@ -30,11 +30,47 @@
 </div>
 
 <div class="mb-3">
+  
   <form method="POST" for="{{ modeform }}" action="{{ url_for('upload_file') }}" enctype="multipart/form-data">
-    <label for="formFileMultiple" class="form-label">Source .h5 data file - Required</label>
-    <p><input class="form-control" type="file" id="originalFile" name="file_original"></p>
-    <label for="formFileMultiple" class="form-label">Target .h5 data file - Required</label>
-    <p><input class="form-control" type="file" id="gtFile" name="file_gt"></p>
+
+    <label class="form-check-label">
+      <input type="radio" class="form-check-input" name="origin" value="local" {% if origin == 'local' %} checked {% endif %}>
+      Local
+  </label>
+  <label class="form-check-label">
+      <input type="radio" class="form-check-input" name="origin" value="cloud" {% if origin == 'cloud' %} checked {% endif %}>
+      Cloud
+  </label>
+
+    <div id="local-form" {% if origin == 'cloud' %} class="hidden-form" {% endif %}>
+      <label for="formFileMultiple" class="form-label">Source .h5 data file - Required</label>
+      <p><input class="form-control" type="file" id="source_file" name="source_file"></p>
+      <label for="formFileMultiple" class="form-label">Target .h5 data file - Required</label>
+      <p><input class="form-control" type="file" id="target_file" name="target_file"></p>
+    </div>
+  
+    <div id="cloud-form" {% if origin == 'local' %} class="hidden-form" {% endif %}>
+    <label for="formFileMultiple" class="form-label">Source bucket (precomputed: Neuroglancer's native format) - Required</label>
+    <p><input class="form-control" type="url" id="source_url" name="source_url" placeholder="Cloud Volume Bucket - file://<path_to_your_file>"></p>
+    <label for="formFileMultiple" class="form-label">Target bucket (precomputed: Neuroglancer's native format) - Required</label>
+    <p><input class="form-control" type="url" id="target_url" name="target_url" placeholder="Cloud Volume Bucket - file://<path_to_your_file>"></p>
+      
+      <label for="formFileMultiple" class="form-label">Slicing indices for the Subvolume</label>
+      
+      <div class="number-container">
+        <input class="number-dims" type="number" id="x1" name="x1" placeholder="X1 - Default: 0">
+        <input class="number-dims" type="number" id="x2" name="x2" placeholder="X2 - Default: max(X)">
+        <input class="number-dims" type="number" id="y1" name="y1" placeholder="Y1 - Default: 0">
+        <input class="number-dims" type="number" id="y2" name="y2" placeholder="Y2 - Default: max(Y)">
+        <input class="number-dims" type="number" id="z1" name="z1" placeholder="Z1 - Default: 0">
+        <input class="number-dims" type="number" id="z2" name="z2" placeholder="Z2 - Default: max(Z)">
+      </div>
+      
+      <div class="mb-3"></div>
+      <label for="formFileMultiple" class="form-label">Secrets (File containing the bucket secrets, defaults to looking in .cloudvolume/secrets)</label>
+      <p><input class="form-control" type="file" id="secrets_file" name="secrets_file"></p>
+  </div>
+
     <label for="formFileMultiple" class="form-label">SynAnno JSON file {% if mode == 'draw'%}-
       Required{% endif %}</label>
     <p><input class="form-control {{mode}}" type="file" id="formFile" name="file_json"></p>
@@ -54,6 +90,8 @@
         href="{{ url_for('set_data', task=mode, json_name=json_name) }}">Continue Previous Task</a>
     </p>
   </form>
+
+  
 </div>
 
 <!-- Modal with progress bar -->
@@ -86,5 +124,9 @@
 <script src="{{ url_for('static', filename='progressbar.js') }}"></script>
 <!-- add js file to disable the form on reset -->
 <script src="{{ url_for('static', filename='opendata.js') }}"></script>
+
+<script>
+
+</script>
 
 {% endblock %}

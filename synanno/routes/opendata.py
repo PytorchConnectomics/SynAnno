@@ -31,7 +31,6 @@ from werkzeug.datastructures import MultiDict
 from typing import Dict
 
 
-
 # global variables
 global draw_or_annotate  # defines the downstream task; either draw or annotate - default to annotate
 draw_or_annotate = 'annotate'
@@ -55,8 +54,8 @@ def open_data(task: str) -> Template:
 
     if os.path.isdir('./synanno/static/Images/Img'):
         flash('Click \"Reset Backend\" to clear the memory, start a new task, and start up a Neuroglancer instance.')
-        return render_template('opendata.html', modecurrent='d-none', modenext='d-none', modereset='inline', mode=draw_or_annotate, json_name=app.config['JSON'])
-    return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate)
+        return render_template('opendata.html', modecurrent='d-none', modenext='d-none', modereset='inline', mode=draw_or_annotate, json_name=app.config['JSON'], origin='local')
+    return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate, origin='local')
 
 
 @app.route('/upload', methods=['GET', 'POST'])
@@ -76,10 +75,10 @@ def upload_file() -> Template:
         os.mkdir(os.path.join('.', os.path.join(
             app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER'])))
 
-    # retrieve the file paths from the corresponding html fields
-    file_original = request.files['file_original']
-    file_gt = request.files['file_gt']
-    file_json = request.files['file_json']
+    # remove existing json file
+    if os.path.isfile(os.path.join(os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']), app.config['JSON'])):
+        os.remove(os.path.join(os.path.join(
+            app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']), app.config['JSON']))
 
     # update the patch size if provided
     if request.form.get('patchsize'):
@@ -89,57 +88,82 @@ def upload_file() -> Template:
 
     session['patch_size'] = patch_size
 
-    # check if the path to the required files (source and target) are not None
-    if file_original.filename and file_gt.filename:
+    origin = request.form.get('origin')
 
-        # retrieve the names of the provided files
-        original_name = save_file(file_original, file_original.filename)
-        gt_name = save_file(file_gt, file_gt.filename)
+    if origin == 'cloud':
 
-        # if the source and target path are valid
-        if original_name and gt_name:
+        source_url = request.form.get('source_url')
+        target_url = request.form.get('target_url')
+    
+        # retrieve the bounding box information from the corresponding html fields, if not provided set to -1
+        x1 = request.form.get('x1') if request.form.get('x1') else 0
+        x2 = request.form.get('x2') if request.form.get('x2') else -1
+        y1 = request.form.get('y1') if request.form.get('y1') else 0
+        y2 = request.form.get('y2') if request.form.get('y2') else -1
+        z1 = request.form.get('z1') if request.form.get('z1') else 0
+        z2 = request.form.get('z2') if request.form.get('z2') else -1
 
-            # remove existing json file
-            if os.path.isfile(os.path.join(os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']), app.config['JSON'])):
-                os.remove(os.path.join(os.path.join(
-                    app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']), app.config['JSON']))
-
-            # if a json got provided save it locally and process the data based on the JSON info
-            if file_json.filename:
-                path_json = save_file(file_json, app.config['JSON'])
-                _, source_img, target_seg = ip.load_3d_files(
-                    os.path.join(
-                        os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']), file_original.filename),
-                    os.path.join(
-                        os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']), file_gt.filename),
-                    patch_size=patch_size,
-                    path_json=path_json)
-            # else compute the bounding box information and write them to a json
+        if any( bucket in source_url for bucket in app.config['CLOUD_VOLUME_BUCKETS']) and any(bucket in target_url for bucket in app.config['CLOUD_VOLUME_BUCKETS']):
+            
+            # retrieve the bucket secret if the user provided one
+            if bucket_secret:= request.files['secrets_file']:
+                bucket_secret_bytes = bucket_secret.read()  # Read the file contents
+                bucket_secret_json = json.loads(bucket_secret_bytes)  # Parse JSON into dictionary
+                source, raw_target = ip.load_3d_cloud_volume(source_url, target_url, x1, x2, y1, y2, z1, z2, bucket_secret_json)
             else:
-                path_json, source_img, target_seg = ip.load_3d_files(
-                    os.path.join(
-                        os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']), file_original.filename),
-                    os.path.join(
-                        os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']), file_gt.filename),
-                    patch_size)
-
-            # if the NG version number is None setup a new NG viewer
-            if synanno.ng_version is None:
-                ng_util.setup_ng(source_img, target_seg)
-
-        # test if the created/provided json is valid by loading it an rerender the open-data view
-        try:
-            with open(path_json, 'r') as f:
-                json.load(f)
-            flash('Data ready!')
-            return render_template('opendata.html', json_name=path_json.split('/')[-1], modecurrent='disabled', modeform='formFileDisabled', mode=draw_or_annotate)
-        except ValueError as e:
-            flash('Something is wrong with the loaded JSON!', 'error')
+                source, raw_target = ip.load_3d_cloud_volume(source_url, target_url, x1, x2, y1, y2, z1, z2)
+        else:
+            flash('Please provide at least the paths to valid source and target cloud volume buckets!', 'error')
             return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate)
-    else:
-        flash('Please provide at least the paths to valid source and target .h5 files!', 'error')
-        return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate)
+        
+    elif origin == 'local':
 
+        source_file = request.files['source_file']
+        target_file = request.files['target_file']
+
+        # check if the path to the required files (source and target) are not None
+        if source_file.filename and target_file.filename:
+
+            # retrieve the names of the provided files
+            source_file_path = save_file(source_file, source_file.filename)
+            target_file_path = save_file(target_file, target_file.filename)
+            source, raw_target = ip.load_3d_files(source_file_path, target_file_path)
+
+        else:
+            flash('Please provide at least the paths to valid source and target .h5 files!', 'error')
+            return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate)
+
+
+    file_json = request.files['file_json']
+
+    # if a json got provided save it locally and process the data based on the JSON info
+    if file_json.filename:
+        path_json = save_file(file_json, app.config['JSON'])
+        _, synanno.source, target_seg = ip.process_3d_data(
+            source,
+            raw_target,
+            patch_size=patch_size,
+            path_json=path_json)
+    # else compute the bounding box information and write them to a json
+    else:
+        path_json, synanno.source, target_seg = ip.process_3d_data(
+            source,
+            raw_target,
+            patch_size)
+
+    # if the NG version number is None setup a new NG viewer
+    if synanno.ng_version is None:
+        ng_util.setup_ng(synanno.source, target_seg)
+
+    # test if the created/provided json is valid by loading it an rerender the open-data view
+    try:
+        with open(path_json, 'r') as f:
+            json.load(f)
+        flash('Data ready!')
+        return render_template('opendata.html', json_name=path_json.split('/')[-1], modecurrent='disabled', modeform='formFileDisabled', origin=origin, mode=draw_or_annotate)
+    except ValueError as e:
+        flash('Something is wrong with the loaded JSON!', 'error')
+        return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate)
 
 @app.route('/set-data/<task>/<json_name>')
 @app.route('/set-data/<json_name>')

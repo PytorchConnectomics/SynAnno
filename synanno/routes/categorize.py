@@ -107,7 +107,7 @@ def pass_flags() -> Dict[str, object]:
         final_file['Data'] = sum(session['data'], [])
         final_file['Proofread Time'] = synanno.proofread_time
         with open(os.path.join(app.config['PACKAGE_NAME'],os.path.join(app.config['UPLOAD_FOLDER']),app.config['JSON']), 'w') as f:
-            json.dump(final_file, f, default=json_serial)
+            json.dump(final_file, f, indent=4, default=json_serial)
 
         # provide sufficient time for the json update
         time.sleep(len(data)*0.01*session['per_page'])

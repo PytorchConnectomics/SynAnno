@@ -27,10 +27,10 @@ Metadata JSON file structure:
     ]
 }
 '''
-from typing import Optional, Union, List, Tuple
+from typing import Union, Tuple
 from collections import OrderedDict
 
-from typing import Optional, Union, List, Tuple
+from typing import Union, Tuple
 from collections import OrderedDict
 
 import os
@@ -51,8 +51,21 @@ from .utils import *
 import synanno # import global configs
 from synanno import app # import the package app
 
+from cloudvolume import CloudVolume
+
+
 # Processing the synpases using binary dilation as well as by removing small objects.
-def process_syn(gt, small_thres=16):
+def process_syn(gt: np.ndarray, small_thres: int = 16) -> Tuple[np.ndarray, np.ndarray]:
+    """Process the synapses using binary dilation as well as by removing small objects.
+
+    Args:
+        gt (np.ndarray): the binary mask of the synapse.
+        small_thres (int): the threshold for removing small objects.
+
+    Returns:
+        syn (np.ndarray): the binary mask of the synapse.
+        seg (np.ndarray): the binary mask of the segmentation.
+    """
     indices = np.unique(gt)
     is_semantic = len(indices) == 3 and (indices==[0,1,2]).all()
     if not is_semantic: # already an instance-level segmentation
@@ -79,7 +92,16 @@ def process_syn(gt, small_thres=16):
     return syn, seg
 
 
-def bbox_ND(img):
+def bbox_ND(img: np.ndarray) -> tuple:
+    """Calculate the bounding box coordinates of a N-dimensional array.
+
+    Args:
+        img (np.ndarray): the N-dimensional array.
+
+    Returns:
+        bbox (tuple): the bounding box coordinates.
+    """
+
     N = img.ndim
     out = []
     for ax in itertools.combinations(reversed(range(N)), N - 1):
@@ -91,6 +113,14 @@ def crop_ND(img: np.ndarray, coord: Tuple[int],
             end_included: bool = False) -> np.ndarray:
     """Crop a chunk from a N-dimensional array based on the 
     bounding box coordinates.
+
+    Args:
+        img (np.ndarray): the N-dimensional array.
+        coord (tuple): the bounding box coordinates.
+        end_included (bool): whether the end coordinates are included.
+
+    Returns:
+        cropped (np.ndarray): the cropped chunk.
     """
     N = img.ndim
     assert len(coord) == N * 2
@@ -102,7 +132,18 @@ def crop_ND(img: np.ndarray, coord: Tuple[int],
     slicing = tuple(slicing)
     return img[slicing].copy()
 
-def adjust_bbox(low, high, sz):
+def adjust_bbox(low: int, high: int, sz: int) -> Tuple[int]:
+    """Adjust the bounding box coordinates to a given size.
+
+    Args:
+        low (int): the lower bound of the bounding box.
+        high (int): the upper bound of the bounding box.
+        sz (int): the size of the bounding box.
+
+    Returns:
+        low (int): the adjusted lower bound of the bounding box.
+        high (int): the adjusted upper bound of the bounding box.
+    """
     assert high >= low
     bbox_sz = high - low
     diff = abs(sz - bbox_sz) // 2
@@ -114,6 +155,16 @@ def adjust_bbox(low, high, sz):
 def bbox_relax(coord: Union[tuple, list], 
                shape: tuple, 
                relax: int = 0) -> tuple:
+    """Relax the bounding box coordinates by a given value.
+
+    Args:
+        coord (tuple): the bounding box coordinates.
+        shape (tuple): the shape of the image.
+        relax (int): the relaxation size for the bounding box.
+
+    Returns:
+        coord (tuple): the relaxed bounding box coordinates.
+    """
     assert len(coord) == len(shape) * 2
     coord = list(coord)
     for i in range(len(shape)):
@@ -130,6 +181,15 @@ def index2bbox(seg: np.ndarray, indices: list, relax: int = 0,
     Note:
         Since labels with value 0 are ignored in ``scipy.ndimage.find_objects``,
         the first tuple in the output list is associated with label index 1. 
+
+    Args:
+        seg (np.ndarray): the binary mask of the segmentation.
+        indices (list): the list of indices.
+        relax (int): the relaxation size for the bounding box.
+        iterative (bool): whether to use iterative approach to calculate bounding boxes.
+
+    Returns:
+        bbox_dict (dict): the dictionary of bounding boxes.
     """
     bbox_dict = OrderedDict()
 
@@ -161,8 +221,22 @@ def index2bbox(seg: np.ndarray, indices: list, relax: int = 0,
         bbox_dict[object_idx] = bbox_relax(bbox, seg_shape, relax)
     return bbox_dict
 
-# crop a 2D patch from 3D volume
-def crop_pad_data(data, z, bbox_2d, pad_val=0, mask=None, return_box=False):
+def crop_pad_data(data: np.ndarray, z: int, bbox_2d: list, pad_val: int = 0, mask: np.ndarray = None, return_box: bool = False) -> Union[np.ndarray, Tuple[np.ndarray, list, tuple]]:
+    ''' Crop a 2D patch from 3D volume.
+
+    Args:   
+        data (np.ndarray): the 3D volume.
+        z (int): the z index of the 2D patch.   
+        bbox_2d (list): the bounding box of the 2D patch.
+        pad_val (int): the value used for padding.
+        mask (np.ndarray): the binary mask of the synapse.
+        return_box (bool): whether to return the bounding box.
+
+    Returns:
+        cropped (np.ndarray): the cropped 2D patch.
+        [y1, y2, x1, x2] (list): the bounding box of the 2D patch.
+        pad (tuple): the padding size for y and x axes.
+    '''
     sz = data.shape[1:]
     y1o, y2o, x1o, x2o = bbox_2d  # region to crop
     y1m, y2m, x1m, x2m = 0, sz[0], 0, sz[1]
@@ -185,7 +259,15 @@ def crop_pad_data(data, z, bbox_2d, pad_val=0, mask=None, return_box=False):
     return cropped, [y1, y2, x1, x2], pad
 
 
-def syn2rgb(label):
+def syn2rgb(label: np.ndarray) -> np.ndarray:
+    ''' Convert the binary mask of the synapse to RGB format.
+    
+    Args:
+        label (np.ndarray): the binary mask of the synapse.
+        
+    Returns:
+        out (np.ndarray): the RGB mask of the synapse.
+    '''
     tmp = [None] * 3
     tmp[0] = np.logical_and((label % 2) == 1, label > 0)
     tmp[1] = np.logical_and((label % 2) == 0, label > 0)
@@ -194,16 +276,34 @@ def syn2rgb(label):
     return out * 255
 
 
-# create a directory if it does not exist
-def create_dir(parent_dir_path, dir_name):
+def create_dir(parent_dir_path: str, dir_name: str) -> str:
+    ''' Create a directory if it does not exist.
+    
+    Args:
+        parent_dir_path (str): the path to the parent directory.
+        dir_name (str): the name of the directory.
+        
+    '''
     dir_path = os.path.join(parent_dir_path, dir_name)
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
     return dir_path
 
 
-# calculate the rotation angle to align masks with different orientations
-def calculate_rot(syn, struct_sz=3, return_overlap=False, mode='linear'):
+def calculate_rot(syn: np.ndarray, struct_sz: int = 3, return_overlap: bool = False, mode: str = 'linear') -> Union[float, np.ndarray]:
+    ''' Calculate the rotation angle to align masks with different orientations.
+
+    Args:
+        syn (np.ndarray): the binary mask of the synapse.
+        struct_sz (int): the size of the structuring element used in dilation.
+        return_overlap (bool): whether to return the overlap mask.
+        mode (str): the mode used in regression.
+
+    Returns:
+        angle (float): the rotation angle.
+        slope (float): the slope of the regression line.
+    '''
+
     assert mode in ['linear', 'siegel', 'theil']
     struct = np.ones((struct_sz, struct_sz), np.uint8)
     pos = binary_dilation(np.logical_and((syn % 2) == 1, syn > 0), struct)
@@ -236,7 +336,21 @@ def calculate_rot(syn, struct_sz=3, return_overlap=False, mode='linear'):
     return angle, slope
 
 
-def visualize(syn, seg, img, sz, return_data=False, iterative_bbox=False, path_json=None):
+def visualize(syn: np.ndarray, seg: np.ndarray, img: np.ndarray, sz: int, return_data: bool = False, iterative_bbox: bool = False, path_json: str = None) -> Union[str, None]:
+    ''' Visualize the synapse and EM images in 2D slices.
+    
+    Args:
+        syn (np.ndarray): the binary mask of the synapse.
+        seg (np.ndarray): the binary mask of the segmentation.
+        img (np.ndarray): the original EM image.
+        sz (int): the size of the 2D patch.
+        return_data (bool): whether to return the data.
+        iterative_bbox (bool): whether to use iterative approach to calculate bounding boxes.
+        path_json (str): the path to the JSON file.
+        
+    Returns:
+        synanno_json (str): the path to the JSON file.
+    '''
     crop_size = int(sz * 1.415) # considering rotation 
 
     item_list, data_dict = [], {}
@@ -427,13 +541,85 @@ def visualize(syn, seg, img, sz, return_data=False, iterative_bbox=False, path_j
         return
 
 
-
-def load_3d_files(im_file, gt_file, patch_size=142, path_json=None):
+def load_3d_files(im_file: str, gt_file: str) -> Tuple[np.ndarray, np.ndarray]:
+    """Load the 3D image and ground truth files.
+    
+    Args:
+        im_file (str): path to the image file.
+        gt_file (str): path to the ground truth file.
+        
+    Returns:
+        source (np.ndarray): the original image (EM).
+        gt (np.ndarray): the mask annotation (GT: ground truth).
+    """
     synanno.progress_bar_status['status'] = "Loading Source File"
-    synanno.im = readvol(im_file)  # The original image (EM)
+    img = readvol(im_file)  # The original image (EM)
+
+
     synanno.progress_bar_status['status'] = "Loading Target File"
     gt = readvol(gt_file)  # The mask annotation (GT: ground truth)
+
+    return img, gt
+
+def load_3d_cloud_volume(im_file: str, gt_file: str, x1: int, x2: int, y1: int, y2: int, z1: int, z2: int, bucket_secret_json: json = '~/.cloudvolume/secrets'):
+    """Load the 3D image and ground truth volumes.
     
+    Args:
+        im_file (str): path to the image file.
+        gt_file (str): path to the ground truth file.
+        x1 (int): x1 coordinate of the bounding box.
+        x2 (int): x2 coordinate of the bounding box.
+        y1 (int): y1 coordinate of the bounding box.
+        y2 (int): y2 coordinate of the bounding box.
+        z1 (int): z1 coordinate of the bounding box.
+        z2 (int): z2 coordinate of the bounding box.
+        
+    Returns:
+        source (np.ndarray): the original image (EM).
+        gt (np.ndarray): the mask annotation (GT: ground truth).
+    """
+    
+    synanno.progress_bar_status['status'] = "Loading Source File"
+
+    print("#"*40)
+    print(bucket_secret_json)
+    # handle to cloud volume
+    source = CloudVolume(im_file, secrets=bucket_secret_json)
+
+    if x2 == -1:
+        x2 = source.info['scales'][0]['size'][2]
+
+    if y2 == -1:
+        y2 = source.info['scales'][0]['size'][1]
+    
+    if z2 == -1:
+        z2 = source.info['scales'][0]['size'][0]
+
+    # retrieve the subvolume
+    img = np.squeeze(source[z1:z2, y1:y2, x1:x2])
+
+    # remove the first 128 pixels from the x axis, as they got weirdly shifted by cloudvolume
+    img = img[:,:,128:]
+    img_np = np.zeros(img.shape).astype(np.uint8)
+    img_np[:,:,:] = img[:,:,:]
+
+
+    synanno.progress_bar_status['status'] = "Loading Target File"
+
+    # handle to cloud volume
+    gt = CloudVolume(gt_file, secrets=bucket_secret_json)
+
+    
+    gt = np.squeeze(gt[z1:z2, y1:y2, x1:x2])
+
+    # remove the first 128 pixels from the x axis, as they got weirdly shifted by cloudvolume
+    gt = gt[:,:,128:]
+    gt_np = np.zeros(gt.shape).astype(np.uint8)
+    gt_np[:,:,:] = gt[:,:,:]
+
+    return img, gt
+
+def process_3d_data(im: np.ndarray, gt: np.ndarray, patch_size: int = 142, path_json: str = None):
 
     synanno.progress_bar_status['status'] = "Convert Polarity Prediction to Segmentation"
     if gt.ndim != 3:
@@ -451,22 +637,22 @@ def load_3d_files(im_file, gt_file, patch_size=142, path_json=None):
 
     synanno.progress_bar_status['status'] = "Retrive 2D patches from 3D volume"
     # Processing the 3D volume to get 2D patches.
-    syn, synanno.seg = process_syn(gt)
+    syn, synanno.target = process_syn(gt)
 
 
     synanno.progress_bar_status['status'] = "Render Images"
     
     # if a json was provided process the data accordingly
     if path_json is not None:
-        visualize(syn, synanno.seg, synanno.im, sz=patch_size, path_json=path_json)
+        visualize(syn, synanno.target, im, sz=patch_size, path_json=path_json)
         synanno.progress_bar_status['percent'] = int(100) 
-        return None, synanno.im, gt
+        return None, im, gt
     # if no json was provided create a json file and process the data
     else:
-        synanno_json = visualize(syn, synanno.seg, synanno.im, sz=patch_size)
+        synanno_json = visualize(syn, synanno.target,im, sz=patch_size)
         synanno.progress_bar_status['percent'] = int(100) 
         if os.path.isfile(synanno_json):
-            return synanno_json, synanno.im, gt
+            return synanno_json, im, gt
         else:
             # the json file should have been created by the visualize function
             raise FileNotFoundError(

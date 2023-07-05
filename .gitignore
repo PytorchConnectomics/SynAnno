@@ -129,9 +129,7 @@ dmypy.json
 .pyre/
 
 #others
-.dockerignore
 .idea/
-Dockerfile
 
 .DS_Store
 files/

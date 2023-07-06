@@ -29,9 +29,9 @@ def setup_ng(source: Union[np.typing.NDArray, str], target: Union[np.typing.NDAr
 
     # specify the NG coordinate space
     res = neuroglancer.CoordinateSpace(
-        names=['z', 'y', 'x'],
+        names=[list(synanno.coordinate_order.keys())[0], list(synanno.coordinate_order.keys())[1], list(synanno.coordinate_order.keys())[2]],
         units=['nm', 'nm', 'nm'],
-        scales=[30, 8, 8])
+        scales=[int(list(synanno.coordinate_order.values())[0]), int(list(synanno.coordinate_order.values())[1]), int(list(synanno.coordinate_order.values())[2])])
 
     # config viewer: Add image layer, add segmentation mask layer, define position
     with synanno.ng_viewer.txn() as s:

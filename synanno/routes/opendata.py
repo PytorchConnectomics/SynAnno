@@ -100,6 +100,8 @@ def upload_file() -> Template:
     # retrieve the origin of the data, either local or cloud
     origin = request.form.get('origin')
 
+    # retrieve the coordinate order and resolution from the form and save them in a dict, used by the NG instance and the processing functions
+    synanno.coordinate_order = {c: request.form.get('res'+str(i+1)) for i, c in enumerate(list(request.form.get('coordinates')))}
 
     # if the user provided a cloud volume bucket
     if origin == 'cloud':
@@ -319,24 +321,26 @@ def neuro() -> Dict[str, object]:
 
     mode = str(request.form['mode'])
 
+    center = {}
+
     if mode == "annotate":
-        oz = int(request.form['cz0'])
-        oy = int(request.form['cy0'])
-        ox = int(request.form['cx0'])
+        center['z'] = int(request.form['cz0'])
+        center['y'] = int(request.form['cy0'])
+        center['x'] = int(request.form['cx0'])
     elif mode == 'draw':
-        oz = synanno.vol_dim_z // 2
-        oy = synanno.vol_dim_y // 2
-        ox = synanno.vol_dim_x // 2
+        center['z'] = synanno.vol_dim_z // 2
+        center['y'] = synanno.vol_dim_y // 2
+        center['x'] = synanno.vol_dim_x // 2
         
     if synanno.ng_version is not None:
         # update the view focus of the running NG instance
         with synanno.ng_viewer.txn() as s:
-            s.position = [oz, oy, ox]
+            s.position = [center[synanno.coordinate_order.keys()[0]], center[synanno.coordinate_order.keys()[1]], center[synanno.coordinate_order.keys()[2]]]
     else:
         raise Exception('No NG instance running')
 
     print(
-        f'Neuroglancer instance running at {synanno.ng_viewer}, centered at x,y,x {oz,oy,ox}')
+        f'Neuroglancer instance running at {synanno.ng_viewer}, centered at {str(synanno.coordinate_order.keys()[0])},{str(synanno.coordinate_order.keys()[1])},{str(synanno.coordinate_order.keys()[2])} {center[synanno.coordinate_order.keys()[0]], center[synanno.coordinate_order.keys()[1]], center[synanno.coordinate_order.keys()[2]]}')
 
     final_json = jsonify(
         {'ng_link': 'http://'+app.config['IP']+':9015/v/'+str(synanno.ng_version)+'/'})

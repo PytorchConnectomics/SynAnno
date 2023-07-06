@@ -42,6 +42,31 @@
       Cloud
   </label>
 
+  <div class="mb-1"></div>
+
+  <div style="display: flex; justify-content: space-between;">
+  <div>
+  <label for="formFileMultiple" class="form-label">Resolution (in nm)</label>
+  <input class="X-Res." type="number" id="res1" name="res1" placeholder="Default: 8" value=8>
+  <input class="Y-Res." type="number" id="res2" name="res2" placeholder="Default: 8" value=8>
+  <input class="Z-Res." type="number" id="res3" name="res3" placeholder="Default: 33" value=33>
+  </label>
+  </div>
+
+  <div>
+    <label for="coordinates">Select coordinate order:
+      <select id="coordinates" name="coordinates">
+          <option value="xyz" selected>  xyz  </option>
+          <option value="xzy">  xzy  </option>
+          <option value="zyx">  zyx  </option>
+          <option value="zxy">  zxy  </option>
+          <option value="yxz">  yxz  </option>
+          <option value="yzx">  yzx  </option>
+      </select>
+    </label>
+  </div>
+</div>
+
     <div id="local-form" {% if origin == 'cloud' %} class="hidden-form" {% endif %}>
       <label for="formFileMultiple" class="form-label">Source .h5 data file - Required</label>
       <p><input class="form-control" type="file" id="source_file" name="source_file"></p>
@@ -51,10 +76,9 @@
   
     <div id="cloud-form" {% if origin == 'local' %} class="hidden-form" {% endif %}>
     <label for="formFileMultiple" class="form-label">Source bucket (precomputed: Neuroglancer's native format) - Required</label>
-    <p><input class="form-control" type="url" id="source_url" name="source_url" placeholder="Cloud Volume Bucket - file://<path_to_your_file>"></p>
+    <p><input class="form-control" type="url" id="source_url" name="source_url" placeholder="Cloud Volume Bucket - file://<path_to_your_file>" value='gs://h01-release/data/20210601/c3'></p>
     <label for="formFileMultiple" class="form-label">Target bucket (precomputed: Neuroglancer's native format) - Required</label>
-    <p><input class="form-control" type="url" id="target_url" name="target_url" placeholder="Cloud Volume Bucket - file://<path_to_your_file>"></p>
-      
+    <p><input class="form-control" type="url" id="target_url" name="target_url" placeholder="Cloud Volume Bucket - file://<path_to_your_file>" value='gs://h01-release/data/20210729/c3/synapses/whole_ei_onlyvol'></p>
 
     <label class="form-check-label">
         <input type="radio" class="form-check-input" name="view_style" value="view" {% if view_style == 'view' %} checked {% endif %}>
@@ -67,9 +91,10 @@
 
     <div class="mb-1"></div>
 
+
       <div id="neuron-form" {% if view_style == 'view' %} class="hidden-form" {% endif %}>
         <label for="formFileMultiple" class="form-label">Materialization (url/name of the table containing the ID association and bounding box information)</label>
-        <p><input class="form-control" type="text" id="materialization_url" name="materialization_url" placeholder="Materialization - synapses"></p>
+        <p><input class="form-control" type="text" id="materialization_url" name="materialization_url" placeholder="Materialization - synapses" value='/Users/lando/Code/SynAnno/h01/synapse-export_000000000000.csv'</p>
         <label for="formFileMultiple" class="form-label">Pre- and postsynaptic IDs</label>
         <div class="number-container">
           <input class="number-dims" type="number" id="preid" name="Presynaptic" placeholder="Presynaptic ID">

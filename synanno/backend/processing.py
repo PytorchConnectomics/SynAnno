@@ -48,7 +48,7 @@ from .utils import *
 import synanno # import global configs
 from synanno import app # import the package app
 
-from cloudvolume import CloudVolume
+from cloudvolume import CloudVolume, Bbox
 import pandas as pd
 
 from flask import session
@@ -158,6 +158,21 @@ def adjust_bbox(low: int, high: int, sz: int) -> Tuple[int]:
 
     return low - diff, low - diff + sz
 
+def bounds_2exp(cord: int, exp: int) -> Tuple[int]:
+    """ Calculate the lower and upper bounds of the bounding box based on a given coordinate and multiple of 2.
+    
+    Args:
+        cord (int): the coordinate.
+        exp (int): the multiple of 2.
+
+    Returns:
+        low (int): the lower bound of the bounding box.
+        high (int): the upper bound of the bounding box.
+    """
+    low = cord - (cord % exp)
+    high = low + exp
+    return low, high
+
 def bbox_relax(coord: Union[tuple, list], 
                shape: tuple, 
                relax: int = 0) -> tuple:
@@ -264,14 +279,19 @@ def crop_pad_data(data: np.ndarray, z: int, bbox_2d: list, pad_val: int = 0, mas
 
     return cropped, [y1, y2, x1, x2], pad
 
-def crop_pad_cloud_volume(cv, bbox_3d: list) -> Union[np.ndarray, Tuple[np.ndarray, list, tuple]]:
+def crop_pad_cloud_volume(vs, bbox_3d: list) -> Union[np.ndarray, Tuple[np.ndarray, list, tuple]]:
+    ''' Crop a 3D patch from 3D volume.
 
-    # retrieve the shape of the volume
-    sz = cv.volume_size
-    # TODO: QUICKFIX do to error in igneous library, DELETE THE -128
-    sz[2] = sz[2] - 128
+    Args:   
+        vs (list): the size of the 3D volume.
+        bbox_3d (list): the bounding box of the 3D patch.
+
+    Returns:
+        [z1, z2, y1, y2, x1, x2] (list): the bounding box of the 3D patch.
+        pad (tuple): the padding size for y and x axes.
+    '''
     z1o, z2o, y1o, y2o, x1o, x2o = bbox_3d  # region to crop
-    z1m, z2m, y1m, y2m, x1m, x2m = 0, sz[0], 0, sz[1], 0, sz[2]
+    z1m, z2m, y1m, y2m, x1m, x2m = 0, vs[0], 0, vs[1], 0, vs[2]
     z1, y1, x1 = max(z1o, z1m), max(y1o, y1m), max(x1o, x1m)
     z2, y2, x2 = min(z2o, z2m), min(y2o, y2m), min(x2o, x2m)
 
@@ -581,7 +601,7 @@ def visualize(syn: np.ndarray, seg: np.ndarray, img: np.ndarray, sz: int, return
         return
 
 
-def visualize_cv_instances(crop_size: int, path_json: str = None, page: int =0) -> Union[str, None]:
+def visualize_cv_instances(crop_size: int, path_json: str = None, page: int =0, bbox_exists=False) -> Union[str, None]:
     ''' Visualize the synapse and EM images in 2D slices for each instance by cropping the bounding box of the instance.
         Processing each instance individually, retrieving them from the cloud volume and saving them to the local disk.
     
@@ -589,6 +609,7 @@ def visualize_cv_instances(crop_size: int, path_json: str = None, page: int =0) 
         sz (int): the size of the 2D patch.
         path_json (str): the path to the JSON file.
         page (int): the current page number for which to compute the data.
+        bbox_exists (bool): whether the bounding box is already calculated, else retrieve it from the central synapse coordinates.
         
     Returns:
         synanno_json (str): the path to the JSON file.
@@ -614,9 +635,6 @@ def visualize_cv_instances(crop_size: int, path_json: str = None, page: int =0) 
         # list of json objects representing the synapses (ids, middle slices, bounding boxes, etc.)
         json_objects_list = {str(page): []}
 
-    print(json_page_entry)
-
-    
     # create the directories for saving the source and target images
     idx_dir = create_dir('./synanno/static/', 'Images')
     syn_folder, img_folder = create_dir(idx_dir, 'Syn'), create_dir(idx_dir, 'Img')
@@ -639,11 +657,14 @@ def visualize_cv_instances(crop_size: int, path_json: str = None, page: int =0) 
         # create a new item for the JSON file with defaults.
         if json_page_entry is False:
             # retrieve the bounding box for the current synapse
-            bbox = bbox_dict[idx]
+            if bbox_exists:
+                bbox = bbox_dict[idx]
+            else:
+                bbox = [int(bbox_dict[idx]['z']), int(bbox_dict[idx]['z']), int(bbox_dict[idx]['y']), int(bbox_dict[idx]['y']), int(bbox_dict[idx]['x']), int(bbox_dict[idx]['x'])]
             
             # calculate the middle slice (relative to the whole volume)
             # TODO: currently does not check if the center slice contains foreground
-            z_mid_total = bbox_dict[idx][0] + (bbox_dict[idx][1] - bbox_dict[idx][0])//2
+            z_mid_total = bbox[0] + (bbox[1] - bbox[0])//2
 
             # create a new item for the JSON file with defaults.
             item = dict()
@@ -659,24 +680,38 @@ def visualize_cv_instances(crop_size: int, path_json: str = None, page: int =0) 
             item["cy0"] = (item["Original_Bbox"][2] + item["Original_Bbox"][3])//2 
             item["cx0"] = (item["Original_Bbox"][4] + item["Original_Bbox"][5])//2
 
+        # test if the original bounding box is with in the volume size and if not print a warning and skip the instance 
+        if item["Original_Bbox"][1] > synanno.vol_dim_z or item["Original_Bbox"][3] > synanno.vol_dim_y or item["Original_Bbox"][5] > synanno.vol_dim_x:
+            print("WARNING: The original bounding box of the current instance is outside of the volume size. -> Skipping instance.")
+            continue
+
         # retrieve the bounding box for the current synapse
         bbox = bbox if json_page_entry is False else list(map(int,item["Original_Bbox"]))
         # retrieve the middle slice (relative to the whole volume) for the current synapse
         z_mid_total = z_mid_total if json_page_entry is False else int(item["Middle_Slice"])
 
-        # adjust the bounding box in x and y direction to fit the crop size
-        y1, y2 = adjust_bbox(bbox[2], bbox[3], crop_size)
-        x1, x2 = adjust_bbox(bbox[4], bbox[5], crop_size)
-        adjusted_3d_bboxes = bbox[:2] + [y1, y2, x1, x2]
+        if bbox_exists:
+            # adjust the bounding box in x and y direction to fit the crop size
+            y1, y2 = adjust_bbox(bbox[2], bbox[3], crop_size)
+            x1, x2 = adjust_bbox(bbox[4], bbox[5], crop_size)
+            if bbox[0] == bbox[1]:
+                z1, z2 = adjust_bbox(bbox[0], bbox[1], 16)
+                adjusted_3d_bboxes = [z1, z2, y1, y2, x1, x2]
+            else:
+                adjusted_3d_bboxes = bbox[:2] + [y1, y2, x1, x2]
+        else:
+            # TODO: DO NOT HARD CODE THE CROP SIZE
+            z1, z2 = bounds_2exp(bbox[0], 32)
+            y1, y2 = bounds_2exp(bbox[2], 128)
+            x1, x2 = bounds_2exp(bbox[4], 128)
+            adjusted_3d_bboxes = [z1, z2, y1, y2, x1, x2]
 
         # retrieve the actual crop coordinates and possible padding based on the max dimensions of the whole cloud volume
-        img_bbox, img_padding = crop_pad_cloud_volume(synanno.source_cv, adjusted_3d_bboxes)
-        syn_bbox, syn_padding = crop_pad_cloud_volume(synanno.target_cv, adjusted_3d_bboxes)
-        
+        crop_bbox, img_padding = crop_pad_cloud_volume([synanno.vol_dim_z, synanno.vol_dim_y, synanno.vol_dim_x], adjusted_3d_bboxes)
+
         if json_page_entry is False:
             # update the json item with the adjusted bounding box and padding
-            adjusted_box_img, item["Padding_Img"] = img_bbox, img_padding
-            adjusted_box_syn, item["Padding_Syn"] = syn_bbox, syn_padding
+            adjusted_box_syn, item["Padding_Syn"] = adjusted_box_img, item["Padding_Img"] = crop_bbox, img_padding
 
             assert adjusted_box_img == adjusted_box_syn, "The adjusted bounding boxes of the source and target images do not match."
 
@@ -685,14 +720,57 @@ def visualize_cv_instances(crop_size: int, path_json: str = None, page: int =0) 
             json_objects_list[str(page)].append(item)
 
         synanno.progress_bar_status['status'] = f"Inst.{str(idx)}: Pre-process sub-volume."
-        # retrieve the subvolume from the cloud volume 
-        cropped_img = synanno.source_cv[syn_bbox[0]:syn_bbox[1], syn_bbox[2]:syn_bbox[3], syn_bbox[4]+128:syn_bbox[5]+128]
-        cropped_gt = synanno.target_cv[img_bbox[0]:img_bbox[1], img_bbox[2]:img_bbox[3], img_bbox[4]+128:img_bbox[5]+128]
+        
+        # Map the bounding box coordinates to a dictionary
+        crop_box_dict = {
+            'z1': crop_bbox[0],
+            'z2': crop_bbox[1],
+            'y1': crop_bbox[2],
+            'y2': crop_bbox[3],
+            'x1': crop_bbox[4],
+            'x2': crop_bbox[5]
+        }
+
+        # Retrieve the order of the coordinates (xyz, xzy, yxz, yzx, zxy, zyx)
+        cord_order = list(synanno.coordinate_order.keys())
+
+        # Create the bounding box for the current synapse
+        bound = Bbox(
+            [
+                crop_box_dict[cord_order[0] + '1'],
+                crop_box_dict[cord_order[1] + '1'],
+                crop_box_dict[cord_order[2] + '1']
+            ],
+            [
+                crop_box_dict[cord_order[0] + '2'],
+                crop_box_dict[cord_order[1] + '2'],
+                crop_box_dict[cord_order[2] + '2']
+            ]
+        )
+
+        # Convert coordinate resolution values to integers
+        coord_resolution = [int(res) for res in synanno.coordinate_order.values()]
+
+        # Retrieve the source and target images from the cloud volume
+        cropped_img = synanno.source_cv.download(bound, coord_resolution=coord_resolution, mip=0)
+        cropped_gt = synanno.target_cv.download(bound, coord_resolution=coord_resolution, mip=0)
+
+        # Download based on a point
+        # Retrieve the source and target images from the cloud volume
+        size = {'x':128, 'y':128, 'z':32}
+        size_order = [size[cord_order[0]], size[cord_order[1]], size[cord_order[2]]]
+        point = [bbox_dict[idx][cord_order[0]], bbox_dict[idx][cord_order[1]], bbox_dict[idx][cord_order[2]]]
+        cropped_img = synanno.source_cv.download_point(point, size=size_order, coord_resolution=coord_resolution, mip=0)          
+        cropped_gt = synanno.target_cv.download_point(point, size=size_order, coord_resolution=coord_resolution, mip=0)
 
         # remove the singleton dimension, take care as the z dimension might be singleton
         cropped_img = cropped_img.squeeze(axis=3)
         cropped_gt = cropped_gt.squeeze(axis=3)
 
+        # given the six cases xyz, xzy, yxz, yzx, zxy, zyx, we have to permute the axes to match the zyx order
+        cropped_img = np.transpose(cropped_img, axes=[cord_order.index('z'), cord_order.index('y'), cord_order.index('x')])
+        cropped_gt = np.transpose(cropped_gt, axes=[cord_order.index('z'), cord_order.index('y'), cord_order.index('x')])
+        
         # process the 3D gt file by converting the polarity prediction to semantic segmentation and then to instance-level segmentation on pre/post synaptic level and synapse level.
         cropped_img, cropped_gt, cropped_syn, cropped_seg = retrieve_instance_seg(cropped_img, cropped_gt, view_style='neuron')
 
@@ -705,7 +783,7 @@ def visualize_cv_instances(crop_size: int, path_json: str = None, page: int =0) 
 
         # pad the images and synapse segmentation to fit the crop size (sz)
         cropped_img_pad = np.pad(cropped_img, img_padding, mode='constant', constant_values=128)
-        cropped_syn_pad = np.pad(cropped_syn, syn_padding, mode='constant', constant_values=0)  
+        cropped_syn_pad = np.pad(cropped_syn, img_padding, mode='constant', constant_values=0)  
         
         assert cropped_img_pad.shape == cropped_syn_pad.shape, "The shape of the source and target images do not match."
 
@@ -715,6 +793,8 @@ def visualize_cv_instances(crop_size: int, path_json: str = None, page: int =0) 
             label_list.append(cropped_syn_pad[z])
 
         vis_image = np.stack(image_list, 0)
+        print("vis_image.shape")
+        print(vis_image.shape)
         vis_label = syn2rgb(np.stack(label_list, 0)) # z, y, x, c
 
         # center slice of padded subvolume
@@ -723,7 +803,6 @@ def visualize_cv_instances(crop_size: int, path_json: str = None, page: int =0) 
         # overwrite cs incase that object close to boundary
         cs = min(int(z_mid_total), cs_dix)
 
-
         synanno.progress_bar_status['status'] = f"Inst.{str(idx)}: Saving 2D Slices"
 
         # save volume slices
@@ -731,7 +810,7 @@ def visualize_cv_instances(crop_size: int, path_json: str = None, page: int =0) 
             img_name = str(int(z_mid_total)-cs+s)+".png"
 
             # image
-            img_c = Image.fromarray(vis_image[s,:,:])
+            img_c = Image.fromarray((vis_image[s,:,:]* 255).astype(np.uint8))
             img_c.save(os.path.join(img_all,img_name), "PNG")
 
             # label
@@ -812,20 +891,33 @@ def neuron_centric_3d_data_processing(source_url: str, target_url: str, table_na
     """
 
     # TODO: Update with real materialization
-    # read json as dict from path table_name
-    table = json.load(open(table_name))
-
-    # convert table to pandas dataframe
-    df = pd.DataFrame(table["Data"])
-
-    # dict that contains the bounding boxes for each synapse and the corresponding id
-    bbox_dict = dict()
-
+    # handling both suitcases: the bounding box was already calculated and stored in the table or it has to be calculated on the fly from a synapse centric point
+    bbox_exists = False
+    
+    # read data as dict from path table_name
     synanno.progress_bar_status['status'] = "Retrieving Materialization"
-    # loop over the rows of the df reading them as dic
-    for row in df.to_dict(orient="records"):
-        # retrieve the bounding box for the current synapse
-        bbox_dict[int(row["Image_Index"])] = list(map(int, row["Original_Bbox"]))
+    if bbox_exists:
+
+        table = json.load(open(table_name))
+        # convert table to pandas dataframe
+        df = pd.DataFrame(table["Data"])
+
+        # dict that contains the bounding boxes for each synapse and the corresponding id
+        bbox_dict = dict()
+
+        # loop over the rows of the df reading them as dic
+        for row in df.to_dict(orient="records"):
+            # retrieve the bounding box for the current synapse
+            bbox_dict[int(row["Image_Index"])] = list(map(int, row["Original_Bbox"]))
+    else:
+        # Read the CSV file
+        df = pd.read_csv(table_name)
+
+        # Select only the necessary columns
+        df = df[['pre_pt_x', 'pre_pt_y', 'pre_pt_z', 'post_pt_x', 'post_pt_y', 'post_pt_z', 'x', 'y', 'z']]
+
+        # Convert the DataFrame to a dictionary
+        bbox_dict = df.to_dict('index')
 
     # save the table to the session
     session['materialization'] = bbox_dict
@@ -834,10 +926,22 @@ def neuron_centric_3d_data_processing(source_url: str, target_url: str, table_na
     synanno.source_cv = CloudVolume(source_url, secrets=bucket_secret_json)
     synanno.target_cv = CloudVolume(target_url, secrets=bucket_secret_json)
 
-    # assert that both voluems have the same dimensions
-    assert list(synanno.source_cv.volume_size) == list(synanno.target_cv.volume_size), "The dimensions of the source and target volumes do not match."
+    # assert that both volumes have the same dimensions
+    print(synanno.source_cv.volume_size, synanno.target_cv.volume_size)
 
-    synanno.vol_dim_z, synanno.vol_dim_y, synanno.vol_dim_x = tuple([s-1 for s in synanno.source_cv.volume_size])
+    if list(synanno.source_cv.volume_size) == list(synanno.target_cv.volume_size):
+        vol_dim = tuple([s-1 for s in synanno.source_cv.volume_size]) 
+    else:
+        # print a warning if the dimensions do not match, stating that we use the smaller size of the two volumes
+        print(f"The dimensions of the source ({synanno.source_cv.volume_size}) and target ({synanno.target_cv.volume_size}) volumes do not match. We use the smaller size of the two volumes.")
+
+        # test which size is smaller
+        if np.prod(synanno.source_cv.volume_size) < np.prod(synanno.target_cv.volume_size):
+            vol_dim = {c: dim for c, dim in zip(synanno.coordinate_order.keys(), synanno.source_cv.volume_size)}
+        else:
+            vol_dim = {c: dim for c, dim in zip(synanno.coordinate_order.keys(), synanno.target_cv.volume_size)}
+
+    synanno.vol_dim_x, synanno.vol_dim_y, synanno.vol_dim_z = vol_dim['x'], vol_dim['y'], vol_dim['z']
 
     # number of rows in df
     session['n_images'] = df.shape[0]
@@ -888,11 +992,7 @@ def view_centric_cloud_volume(im_file: str, gt_file: str, z1: int, z2: int, y1: 
     # retrieve the subvolume
     img = np.squeeze(source[z1:z2, y1:y2, x1:x2])
 
-    # remove the first 128 pixels from the x axis, as they got weirdly shifted by cloudvolume
-    img = img[:,:,128:]
-    img_np = np.zeros(img.shape).astype(np.uint8)
-    img_np[:,:,:] = img[:,:,:]
-
+    img = img[:,:,:]
 
     synanno.progress_bar_status['status'] = "Loading Target Cloud Volume"
 
@@ -902,10 +1002,7 @@ def view_centric_cloud_volume(im_file: str, gt_file: str, z1: int, z2: int, y1: 
     
     gt = np.squeeze(gt[z1:z2, y1:y2, x1:x2])
 
-    # remove the first 128 pixels from the x axis, as they got weirdly shifted by cloudvolume
-    gt = gt[:,:,128:]
-    gt_np = np.zeros(gt.shape).astype(np.uint8)
-    gt_np[:,:,:] = gt[:,:,:]
+    gt = gt[:,:,:]
 
     return img, gt
 
@@ -919,8 +1016,8 @@ def instance_based_ng_preprocessing(z1: int, z2: int, y1: int, y2: int, x1: int,
     adjusted_3d_bboxes = [z1, z2, y1, y2, x1, x2]
     
     # retrieve the actual crop coordinates and possible padding based on the max dimensions of the whole cloud volume
-    img_bbox, _ = crop_pad_cloud_volume(synanno.source_cv, adjusted_3d_bboxes)
-    syn_bbox, _ = crop_pad_cloud_volume(synanno.target_cv, adjusted_3d_bboxes)
+    img_bbox, _ = crop_pad_cloud_volume([synanno.vol_dim_z, synanno.vol_dim_y, synanno.vol_dim_x], adjusted_3d_bboxes)
+    syn_bbox, _ = crop_pad_cloud_volume([synanno.vol_dim_z, synanno.vol_dim_y, synanno.vol_dim_x], adjusted_3d_bboxes)
     
     # assert that both voluems have the same dimensions
     assert img_bbox == syn_bbox, "The dimensions of the source and target volumes do not match."

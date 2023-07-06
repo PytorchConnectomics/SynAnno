@@ -61,6 +61,11 @@ grid_opacity = 0.5
 global proofread_time
 proofread_time = {"start_grid":None,"finish_grid":None,"difference_grid":None, "start_categorize":None,"finish_categorize":None,"difference_categorize":None}
 
+# coordinate order and resolution
+global coordinate_order
+
+coordinate_order = {}
+
 # record the max volume dimensions for the provided image volume
 global vol_dim_x
 global vol_dim_y

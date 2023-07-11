@@ -10,13 +10,14 @@ import numpy as np
 
 from typing import Union
 
-def setup_ng(source: Union[np.typing.NDArray, str], target: Union[np.typing.NDArray, str]) -> None:
+def setup_ng(source: Union[np.typing.NDArray, str], target: Union[np.typing.NDArray, str], view_style: str = 'view' ) -> None:
     ''' Setup function for the Neuroglancer (ng) that enables the recording and depiction 
         of center markers for newly identified FN instances.
 
         Args:
             source_img: The image volume depicted by the ng
             target_seg: The target volume depicted by the ng
+            view_style: The view style: view | neuron
     '''
 
     # generate a version number
@@ -29,9 +30,9 @@ def setup_ng(source: Union[np.typing.NDArray, str], target: Union[np.typing.NDAr
 
     # specify the NG coordinate space
     res = neuroglancer.CoordinateSpace(
-        names=[list(synanno.coordinate_order.keys())[0], list(synanno.coordinate_order.keys())[1], list(synanno.coordinate_order.keys())[2]],
+        names= ['z', 'y', 'x'] if view_style == 'view' else [list(synanno.coordinate_order.keys())[0], list(synanno.coordinate_order.keys())[1], list(synanno.coordinate_order.keys())[2]],
         units=['nm', 'nm', 'nm'],
-        scales=[int(list(synanno.coordinate_order.values())[0]), int(list(synanno.coordinate_order.values())[1]), int(list(synanno.coordinate_order.values())[2])])
+        scales=[int(synanno.coordinate_order['z']), int(synanno.coordinate_order['y']), int(synanno.coordinate_order['x'])])
 
     # config viewer: Add image layer, add segmentation mask layer, define position
     with synanno.ng_viewer.txn() as s:

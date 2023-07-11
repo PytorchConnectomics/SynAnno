@@ -26,10 +26,9 @@ from typing import Dict
 import synanno.backend.processing as ip
 
 
-@app.route('/annotation/<int:page>/<string:view_style>')
 @app.route('/annotation/<int:page>')
 @app.route('/annotation')
-def annotation(page: int = 0, view_style: str = 'view') -> Template:
+def annotation(page: int = 0) -> Template:
     ''' Start the proofreading timer and load the annotation view.
 
         Args:
@@ -40,7 +39,7 @@ def annotation(page: int = 0, view_style: str = 'view') -> Template:
             The annotation view
     '''
 
-    if (view_style == 'neuron'):
+    if session["view_style"] == 'neuron':
     # check if the data for the current page is already loaded
         if session.get('data')[page] is None:
             # compute the data for the current page
@@ -60,7 +59,7 @@ def annotation(page: int = 0, view_style: str = 'view') -> Template:
     if synanno.proofread_time['start_grid'] is None:
         synanno.proofread_time['start_grid'] = datetime.datetime.now()
 
-    return render_template('annotation.html', images=session.get('data')[page], page=page, n_pages=session.get('n_pages'), grid_opacity=synanno.grid_opacity, view_style=view_style)
+    return render_template('annotation.html', images=session.get('data')[page], page=page, n_pages=session.get('n_pages'), grid_opacity=synanno.grid_opacity, view_style=session["view_style"])
 
 
 @app.route('/set_grid_opacity', methods=['POST'])

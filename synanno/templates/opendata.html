@@ -33,48 +33,9 @@
   
   <form method="POST" for="{{ modeform }}" action="{{ url_for('upload_file') }}" enctype="multipart/form-data">
 
-    <label class="form-check-label">
-      <input type="radio" class="form-check-input" name="origin" value="local" {% if origin == 'local' %} checked {% endif %}>
-      Local
-  </label>
-  <label class="form-check-label">
-      <input type="radio" class="form-check-input" name="origin" value="cloud" {% if origin == 'cloud' %} checked {% endif %}>
-      Cloud
-  </label>
-
   <div class="mb-1"></div>
-
-  <div style="display: flex; justify-content: space-between;">
-  <div>
-  <label for="formFileMultiple" class="form-label">Resolution (in nm)</label>
-  <input class="X-Res." type="number" id="res1" name="res1" placeholder="Default: 8" value=8>
-  <input class="Y-Res." type="number" id="res2" name="res2" placeholder="Default: 8" value=8>
-  <input class="Z-Res." type="number" id="res3" name="res3" placeholder="Default: 33" value=33>
-  </label>
-  </div>
-
-  <div>
-    <label for="coordinates">Select coordinate order:
-      <select id="coordinates" name="coordinates">
-          <option value="xyz" selected>  xyz  </option>
-          <option value="xzy">  xzy  </option>
-          <option value="zyx">  zyx  </option>
-          <option value="zxy">  zxy  </option>
-          <option value="yxz">  yxz  </option>
-          <option value="yzx">  yzx  </option>
-      </select>
-    </label>
-  </div>
-</div>
-
-    <div id="local-form" {% if origin == 'cloud' %} class="hidden-form" {% endif %}>
-      <label for="formFileMultiple" class="form-label">Source .h5 data file - Required</label>
-      <p><input class="form-control" type="file" id="source_file" name="source_file"></p>
-      <label for="formFileMultiple" class="form-label">Target .h5 data file - Required</label>
-      <p><input class="form-control" type="file" id="target_file" name="target_file"></p>
-    </div>
   
-    <div id="cloud-form" {% if origin == 'local' %} class="hidden-form" {% endif %}>
+    <div id="cloud-form">
     <label for="formFileMultiple" class="form-label">Source bucket (precomputed: Neuroglancer's native format) - Required</label>
     <p><input class="form-control" type="url" id="source_url" name="source_url" placeholder="Cloud Volume Bucket - file://<path_to_your_file>" value='gs://h01-release/data/20210601/c3'></p>
     <label for="formFileMultiple" class="form-label">Target bucket (precomputed: Neuroglancer's native format) - Required</label>
@@ -122,12 +83,41 @@
     <label for="formFileMultiple" class="form-label">SynAnno JSON file {% if mode == 'draw'%}-
       Required{% endif %}</label>
     <p><input class="form-control {{mode}}" type="file" id="formFile" name="file_json"></p>
-    <label for="formGroupExampleInput" class="form-label">Patch Size (square)</label>
-    <p><input type="text" class="form-control" id="patchsize" placeholder="142" name="patchsize"></p>
+
+
+    <div style="display: flex">
+      <div>
+      <label for="formFileMultiple" class="form-label">Volume Resolution (in nm)</label>
+      <input class="X-Res." type="number" id="res1" name="res1" placeholder="Default: 8" value=8>
+      <input class="Y-Res." type="number" id="res2" name="res2" placeholder="Default: 8" value=8>
+      <input class="Z-Res." type="number" id="res3" name="res3" placeholder="Default: 33" value=33>
+      </label>
+      </div>
+    
+      <div style="padding-left: 5px; padding-top: 2px">
+        <select id="coordinates" name="coordinates">
+          <option value="xyz" selected>  XYZ  </option>
+          <option value="xzy">  XZY  </option>
+          <option value="zyx">  ZYX  </option>
+          <option value="zxy">  ZXY  </option>
+          <option value="yxz">  YXZ  </option>
+          <option value="yzx">  YZX  </option>
+        </select>
+        </label>
+      </div>
+    </div>
+
+    <div class="mb-1"></div>
+
+    <label for="formGroupExampleInput" class="form-label">Instance crop size (in px)</label>
+    <input type="number" id="cropsize_x" placeholder="142" name="crop_size_x" value=142> 
+    <input type="number" id="cropsize_y" placeholder="142" name="crop_size_y" value=142> 
+    <input type="number" id="cropsize_z" placeholder="16" name="crop_size_z" value=16> 
+
     <p class="mt-4">
       <input id="processData" type="submit" class="btn btn-secondary {{ modecurrent }} disabled" value="Submit">
       <a type="button" class="btn btn-primary {{ modenext }}"
-        href="{{ url_for('set_data', task=mode, view_style=view_style, json_name=json_name) }}">
+        href="{{ url_for('set_data', task=mode, json_name=json_name) }}">
         {% if mode == 'draw'%} Start Drawing {% elif mode == 'annotate'%}Start Data Proofread{% endif %}
       </a>
     </p>
@@ -135,7 +125,7 @@
       <a type="button" id='resetButton' class="btn btn-outline-danger d-{{ modereset or 'none'}}"
         href="{{ url_for('reset') }}">Reset Backend</a>
       <a type="button" id='continueButton' class="btn btn-outline-warning d-{{ modereset or 'none'}}"
-        href="{{ url_for('set_data', task=mode, view_style=view_style, json_name=json_name) }}">Continue Previous Task</a>
+        href="{{ url_for('set_data', task=mode, json_name=json_name) }}">Continue Previous Task</a>
     </p>
   </form>
 

@@ -58,7 +58,7 @@ def draw() -> Template:
             app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']), app.config['JSON']))
         synanno.new_json = False
 
-    return render_template('draw.html', pages=session.get('data'))
+    return render_template('draw.html', pages=session.get('data'), view_style=session["view_style"])
 
 
 @app.route('/save_canvas', methods=['POST'])
@@ -82,8 +82,7 @@ def save_canvas() -> Dict[str, object]:
     im = Image.open(BytesIO(base64.b64decode(image_data)))
 
     # adjust the size of the PIL Image in accordance with the session's path size 
-    patch_size = session['patch_size']
-    im = im.resize((patch_size, patch_size), Image.ANTIALIAS)
+    im = im.resize((session['crop_size_y'], session['crop_size_x']), Image.ANTIALIAS)
 
     # create folder where to save the image
     folder_path = os.path.join(os.path.join(
@@ -181,21 +180,23 @@ def ng_bbox_fp_save()-> Dict[str, object]:
         item['Middle_Slice'] = str(int(synanno.cz))
 
     # define the bbox
-    expand = session['patch_size'] // 2
-    bb_x1 = int(synanno.cx) - expand if int(synanno.cx) - expand > 0 else 0
-    bb_x2 = int(synanno.cx) + expand if int(synanno.cx) + \
-        expand < synanno.vol_dim_x else synanno.vol_dim_x
+    expand_x = session['crop_size_x'] // 2
+    expand_y = session['crop_size_y'] // 2
+    bb_x1 = int(synanno.cx) - expand_x if int(synanno.cx) - expand_x > 0 else 0
+    bb_x2 = int(synanno.cx) + expand_x if int(synanno.cx) + \
+        expand_x < synanno.vol_dim_x else synanno.vol_dim_x
 
-    bb_y1 = int(synanno.cy) - expand if int(synanno.cy) - expand > 0 else 0
-    bb_y2 = int(synanno.cy) + expand if int(synanno.cy) + \
-        expand < synanno.vol_dim_y else synanno.vol_dim_y
+    bb_y1 = int(synanno.cy) - expand_y if int(synanno.cy) - expand_y > 0 else 0
+    bb_y2 = int(synanno.cy) + expand_y if int(synanno.cy) + \
+        expand_y < synanno.vol_dim_y else synanno.vol_dim_y
 
     item['Original_Bbox'] = [cz1, cz2, bb_y1, bb_y2, bb_x1, bb_x2]
     item['cz0'] = item['Middle_Slice']
     item['cy0'] = int(synanno.cy)
     item['cx0'] = int(synanno.cx)
-    item['Adjusted_Bbox'] = item['Original_Bbox']
-    item['Padding'] = [[0, 0], [0, 0]]
+    item['crop_size_x'] = session['crop_size_x']
+    item['crop_size_y'] = session['crop_size_y']
+    item['crop_size_z'] = session['crop_size_z']
 
     # crop out and save the relevant gt and im
     idx_dir = create_dir('./synanno/static/', 'Images')
@@ -205,9 +206,14 @@ def ng_bbox_fp_save()-> Dict[str, object]:
     image_list = []
     crop_2d = item['Original_Bbox'][2:]
     for z_index in range(item['Original_Bbox'][0], item['Original_Bbox'][1]+1):
-        cropped_img = crop_pad_data(synanno.source, z_index, crop_2d, pad_val=0)
+        cropped_img, ab_img, pad_img = crop_pad_data(synanno.source, z_index, crop_2d, session['crop_size_x'], session['crop_size_y'])
         image_list.append(cropped_img)
-    vis_image = np.stack(image_list, 0)
+
+        if z_index == 0:
+            item["Adjusted_Bbox"] = [int(u) for u in list([item['Original_Bbox'][0], item['Original_Bbox'][1]] + ab_img)]
+            item["Padding"] = pad_img
+        
+    vis_image = np.stack(image_list, 0).astype(np.uint8)
 
     # center slice of padded subvolume
     cs_dix = (vis_image.shape[0]-1)//2  # assumes even padding
@@ -226,7 +232,6 @@ def ng_bbox_fp_save()-> Dict[str, object]:
 
     item['GT'] = 'None'  # do not save the GT as we do not have masks for the FPs
     item['EM'] = '/'+'/'.join(img_all.strip('.\\').split('/')[2:])
-    item['Rotation_Angle'] = 0.0
 
     # add item to list
     item_list.append(item)

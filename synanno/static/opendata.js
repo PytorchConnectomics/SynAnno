@@ -94,18 +94,6 @@ $(document).ready(function () {
 
     });
 
-    // toggle between local and cloud upload form
-    $('input[type="radio"]').change(function() {
-        if ($(this).val() === 'local') {
-            $('#local-form').show();
-            $('#cloud-form').hide();
-        } else if ($(this).val() === 'cloud') {
-            $('#local-form').hide();
-            $('#cloud-form').show();
-        }
-    });
-
-
     // toggle between view and neuron centric view
     $('input[type="radio"]').change(function() {
         if ($(this).val() === 'view') {

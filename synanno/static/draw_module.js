@@ -20,12 +20,14 @@ $(document).ready(function () {
         });
     });
 
+    
     $('#add_new_instance').click(async function (e) {
+        var view_style = $(this).attr('view_style')
         // open a new Neuroglancer view
         req_ng = $.ajax({
             url: '/neuro',
             type: 'POST',
-            data: { cz0: 0, cy0: 0, cx0: 0, mode: 'draw' }
+            data: { view_style: view_style, cz0: 0, cy0: 0, cx0: 0, mode: 'draw' }
         });
 
         req_ng.done(function (data) {

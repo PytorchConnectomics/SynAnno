@@ -32,7 +32,7 @@ import re
 import os
 
 # import processing functions
-from synanno.backend.processing import crop_pad_data, create_dir
+from synanno.backend.processing import crop_pad_mask_data_3d, create_dir
 from synanno.backend.utils import NpEncoder
 
 # reload the json and update the session data
@@ -203,31 +203,25 @@ def ng_bbox_fp_save()-> Dict[str, object]:
     img_folder = create_dir(idx_dir, 'Img')
     img_all = create_dir(img_folder, str(item['Image_Index']))
 
-    image_list = []
-    crop_2d = item['Original_Bbox'][2:]
-    for z_index in range(item['Original_Bbox'][0], item['Original_Bbox'][1]+1):
-        cropped_img, ab_img, pad_img = crop_pad_data(synanno.source, z_index, crop_2d, session['crop_size_x'], session['crop_size_y'])
-        image_list.append(cropped_img)
+    bbox_3d = item['Original_Bbox']
+    cropped_img, adjusted_bbox, padding = crop_pad_mask_data_3d(synanno.source, bbox_3d)
 
-        if z_index == 0:
-            item["Adjusted_Bbox"] = [int(u) for u in list([item['Original_Bbox'][0], item['Original_Bbox'][1]] + ab_img)]
-            item["Padding"] = pad_img
-        
-    vis_image = np.stack(image_list, 0).astype(np.uint8)
+    item["Adjusted_Bbox"] = [int(u) for u in adjusted_bbox]
+    item["Padding"] = padding
 
     # center slice of padded subvolume
-    cs_dix = (vis_image.shape[0]-1)//2  # assumes even padding
+    cs_dix = (cropped_img.shape[0]-1)//2  # assumes even padding
 
     # overwrite cs incase that object close to boundary
     z_mid_total = item['Middle_Slice']
     cs = min(int(z_mid_total), cs_dix)
 
     # save volume slices
-    for s in range(vis_image.shape[0]):
+    for s in range(cropped_img.shape[0]):
         img_name = str(int(z_mid_total)-cs+s)+'.png'
 
         # image
-        img_c = Image.fromarray(vis_image[s, :, :])
+        img_c = Image.fromarray(cropped_img[s, :, :])
         img_c.save(os.path.join(img_all, img_name), 'PNG')
 
     item['GT'] = 'None'  # do not save the GT as we do not have masks for the FPs

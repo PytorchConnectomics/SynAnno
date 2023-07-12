@@ -138,14 +138,14 @@ def upload_file() -> Template:
         # if the user chose the neuron view_style mode, retrieve a list of all the synapses of the provided neuron ids and then process the data on synapse level 
         elif session["view_style"] == 'neuron':
             # if the user chose the neuron view_style mode retrieve the neuron ids
-            preid = request.form.get('preid')
-            postid = request.form.get('postid')
+            preid = int(request.form.get('preid')) if request.form.get('preid') else None
+            postid = int(request.form.get('postid')) if request.form.get('postid') else None
 
             # TODO: The URL should be a url currently it is set to text, if providing a false path no error handling is in place
             # retrieve the materialization url
             materialization_url = request.form.get('materialization_url')
 
-            path_json = ip.neuron_centric_3d_data_processing(source_url, target_url, materialization_url, preid, postid, bucket_secret_json= bucket_secret if bucket_secret else '~/.cloudvolume/secrets', crop_size_x=session.get('crop_size_x'), crop_size_y=session.get('crop_size_y'), crop_size_z=session.get('crop_size_z'), path_json=path_json)
+            path_json = ip.neuron_centric_3d_data_processing(source_url, target_url, materialization_url, preid, postid, bucket_secret_json= bucket_secret if bucket_secret else '~/.cloudvolume/secrets', crop_size_x=session['crop_size_x'], crop_size_y=session['crop_size_y'], crop_size_z=session['crop_size_z'], path_json=path_json)
 
     else:
         flash('Please provide at least the paths to valid source and target cloud volume buckets!', 'error')

@@ -55,11 +55,11 @@
 
       <div id="neuron-form" {% if view_style == 'view' %} class="hidden-form" {% endif %}>
         <label for="formFileMultiple" class="form-label">Materialization (url/name of the table containing the ID association and bounding box information)</label>
-        <p><input class="form-control" type="text" id="materialization_url" name="materialization_url" placeholder="Materialization - synapses" value='/Users/lando/Code/SynAnno/h01/synapse-export_000000000000.csv'</p>
+        <p><input class="form-control" type="text" id="materialization_url" name="materialization_url" placeholder="Materialization - synapses" value='/Users/lando/Code/SynAnno/h01/synapse-export_000000000000.csv'></p>
         <label for="formFileMultiple" class="form-label">Pre- and postsynaptic IDs</label>
         <div class="number-container">
-          <input class="number-dims" type="number" id="preid" name="Presynaptic" placeholder="Presynaptic ID">
-          <input class="number-dims" type="number" id="postid" name="Postsynaptic" placeholder="Postsynaptic ID">
+          <input class="number-dims" type="number" id="preid" name="preid" placeholder="Presynaptic ID">
+          <input class="number-dims" type="number" id="postid" name="postid" placeholder="Postsynaptic ID">
         </div>
       </div>
       

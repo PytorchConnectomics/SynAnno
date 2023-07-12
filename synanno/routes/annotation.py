@@ -43,7 +43,8 @@ def annotation(page: int = 0) -> Template:
     # check if the data for the current page is already loaded
         if session.get('data')[page] is None:
             # compute the data for the current page
-            ip.visualize_cv_instances(session.get('patch_size'), session.get('path_json'), page)
+            json_object = ip.free_page(path_json=session.get('path_json'), page=page)
+            ip.visualize_cv_instances(crop_size_x=session['crop_size_x'], crop_size_y=session['crop_size_y'], crop_size_z=session['crop_size_z'], json_object=json_object, page=page)
 
             # update the session data
             session.get('data')[page] = None

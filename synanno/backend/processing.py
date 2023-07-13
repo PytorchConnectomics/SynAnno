@@ -502,7 +502,7 @@ def visualize(seg: np.ndarray, img: np.ndarray, crop_size_x: int = 148, crop_siz
     else:
         return path_json
 
-def free_page(page: int = 0) -> None:
+def free_page(page: int = 0, json_object = None) -> None:
     ''' Remove the segmentation and images from the EM and GT folder for the previous and next page.
 
     Args:
@@ -510,21 +510,20 @@ def free_page(page: int = 0) -> None:
         page (int): the current page number for which to compute the data.
     '''
 
-    # retrieve the session data
-    json_object = {idx: data for idx, data in enumerate(session.get('data'))}
-
     # create the handles to the directories
-    image_folder = os.path.join(os.path.join(app.config['PACKAGE_NAME'], app.config['STATIC_FOLDER']), 'Images')
-    syn_folder, img_folder= os.path.join(image_folder, 'Syn'), os.path.join(image_folder, 'Img')
+    base_folder = os.path.join(os.path.join(app.config['PACKAGE_NAME'], app.config['STATIC_FOLDER']), 'Images')
+    syn_folder, img_folder = os.path.join(base_folder, 'Syn'), os.path.join(base_folder, 'Img')
 
     # retrieve the keys (pages) of the json object
-    key_list = list(json_object.keys())
+    key_list = list(map(str, list(json_object.keys())))
 
     # remove the segmentation and images from the EM and GT folder for the previous and next page.
     for p in [str(page-1), str(page+1)]:
         if p in key_list:
             for inst in json_object[p]:
+                print(f"Removing the data for instance {inst['Image_Index']} from page {p} --- Label {inst['Label']}")
                 if inst["Label"] == "Correct":
+
                     # remove the segmentation and images from the EM and GT folder for the previous page.
                     syn_folder_idx = os.path.join(syn_folder, str(inst['Image_Index']))
                     img_folder_idx = os.path.join(img_folder, str(inst['Image_Index']))
@@ -560,7 +559,6 @@ def visualize_cv_instances(crop_size_x: int = 148, crop_size_y: int = 148, crop_
         synanno_json (str): the path to the JSON file.
     '''
 
-    # TODO: REMOVE ALL CORRECT INSTANCES FROM THE PREVIOUS PAGES
 
     # set the progress bar to zero
     if page != 0:      
@@ -590,6 +588,7 @@ def visualize_cv_instances(crop_size_x: int = 148, crop_size_y: int = 148, crop_
     for i, inst in enumerate(bbox_dict.keys() if json_page_entry is False else json_object[str(page)]):
         # retrieve the index of the current synapse from the json file, else use the index from the list
         if json_page_entry is True:
+
             idx = inst["Image_Index"]
         else:
             idx = inst
@@ -599,9 +598,8 @@ def visualize_cv_instances(crop_size_x: int = 148, crop_size_y: int = 148, crop_
         # create the instance specific directories for saving the source and target images
         syn_all, img_all = create_dir(syn_folder, str(idx)), create_dir(img_folder, str(idx))
 
-        # create a new item for the JSON file with defaults.
+        # create a new item for the current page of the JSON file should the page not jet exist
         if json_page_entry is False:
-
             point = [int(bbox_dict[idx]['z']), int(bbox_dict[idx]['y']), int(bbox_dict[idx]['x'])]
 
             # create a new item for the JSON file with defaults.
@@ -638,6 +636,7 @@ def visualize_cv_instances(crop_size_x: int = 148, crop_size_y: int = 148, crop_
         # retrieve the actual crop coordinates and possible padding based on the max dimensions of the whole cloud volume
         crop_bbox, img_padding = calculate_crop_pad(adjusted_3d_bboxes, [synanno.vol_dim_z, synanno.vol_dim_y, synanno.vol_dim_x])
 
+        # only update the json item if the current page is not already in the json file
         if json_page_entry is False:
             # update the json item with the adjusted bounding box and padding
             item["Adjusted_Bbox"], item["Padding"] = crop_bbox, img_padding
@@ -740,21 +739,25 @@ def visualize_cv_instances(crop_size_x: int = 148, crop_size_y: int = 148, crop_
 
             synanno.progress_bar_status['percent'] = int((90/session.get('per_page')) * i) 
 
-    # create and export the JSON File
-    synanno.progress_bar_status['status'] = "Saving information to JSON file"
-    # save the data as page in the json file
-    json_obj = json.dumps(json_object, indent=4, cls=NpEncoder)
+    # update the json file with the new data, only if the current page is not already in the json file since we otherwise did not change anything
+    if not json_page_entry:
+        print("writing to new page")
+        # create and export the JSON File
+        synanno.progress_bar_status['status'] = "Saving information to JSON file"
 
-    path_json = os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER'])
-    name_json = app.config['JSON']
-        
+        path_json = os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER'])
+        name_json = app.config['JSON']
+            
+        # save the data as page in the json file
+        with open(os.path.join(path_json, name_json), "w") as outfile:
+            outfile.write(json.dumps(json_object, indent=4, cls=NpEncoder))
+        synanno_json = os.path.join(path_json, name_json)
 
-    with open(os.path.join(path_json, name_json), "w") as outfile:
-        outfile.write(json_obj)
         synanno.progress_bar_status['percent'] = int(100) 
-    synanno_json = os.path.join(path_json, name_json)
 
-    return synanno_json
+        return synanno_json
+    else:
+        return None
 
 
 

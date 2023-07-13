@@ -42,22 +42,35 @@ def annotation(page: int = 0) -> Template:
     if session["view_style"] == 'neuron':
     # check if the data for the current page is already loaded
        
-        # compute the data for the current page
-        json_object = ip.free_page(page=page)
-        ip.visualize_cv_instances(crop_size_x=session['crop_size_x'], crop_size_y=session['crop_size_y'], crop_size_z=session['crop_size_z'], json_object=json_object, page=page)
-    
-        # update the session data
-        session.get('data')[page] = None
-    
-        # open the json data and save it to the session
-        f = open(session.get('path_json'))
-        data = json.load(f)
+
+        # retrieve the current data
+        json_object = session.get('data')
+
+        # retrieve the session data
+        json_object = {str(idx): data for idx, data in enumerate(json_object) if data is not None }
+
+        # remove the synapse and image slices for the previous and next page
+        json_object = ip.free_page(page=page, json_object=json_object)
+
+        json_path = ip.visualize_cv_instances(crop_size_x=session['crop_size_x'], crop_size_y=session['crop_size_y'], crop_size_z=session['crop_size_z'], json_object=json_object, page=page)
+
+
+        if json_path is not None:
         
-        session['data'][page] = data[str(page)]
+            # open the json data and save it to the session
+            f = open(json_path)
+            data = json.load(f)
+            # update the session data
+            session['data'][page] = data[str(page)]
 
     # start the timer for the annotation process
     if synanno.proofread_time['start_grid'] is None:
         synanno.proofread_time['start_grid'] = datetime.datetime.now()
+
+    # print the instances of the current page for which the label is not "Correct"
+    for instance in session.get('data')[page]:
+        if instance['Label'] != 'Correct':
+            idx = instance['Image_Index']
 
     return render_template('annotation.html', images=session.get('data')[page], page=page, n_pages=session.get('n_pages'), grid_opacity=synanno.grid_opacity, view_style=session["view_style"])
 

@@ -8,13 +8,16 @@ from synanno import app
 # for type hinting
 import numpy as np
 
-def setup_ng(source_img: np.typing.NDArray, target_seg: np.typing.NDArray) -> None:
+from typing import Union
+
+def setup_ng(source: Union[np.typing.NDArray, str], target: Union[np.typing.NDArray, str], view_style: str = 'view' ) -> None:
     ''' Setup function for the Neuroglancer (ng) that enables the recording and depiction 
         of center markers for newly identified FN instances.
 
         Args:
             source_img: The image volume depicted by the ng
             target_seg: The target volume depicted by the ng
+            view_style: The view style: view | neuron
     '''
 
     # generate a version number
@@ -27,16 +30,25 @@ def setup_ng(source_img: np.typing.NDArray, target_seg: np.typing.NDArray) -> No
 
     # specify the NG coordinate space
     res = neuroglancer.CoordinateSpace(
-        names=['z', 'y', 'x'],
+        names= ['z', 'y', 'x'] if view_style == 'view' else [list(synanno.coordinate_order.keys())[0], list(synanno.coordinate_order.keys())[1], list(synanno.coordinate_order.keys())[2]],
         units=['nm', 'nm', 'nm'],
-        scales=[30, 8, 8])
+        scales=[int(synanno.coordinate_order['z']), int(synanno.coordinate_order['y']), int(synanno.coordinate_order['x'])])
 
     # config viewer: Add image layer, add segmentation mask layer, define position
     with synanno.ng_viewer.txn() as s:
-        s.layers.append(name='im', layer=neuroglancer.LocalVolume(
-            source_img, dimensions=res, volume_type='image', voxel_offset=[0, 0, 0]))
-        s.layers.append(name='gt', layer=neuroglancer.LocalVolume(
-            target_seg, dimensions=res, volume_type='segmentation', voxel_offset=[0, 0, 0]))
+        if isinstance(source, np.ndarray):
+            s.layers.append(name='im', layer=neuroglancer.LocalVolume(
+                data=source, dimensions=res, volume_type='image', voxel_offset=[0, 0, 0]))
+        else:  # Assuming it's a string URL for the precomputed source
+            s.layers.append(name='im', layer=neuroglancer.ImageLayer(
+                source=source))
+
+        if isinstance(target, np.ndarray):
+            s.layers.append(name='gt', layer=neuroglancer.LocalVolume(
+                data=target, dimensions=res, volume_type='segmentation', voxel_offset=[0, 0, 0]))
+        else:  # Assuming it's a string URL for the precomputed source
+            s.layers.append(name='gt', layer=neuroglancer.SegmentationLayer(
+                source=target))
         
         # additional layer that lets the user mark the center of FPs
         s.layers.append(

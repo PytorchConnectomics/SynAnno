@@ -141,3 +141,4 @@ datasets/
 *.tif
 flask_session
 synAnno.json
+secrets/

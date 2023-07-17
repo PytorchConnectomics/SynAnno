@@ -47,11 +47,10 @@ app.config['NG_PORT'] = '9015'
 global progress_bar_status
 progress_bar_status = {"status":"Loading Source File", "percent":0}
 
-# handle to the loaded image and gt data
+# handle to the loaded image
 global source
-global target
 
-source, target = None, None
+source = None
 
 # grid opacity for the annotation view
 global grid_opacity
@@ -61,6 +60,11 @@ grid_opacity = 0.5
 # document the time needed for proofreading
 global proofread_time
 proofread_time = {"start_grid":None,"finish_grid":None,"difference_grid":None, "start_categorize":None,"finish_categorize":None,"difference_categorize":None}
+
+# coordinate order and resolution
+global coordinate_order
+
+coordinate_order = {}
 
 # record the max volume dimensions for the provided image volume
 global vol_dim_x

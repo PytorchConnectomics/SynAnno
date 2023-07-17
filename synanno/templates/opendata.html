@@ -33,49 +33,87 @@
   
   <form method="POST" for="{{ modeform }}" action="{{ url_for('upload_file') }}" enctype="multipart/form-data">
 
-    <label class="form-check-label">
-      <input type="radio" class="form-check-input" name="origin" value="local" {% if origin == 'local' %} checked {% endif %}>
-      Local
-  </label>
-  <label class="form-check-label">
-      <input type="radio" class="form-check-input" name="origin" value="cloud" {% if origin == 'cloud' %} checked {% endif %}>
-      Cloud
-  </label>
-
-    <div id="local-form" {% if origin == 'cloud' %} class="hidden-form" {% endif %}>
-      <label for="formFileMultiple" class="form-label">Source .h5 data file - Required</label>
-      <p><input class="form-control" type="file" id="source_file" name="source_file"></p>
-      <label for="formFileMultiple" class="form-label">Target .h5 data file - Required</label>
-      <p><input class="form-control" type="file" id="target_file" name="target_file"></p>
-    </div>
+  <div class="mb-1"></div>
   
-    <div id="cloud-form" {% if origin == 'local' %} class="hidden-form" {% endif %}>
+    <div id="cloud-form">
     <label for="formFileMultiple" class="form-label">Source bucket (precomputed: Neuroglancer's native format) - Required</label>
-    <p><input class="form-control" type="url" id="source_url" name="source_url" placeholder="Cloud Volume Bucket - file://<path_to_your_file>"></p>
+    <p><input class="form-control" type="url" id="source_url" name="source_url" placeholder="Cloud Volume Bucket - file://<path_to_your_file>" value='gs://h01-release/data/20210601/c3'></p>
     <label for="formFileMultiple" class="form-label">Target bucket (precomputed: Neuroglancer's native format) - Required</label>
-    <p><input class="form-control" type="url" id="target_url" name="target_url" placeholder="Cloud Volume Bucket - file://<path_to_your_file>"></p>
-      
-      <label for="formFileMultiple" class="form-label">Slicing indices for the Subvolume</label>
-      
-      <div class="number-container">
-        <input class="number-dims" type="number" id="x1" name="x1" placeholder="X1 - Default: 0">
-        <input class="number-dims" type="number" id="x2" name="x2" placeholder="X2 - Default: max(X)">
-        <input class="number-dims" type="number" id="y1" name="y1" placeholder="Y1 - Default: 0">
-        <input class="number-dims" type="number" id="y2" name="y2" placeholder="Y2 - Default: max(Y)">
-        <input class="number-dims" type="number" id="z1" name="z1" placeholder="Z1 - Default: 0">
-        <input class="number-dims" type="number" id="z2" name="z2" placeholder="Z2 - Default: max(Z)">
+    <p><input class="form-control" type="url" id="target_url" name="target_url" placeholder="Cloud Volume Bucket - file://<path_to_your_file>" value='gs://h01-release/data/20210729/c3/synapses/whole_ei_onlyvol'></p>
+
+    <label class="form-check-label">
+        <input type="radio" class="form-check-input" name="view_style" value="view" {% if view_style == 'view' %} checked {% endif %}>
+        View Centric
+    </label>
+    <label class="form-check-label">
+        <input type="radio" class="form-check-input" name="view_style" value="neuron" {% if view_style == 'neuron' %} checked {% endif %}>
+        Neuron Centric
+    </label>
+
+    <div class="mb-1"></div>
+
+
+      <div id="neuron-form" {% if view_style == 'view' %} class="hidden-form" {% endif %}>
+        <label for="formFileMultiple" class="form-label">Materialization (url/name of the table containing the ID association and bounding box information)</label>
+        <p><input class="form-control" type="text" id="materialization_url" name="materialization_url" placeholder="Materialization - synapses" value='/Users/lando/Code/SynAnno/h01/synapse-export_000000000000.csv'></p>
+        <label for="formFileMultiple" class="form-label">Pre- and postsynaptic IDs</label>
+        <div class="number-container">
+          <input class="number-dims" type="number" id="preid" name="preid" placeholder="Presynaptic ID">
+          <input class="number-dims" type="number" id="postid" name="postid" placeholder="Postsynaptic ID">
+        </div>
       </div>
       
+      <div id="view-form" {% if view_style == 'neuron' %} class="hidden-form" {% endif %}>
+      <label for="formFileMultiple" class="form-label">Slicing indices for the Subvolume</label>
+      <div class="coordinate-container">
+        <input class="coordinate-dims" type="number" id="x1" name="x1" placeholder="X1 - Default: 0">
+        <input class="coordinate-dims" type="number" id="x2" name="x2" placeholder="X2 - Default: max(X)">
+        <input class="coordinate-dims" type="number" id="y1" name="y1" placeholder="Y1 - Default: 0">
+        <input class="coordinate-dims" type="number" id="y2" name="y2" placeholder="Y2 - Default: max(Y)">
+        <input class="coordinate-dims" type="number" id="z1" name="z1" placeholder="Z1 - Default: 0">
+        <input class="coordinate-dims" type="number" id="z2" name="z2" placeholder="Z2 - Default: max(Z)">
+      </div>
+      </div>
+
       <div class="mb-3"></div>
-      <label for="formFileMultiple" class="form-label">Secrets (File containing the bucket secrets, defaults to looking in .cloudvolume/secrets)</label>
+      <label for="formFileMultiple" class="form-label">Secrets (File containing the bucket secrets, defaults to looking in ~/.cloudvolume/secrets)</label>
       <p><input class="form-control" type="file" id="secrets_file" name="secrets_file"></p>
   </div>
 
     <label for="formFileMultiple" class="form-label">SynAnno JSON file {% if mode == 'draw'%}-
       Required{% endif %}</label>
     <p><input class="form-control {{mode}}" type="file" id="formFile" name="file_json"></p>
-    <label for="formGroupExampleInput" class="form-label">Patch Size (square)</label>
-    <p><input type="text" class="form-control" id="patchsize" placeholder="142" name="patchsize"></p>
+
+
+    <div style="display: flex">
+      <div>
+      <label for="formFileMultiple" class="form-label">Volume Resolution (in nm)</label>
+      <input class="X-Res." type="number" id="res1" name="res1" placeholder="Default: 8" value=8>
+      <input class="Y-Res." type="number" id="res2" name="res2" placeholder="Default: 8" value=8>
+      <input class="Z-Res." type="number" id="res3" name="res3" placeholder="Default: 33" value=33>
+      </label>
+      </div>
+    
+      <div style="padding-left: 5px; padding-top: 2px">
+        <select id="coordinates" name="coordinates">
+          <option value="xyz" selected>  XYZ  </option>
+          <option value="xzy">  XZY  </option>
+          <option value="zyx">  ZYX  </option>
+          <option value="zxy">  ZXY  </option>
+          <option value="yxz">  YXZ  </option>
+          <option value="yzx">  YZX  </option>
+        </select>
+        </label>
+      </div>
+    </div>
+
+    <div class="mb-1"></div>
+
+    <label for="formGroupExampleInput" class="form-label">Instance crop size (in px)</label>
+    <input type="number" id="cropsize_x" placeholder="142" name="crop_size_x" value=142> 
+    <input type="number" id="cropsize_y" placeholder="142" name="crop_size_y" value=142> 
+    <input type="number" id="cropsize_z" placeholder="16" name="crop_size_z" value=16> 
+
     <p class="mt-4">
       <input id="processData" type="submit" class="btn btn-secondary {{ modecurrent }} disabled" value="Submit">
       <a type="button" class="btn btn-primary {{ modenext }}"

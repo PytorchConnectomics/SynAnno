@@ -23,25 +23,56 @@ import json
 from jinja2 import Template
 from typing import Dict
 
+import synanno.backend.processing as ip
 
 
-@app.route('/annotation')
 @app.route('/annotation/<int:page>')
+@app.route('/annotation')
 def annotation(page: int = 0) -> Template:
     ''' Start the proofreading timer and load the annotation view.
 
         Args:
             page: The current data page that is depicted in the grid view
+            view_style: Identifies the view style: view | neuron
 
         Return:
             The annotation view
     '''
 
+    if session["view_style"] == 'neuron':
+    # check if the data for the current page is already loaded
+       
+
+        # retrieve the current data
+        json_object = session.get('data')
+
+        # retrieve the session data
+        json_object = {str(idx): data for idx, data in enumerate(json_object) if data is not None }
+
+        # remove the synapse and image slices for the previous and next page
+        json_object = ip.free_page(page=page, json_object=json_object)
+
+        json_path = ip.visualize_cv_instances(crop_size_x=session['crop_size_x'], crop_size_y=session['crop_size_y'], crop_size_z=session['crop_size_z'], json_object=json_object, page=page)
+
+
+        if json_path is not None:
+        
+            # open the json data and save it to the session
+            f = open(json_path)
+            data = json.load(f)
+            # update the session data
+            session['data'][page] = data[str(page)]
+
     # start the timer for the annotation process
     if synanno.proofread_time['start_grid'] is None:
         synanno.proofread_time['start_grid'] = datetime.datetime.now()
 
-    return render_template('annotation.html', images=session.get('data')[page], page=page, n_pages=session.get('n_pages'), grid_opacity=synanno.grid_opacity)
+    # print the instances of the current page for which the label is not "Correct"
+    for instance in session.get('data')[page]:
+        if instance['Label'] != 'Correct':
+            idx = instance['Image_Index']
+
+    return render_template('annotation.html', images=session.get('data')[page], page=page, n_pages=session.get('n_pages'), grid_opacity=synanno.grid_opacity, view_style=session["view_style"])
 
 
 @app.route('/set_grid_opacity', methods=['POST'])

@@ -32,7 +32,7 @@ import re
 import os
 
 # import processing functions
-from synanno.backend.processing import crop_pad_data, create_dir
+from synanno.backend.processing import crop_pad_mask_data_3d, create_dir
 from synanno.backend.utils import NpEncoder
 
 # reload the json and update the session data
@@ -58,7 +58,7 @@ def draw() -> Template:
             app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']), app.config['JSON']))
         synanno.new_json = False
 
-    return render_template('draw.html', pages=session.get('data'))
+    return render_template('draw.html', pages=session.get('data'), view_style=session["view_style"])
 
 
 @app.route('/save_canvas', methods=['POST'])
@@ -82,8 +82,7 @@ def save_canvas() -> Dict[str, object]:
     im = Image.open(BytesIO(base64.b64decode(image_data)))
 
     # adjust the size of the PIL Image in accordance with the session's path size 
-    patch_size = session['patch_size']
-    im = im.resize((patch_size, patch_size), Image.ANTIALIAS)
+    im = im.resize((session['crop_size_y'], session['crop_size_x']), Image.ANTIALIAS)
 
     # create folder where to save the image
     folder_path = os.path.join(os.path.join(
@@ -181,52 +180,52 @@ def ng_bbox_fp_save()-> Dict[str, object]:
         item['Middle_Slice'] = str(int(synanno.cz))
 
     # define the bbox
-    expand = session['patch_size'] // 2
-    bb_x1 = int(synanno.cx) - expand if int(synanno.cx) - expand > 0 else 0
-    bb_x2 = int(synanno.cx) + expand if int(synanno.cx) + \
-        expand < synanno.vol_dim_x else synanno.vol_dim_x
+    expand_x = session['crop_size_x'] // 2
+    expand_y = session['crop_size_y'] // 2
+    bb_x1 = int(synanno.cx) - expand_x if int(synanno.cx) - expand_x > 0 else 0
+    bb_x2 = int(synanno.cx) + expand_x if int(synanno.cx) + \
+        expand_x < synanno.vol_dim_x else synanno.vol_dim_x
 
-    bb_y1 = int(synanno.cy) - expand if int(synanno.cy) - expand > 0 else 0
-    bb_y2 = int(synanno.cy) + expand if int(synanno.cy) + \
-        expand < synanno.vol_dim_y else synanno.vol_dim_y
+    bb_y1 = int(synanno.cy) - expand_y if int(synanno.cy) - expand_y > 0 else 0
+    bb_y2 = int(synanno.cy) + expand_y if int(synanno.cy) + \
+        expand_y < synanno.vol_dim_y else synanno.vol_dim_y
 
     item['Original_Bbox'] = [cz1, cz2, bb_y1, bb_y2, bb_x1, bb_x2]
     item['cz0'] = item['Middle_Slice']
     item['cy0'] = int(synanno.cy)
     item['cx0'] = int(synanno.cx)
-    item['Adjusted_Bbox'] = item['Original_Bbox']
-    item['Padding'] = [[0, 0], [0, 0]]
+    item['crop_size_x'] = session['crop_size_x']
+    item['crop_size_y'] = session['crop_size_y']
+    item['crop_size_z'] = session['crop_size_z']
 
     # crop out and save the relevant gt and im
     idx_dir = create_dir('./synanno/static/', 'Images')
     img_folder = create_dir(idx_dir, 'Img')
     img_all = create_dir(img_folder, str(item['Image_Index']))
 
-    image_list = []
-    crop_2d = item['Original_Bbox'][2:]
-    for z_index in range(item['Original_Bbox'][0], item['Original_Bbox'][1]+1):
-        cropped_img = crop_pad_data(synanno.source, z_index, crop_2d, pad_val=0)
-        image_list.append(cropped_img)
-    vis_image = np.stack(image_list, 0)
+    bbox_3d = item['Original_Bbox']
+    cropped_img, adjusted_bbox, padding = crop_pad_mask_data_3d(synanno.source, bbox_3d)
+
+    item["Adjusted_Bbox"] = [int(u) for u in adjusted_bbox]
+    item["Padding"] = padding
 
     # center slice of padded subvolume
-    cs_dix = (vis_image.shape[0]-1)//2  # assumes even padding
+    cs_dix = (cropped_img.shape[0]-1)//2  # assumes even padding
 
     # overwrite cs incase that object close to boundary
     z_mid_total = item['Middle_Slice']
     cs = min(int(z_mid_total), cs_dix)
 
     # save volume slices
-    for s in range(vis_image.shape[0]):
+    for s in range(cropped_img.shape[0]):
         img_name = str(int(z_mid_total)-cs+s)+'.png'
 
         # image
-        img_c = Image.fromarray(vis_image[s, :, :])
+        img_c = Image.fromarray(cropped_img[s, :, :])
         img_c.save(os.path.join(img_all, img_name), 'PNG')
 
     item['GT'] = 'None'  # do not save the GT as we do not have masks for the FPs
     item['EM'] = '/'+'/'.join(img_all.strip('.\\').split('/')[2:])
-    item['Rotation_Angle'] = 0.0
 
     # add item to list
     item_list.append(item)

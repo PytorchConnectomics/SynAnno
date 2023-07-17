@@ -49,13 +49,12 @@ def open_data(task: str) -> Template:
 
     # defines the downstream task | 'draw', 'annotate'
     global draw_or_annotate
-
     draw_or_annotate = task
 
     if os.path.isdir('./synanno/static/Images/Img'):
         flash('Click \"Reset Backend\" to clear the memory, start a new task, and start up a Neuroglancer instance.')
-        return render_template('opendata.html', modecurrent='d-none', modenext='d-none', modereset='inline', mode=draw_or_annotate, json_name=app.config['JSON'], origin='local')
-    return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate, origin='local')
+        return render_template('opendata.html', modecurrent='d-none', modenext='d-none', modereset='inline', mode=draw_or_annotate, json_name=app.config['JSON'], view_style='view')
+    return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate, view_style='view')
 
 
 @app.route('/upload', methods=['GET', 'POST'])
@@ -70,103 +69,107 @@ def upload_file() -> Template:
     # defines the downstream task, set by the open-data view | 'draw', 'annotate'
     global draw_or_annotate
 
+    # set the number of cards in one page
+    # this variable is, e.g., used by the preprocess script and the set_data function
+    session['per_page'] = 18
+
+    # init the number of pages to 0
+    session['n_pages'] = 0
+
     # Check if files folder exists, if not create it
     if not os.path.exists(os.path.join('.', os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']))):
         os.mkdir(os.path.join('.', os.path.join(
             app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER'])))
 
-    # remove existing json file
+    # remove the old json file should it exist
     if os.path.isfile(os.path.join(os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']), app.config['JSON'])):
         os.remove(os.path.join(os.path.join(
             app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']), app.config['JSON']))
 
-    # update the patch size if provided
-    if request.form.get('patchsize'):
-        patch_size = int(request.form.get('patchsize'))
-    else:
-        patch_size = 142  # default patch size
+    # retrieve the crop size from the form and save it to the session
+    session['crop_size_x'] = int(request.form.get('crop_size_x'))
+    session['crop_size_y'] = int(request.form.get('crop_size_y'))
+    session['crop_size_z'] = int(request.form.get('crop_size_z'))
 
-    session['patch_size'] = patch_size
+    if session['crop_size_x'] == 0 or session['crop_size_y'] == 0 or session['crop_size_z'] == 0:
+        flash('The crop sizes have to be larger then zero, the current setting will result in a crash of the backend!', 'error')
+        raise ValueError('A crop size was set to 0, this will result in a crash of the backend!')
 
-    origin = request.form.get('origin')
-
-    if origin == 'cloud':
-
-        source_url = request.form.get('source_url')
-        target_url = request.form.get('target_url')
-    
-        # retrieve the bounding box information from the corresponding html fields, if not provided set to -1
-        x1 = request.form.get('x1') if request.form.get('x1') else 0
-        x2 = request.form.get('x2') if request.form.get('x2') else -1
-        y1 = request.form.get('y1') if request.form.get('y1') else 0
-        y2 = request.form.get('y2') if request.form.get('y2') else -1
-        z1 = request.form.get('z1') if request.form.get('z1') else 0
-        z2 = request.form.get('z2') if request.form.get('z2') else -1
-
-        if any( bucket in source_url for bucket in app.config['CLOUD_VOLUME_BUCKETS']) and any(bucket in target_url for bucket in app.config['CLOUD_VOLUME_BUCKETS']):
-            
-            # retrieve the bucket secret if the user provided one
-            if bucket_secret:= request.files['secrets_file']:
-                bucket_secret_bytes = bucket_secret.read()  # Read the file contents
-                bucket_secret_json = json.loads(bucket_secret_bytes)  # Parse JSON into dictionary
-                source, raw_target = ip.load_3d_cloud_volume(source_url, target_url, x1, x2, y1, y2, z1, z2, bucket_secret_json)
-            else:
-                source, raw_target = ip.load_3d_cloud_volume(source_url, target_url, x1, x2, y1, y2, z1, z2)
-        else:
-            flash('Please provide at least the paths to valid source and target cloud volume buckets!', 'error')
-            return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate)
-        
-    elif origin == 'local':
-
-        source_file = request.files['source_file']
-        target_file = request.files['target_file']
-
-        # check if the path to the required files (source and target) are not None
-        if source_file.filename and target_file.filename:
-
-            # retrieve the names of the provided files
-            source_file_path = save_file(source_file, source_file.filename)
-            target_file_path = save_file(target_file, target_file.filename)
-            source, raw_target = ip.load_3d_files(source_file_path, target_file_path)
-
-        else:
-            flash('Please provide at least the paths to valid source and target .h5 files!', 'error')
-            return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate)
-
-
+    # retrieve the handle to the json should one have been provided
     file_json = request.files['file_json']
 
-    # if a json got provided save it locally and process the data based on the JSON info
-    if file_json.filename:
-        path_json = save_file(file_json, app.config['JSON'])
-        _, synanno.source, target_seg = ip.process_3d_data(
-            source,
-            raw_target,
-            patch_size=patch_size,
-            path_json=path_json)
-    # else compute the bounding box information and write them to a json
-    else:
-        path_json, synanno.source, target_seg = ip.process_3d_data(
-            source,
-            raw_target,
-            patch_size)
+    # retrieve the coordinate order and resolution from the form and save them in a dict, used by the NG instance and the processing functions
+    synanno.coordinate_order = {c: request.form.get('res'+str(i+1)) for i, c in enumerate(list(request.form.get('coordinates')))}
 
+    # retrieve the urls for the source and target cloud volume buckets
+    source_url = request.form.get('source_url')
+    target_url = request.form.get('target_url')
+
+    # check if the provided urls are valid based on the cloud provider prefix
+    if any( bucket in source_url for bucket in app.config['CLOUD_VOLUME_BUCKETS']) and any(bucket in target_url for bucket in app.config['CLOUD_VOLUME_BUCKETS']):
+        
+        # retrieve the view_style mode from the form, either view or neuron
+        session["view_style"] = request.form.get('view_style')
+
+        # retrieve the bucket secret if the user provided one
+        if bucket_secret:= request.files.get('secrets_file'):
+            bucket_secret = json.loads(bucket_secret.read())
+
+        # if a json got provided save it locally and process the data based on the JSON info
+        path_json = save_file(file_json, app.config['JSON'])  if file_json.filename else None
+        
+        # if the user chose the view view_style mode load the bbox specific subvolume and then process the data like in the local case
+        if session["view_style"] == 'view':
+
+            subvolume = {'x1': int(request.form.get('x1')) if request.form.get('x1') else 0, 'x2': int(request.form.get('x2')) if request.form.get('x2') else -1,
+                         'y1': int(request.form.get('y1')) if request.form.get('y1') else 0, 'y2': int(request.form.get('y2')) if request.form.get('y2') else -1,
+                         'z1': int(request.form.get('z1')) if request.form.get('z1') else 0, 'z2': int(request.form.get('z2')) if request.form.get('z2') else -1}
+
+            source, raw_target = ip.view_centric_cloud_volume(source_url, target_url, subvolume, bucket_secret_json= bucket_secret if bucket_secret else '~/.cloudvolume/secrets' ) 
+            
+            synanno.source, target_seg, path_json = ip.view_centric_3d_data_processing(
+                    source,
+                    raw_target,
+                    crop_size_x=session.get('crop_size_x'),
+                    crop_size_y=session.get('crop_size_y'),
+                    crop_size_z=session.get('crop_size_z'),
+                    path_json=path_json)
+            
+        # if the user chose the neuron view_style mode, retrieve a list of all the synapses of the provided neuron ids and then process the data on synapse level 
+        elif session["view_style"] == 'neuron':
+            # if the user chose the neuron view_style mode retrieve the neuron ids
+            preid = int(request.form.get('preid')) if request.form.get('preid') else None
+            postid = int(request.form.get('postid')) if request.form.get('postid') else None
+
+            # TODO: The URL should be a url currently it is set to text, if providing a false path no error handling is in place
+            # retrieve the materialization url
+            materialization_url = request.form.get('materialization_url')
+
+            path_json = ip.neuron_centric_3d_data_processing(source_url, target_url, materialization_url, preid, postid, bucket_secret_json= bucket_secret if bucket_secret else '~/.cloudvolume/secrets', crop_size_x=session['crop_size_x'], crop_size_y=session['crop_size_y'], crop_size_z=session['crop_size_z'], path_json=path_json)
+
+    else:
+        flash('Please provide at least the paths to valid source and target cloud volume buckets!', 'error')
+        return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate)
+        
     # if the NG version number is None setup a new NG viewer
     if synanno.ng_version is None:
-        ng_util.setup_ng(synanno.source, target_seg)
+        if session["view_style"] == 'view':
+            ng_util.setup_ng(source = synanno.source, target = target_seg, view_style = session["view_style"])    
+        elif session["view_style"] == 'neuron':
+            ng_util.setup_ng(source = 'precomputed://'+ source_url, target = 'precomputed://'+ target_url, view_style = session["view_style"])
 
     # test if the created/provided json is valid by loading it an rerender the open-data view
     try:
         with open(path_json, 'r') as f:
             json.load(f)
         flash('Data ready!')
-        return render_template('opendata.html', json_name=path_json.split('/')[-1], modecurrent='disabled', modeform='formFileDisabled', origin=origin, mode=draw_or_annotate)
+        return render_template('opendata.html', json_name=path_json.split('/')[-1], modecurrent='disabled', modeform='formFileDisabled', view_style=session["view_style"], mode=draw_or_annotate)
     except ValueError as e:
         flash('Something is wrong with the loaded JSON!', 'error')
         return render_template('opendata.html', modenext='disabled', mode=draw_or_annotate)
 
-@app.route('/set-data/<task>/<json_name>')
-@app.route('/set-data/<json_name>')
+@app.route('/set-data/<string:task>/<string:json_name>')
+@app.route('/set-data/<string:json_name>')
 @app.route('/set-data')
 def set_data(task: str = 'annotate', json_name: str = app.config['JSON']) -> Template:
     ''' Used by the annotation and the draw view to set up the session.
@@ -187,50 +190,52 @@ def set_data(task: str = 'annotate', json_name: str = app.config['JSON']) -> Tem
         json_util.reload_json(path=os.path.join(os.path.join(
             app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']), app.config['JSON']))
         synanno.new_json = False
-        return render_template('draw.html', pages=session.get('data'))
+        return render_template('draw.html', pages=session.get('data'), view_style=session["view_style"])
     # setup the session
     else:
         json_path = os.path.join(os.path.join(
             app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']), json_name)
 
-        # set the number of cards in one page
-        per_page = 18
-        session['per_page'] = per_page
-
         # open the json data and save it to the session
         f = open(json_path)
         data = json.load(f)
+        per_page = session.get('per_page')
 
-        # write the data to the session
-        if not session.get('data'):
-            session['data'] = [data['Data'][i:i+per_page]
-                               for i in range(0, len(data['Data']), per_page)]
+        if session["view_style"] == 'view':
+            # write the data to the session
+            if not session.get('data'):
+                session['data'] = [data['Data'][i:i+per_page]
+                                for i in range(0, len(data['Data']), per_page)]
+             # retrieve the number of instances in the json {'Data': [ ... ]}
+            number_images = len(data['Data'])
+
+            if number_images == 0:
+                flash(
+                    'No synapsis detect in the GT data or the provided JSON does not list any')
+                return render_template('opendata.html', modenext='disabled')
+
+            # calculate the number of pages needed for the instance count in the JSON
+            number_pages = number_images // per_page
+            if not (number_images % per_page == 0):
+                number_pages = number_pages + 1
+
+            # save the number of required pages to the session
+            if not session.get('n_pages'):
+                session['n_pages'] = number_pages
+        elif session["view_style"] == 'neuron':
+                # assigning the data to the first page
+                # number of pages gets set in the neuron_centric_3d_data_processing function
+                session['data'] = [None] * session.get('n_pages')
+                session['data'][0] = data['0']
 
         # save the name of the json file to the session
         session['path_json'] = json_path
 
-        # retrive the number of instances in the json {'Data': [ ... ]}
-        number_images = len(data['Data'])
-
-        if number_images == 0:
-            flash(
-                'No synapsis detect in the GT data or the provided JSON does not list any')
-            return render_template('opendata.html', modenext='disabled')
-
-        # calculate the number of pages needed for the instance count in the JSON
-        number_pages = number_images // per_page
-        if not (number_images % per_page == 0):
-            number_pages = number_pages + 1
-
-        # save the number of required pages to the session
-        if not session.get('n_pages'):
-            session['n_pages'] = number_pages
-
         # link the relevant HTML page based on the defined task
         if task == 'annotate':
-            return render_template('annotation.html', images=session.get('data')[0], page=0, n_pages=session.get('n_pages'), grid_opacity=synanno.grid_opacity)
+            return render_template('annotation.html', images=session.get('data')[0], page=0, n_pages=session.get('n_pages'), grid_opacity=synanno.grid_opacity, view_style=session["view_style"])
         elif task == 'draw':
-            return render_template('draw.html', pages=session.get('data'))
+            return render_template('draw.html', pages=session.get('data'), view_style=session["view_style"])
 
 
 @app.route('/progress', methods=['POST'])
@@ -260,25 +265,32 @@ def neuro() -> Dict[str, object]:
 
     # unpack the coordinates for the new focus point of the view
     mode = str(request.form['mode'])
+    view_style = str(request.form['view_style'])
+
+    center = {}
 
     if mode == "annotate":
-        oz = int(request.form['cz0'])
-        oy = int(request.form['cy0'])
-        ox = int(request.form['cx0'])
+        center['z'] = int(request.form['cz0'])
+        center['y'] = int(request.form['cy0'])
+        center['x'] = int(request.form['cx0'])
     elif mode == 'draw':
-        oz = synanno.vol_dim_z // 2
-        oy = synanno.vol_dim_y // 2
-        ox = synanno.vol_dim_x // 2
+        center['z'] = synanno.vol_dim_z // 2
+        center['y'] = synanno.vol_dim_y // 2
+        center['x'] = synanno.vol_dim_x // 2
         
     if synanno.ng_version is not None:
         # update the view focus of the running NG instance
         with synanno.ng_viewer.txn() as s:
-            s.position = [oz, oy, ox]
+            # in the view view_style mode the coordinates are in the order z,y,x, as we downloaded and transposed the data
+            if view_style == 'view':
+                s.position = [center['z'], center['y'], center['x']]
+            else:
+                s.position = [center[list(synanno.coordinate_order.keys())[0]], center[list(synanno.coordinate_order.keys())[1]], center[list(synanno.coordinate_order.keys())[2]]]
     else:
         raise Exception('No NG instance running')
 
     print(
-        f'Neuroglancer instance running at {synanno.ng_viewer}, centered at x,y,x {oz,oy,ox}')
+        f'Neuroglancer instance running at {synanno.ng_viewer}, centered at {str(list(synanno.coordinate_order.keys())[0])},{str(list(synanno.coordinate_order.keys())[1])},{str(list(synanno.coordinate_order.keys())[2])} {center[list(synanno.coordinate_order.keys())[0]], center[list(synanno.coordinate_order.keys())[1]], center[list(synanno.coordinate_order.keys())[2]]}')
 
     final_json = jsonify(
         {'ng_link': 'http://'+app.config['IP']+':9015/v/'+str(synanno.ng_version)+'/'})

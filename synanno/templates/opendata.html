@@ -117,7 +117,7 @@
     <p class="mt-4">
       <input id="processData" type="submit" class="btn btn-secondary {{ modecurrent }} disabled" value="Submit">
       <a type="button" class="btn btn-primary {{ modenext }}"
-        href="{{ url_for('set_data', task=mode, json_name=json_name) }}">
+        href="{{ url_for('set_data', task=mode) }}">
         {% if mode == 'draw'%} Start Drawing {% elif mode == 'annotate'%}Start Data Proofread{% endif %}
       </a>
     </p>
@@ -125,7 +125,7 @@
       <a type="button" id='resetButton' class="btn btn-outline-danger d-{{ modereset or 'none'}}"
         href="{{ url_for('reset') }}">Reset Backend</a>
       <a type="button" id='continueButton' class="btn btn-outline-warning d-{{ modereset or 'none'}}"
-        href="{{ url_for('set_data', task=mode, json_name=json_name) }}">Continue Previous Task</a>
+        href="{{ url_for('set_data', task=mode) }}">Continue Previous Task</a>
     </p>
   </form>
 

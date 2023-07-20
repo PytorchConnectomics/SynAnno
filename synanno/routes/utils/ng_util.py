@@ -8,9 +8,12 @@ from synanno import app
 # for type hinting
 import numpy as np
 
+import numpy.typing as npt
+
+
 from typing import Union
 
-def setup_ng(source: Union[np.typing.NDArray, str], target: Union[np.typing.NDArray, str], view_style: str = 'view' ) -> None:
+def setup_ng(source: Union[npt.NDArray, str], target: Union[npt.NDArray, str], view_style: str = 'view' ) -> None:
     ''' Setup function for the Neuroglancer (ng) that enables the recording and depiction 
         of center markers for newly identified FN instances.
 
@@ -92,10 +95,12 @@ def setup_ng(source: Union[np.typing.NDArray, str], target: Union[np.typing.NDAr
         # record the current mouse position
         center = s.mouse_voxel_coordinates
 
+        center_coord = {key: int(value) for key, value in zip(list(synanno.coordinate_order.keys()), center)}
+
         # split the position and convert to int
-        synanno.cz = int(center[0])
-        synanno.cy = int(center[1])
-        synanno.cx = int(center[2])
+        synanno.cz = center_coord['z']
+        synanno.cy = center_coord['y']
+        synanno.cx = center_coord['x']
 
         # add a yellow dot at the recorded position with in the NG
         with synanno.ng_viewer.txn() as l:

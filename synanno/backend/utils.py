@@ -1,17 +1,9 @@
 from __future__ import print_function, division
-from typing import Optional, List, Union, Dict
+from typing import Dict
 
 import os
-import cv2
-import h5py
 import json
-import glob
-import imageio
 import numpy as np
-from skimage.measure import label
-from skimage.transform import resize
-from skimage.morphology import dilation
-from skimage.morphology import remove_small_objects
 
 
 class NpEncoder(json.JSONEncoder):

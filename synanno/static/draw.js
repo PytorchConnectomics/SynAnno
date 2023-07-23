@@ -217,13 +217,15 @@ $(document).ready(function () {
             // update the depicted mask with the newly drawn mask
         }).done(function (data) {
 
+            data_json = JSON.parse(data.data); 
+
             // handle to ground truth image of the instance module
             var save = '#imgEM-GT-' + page + '-' + data_id
 
             // create path to image
-            var coordinates = data.data.Adjusted_Bbox.join('_')
-            var middle_slice = data.data.Middle_Slice
-            var img_index = data.data.Image_Index
+            var coordinates = data_json.Adjusted_Bbox.join('_')
+            var middle_slice = data_json.Middle_Slice
+            var img_index = data_json.Image_Index
             img_name = 'idx_' + img_index + '_ms_' + middle_slice + '_cor_' + coordinates + '.png'
             image_path = custom_mask_path + img_name
 

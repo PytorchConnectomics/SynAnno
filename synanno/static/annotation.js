@@ -63,6 +63,7 @@ $(document).ready(function () {
 
         // update the modal
         await req_data.done(function (data) {
+            data_json = JSON.parse(data.data);
             $('#rangeSlices').attr('min', data.range_min);
             $('#rangeSlices').attr('max', data.range_min + data.slices_len - 1);
             $('#rangeSlices').val(data.halflen);
@@ -73,13 +74,13 @@ $(document).ready(function () {
             $('#maxSlice').html(data.slices_len - 1);
 
             $('#imgDetails-EM').addClass(label.toLowerCase());
-            $('#imgDetails-EM').attr('src', data.data.EM + '/' + data.data.Middle_Slice + '.png');
-            $('#imgDetails-GT').attr('src', data.data.GT + '/' + data.data.Middle_Slice + '.png');
+            $('#imgDetails-EM').attr('src', data_json.EM + '/' + data_json.Middle_Slice + '.png');
+            $('#imgDetails-GT').attr('src', data_json.GT + '/' + data_json.Middle_Slice + '.png');
             $('#detailsModal').modal('show');
 
-            cz0 = data.data.cz0
-            cy0 = data.data.cy0
-            cx0 = data.data.cx0
+            cz0 = data_json.cz0
+            cy0 = data_json.cy0
+            cx0 = data_json.cx0
 
         });
 
@@ -125,8 +126,9 @@ $(document).ready(function () {
 
         // update the slice and GT that is depicted
         req.done(function (data) {
-            $('#imgDetails-EM').attr('src', data.data.EM + '/' + rangeValue + '.png');
-            $('#imgDetails-GT').attr('src', data.data.GT + '/' + rangeValue + '.png');
+            data_json = JSON.parse(data.data);
+            $('#imgDetails-EM').attr('src', data_json.EM + '/' + rangeValue + '.png');
+            $('#imgDetails-GT').attr('src', data_json.GT + '/' + rangeValue + '.png');
         });
 
     })
@@ -182,7 +184,6 @@ function dec_opacity_grid() {
 function add_opacity_grid() {
     var value = $('#value-opacity-grid').attr('value');
     var new_value = parseFloat(value) + 0.1;
-    console.log(new_value)
     if (new_value >= 1) {
         new_value = 1;
     }

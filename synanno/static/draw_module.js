@@ -13,8 +13,9 @@ $(document).ready(function () {
         });
 
         await req_data.done(function (data) {
+            data_json = JSON.parse(data.data);
             $('#imgDetails-EM').addClass(label.toLowerCase());
-            $('#imgDetails-EM').attr('src', data.data.EM + '/' + data.data.Middle_Slice + '.png');
+            $('#imgDetails-EM').attr('src', data_json.EM + '/' + data_json.Middle_Slice + '.png');
             $('#detailsModal').modal('show');
 
         });

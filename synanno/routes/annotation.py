@@ -5,7 +5,7 @@ import synanno
 from synanno import app
 
 # flask util functions
-from flask import render_template, session, request, jsonify, flash
+from flask import render_template, session, request, jsonify
 
 # flask ajax requests
 from flask_cors import cross_origin
@@ -41,38 +41,20 @@ def annotation(page: int = 0) -> Template:
 
     if session["view_style"] == 'neuron':
     # check if the data for the current page is already loaded
-       
-
-        # retrieve the current data
-        json_object = session.get('data')
-
-        # retrieve the session data
-        json_object = {str(idx): data for idx, data in enumerate(json_object) if data is not None }
 
         # remove the synapse and image slices for the previous and next page
-        json_object = ip.free_page(page=page, json_object=json_object)
+        ip.free_page(page=page)
 
-        json_path = ip.visualize_cv_instances(crop_size_x=session['crop_size_x'], crop_size_y=session['crop_size_y'], crop_size_z=session['crop_size_z'], json_object=json_object, page=page)
-
-
-        if json_path is not None:
-        
-            # open the json data and save it to the session
-            f = open(json_path)
-            data = json.load(f)
-            # update the session data
-            session['data'][page] = data[str(page)]
+        ip.visualize_cv_instances(crop_size_x=session['crop_size_x'], crop_size_y=session['crop_size_y'], crop_size_z=session['crop_size_z'], page=page)
 
     # start the timer for the annotation process
     if synanno.proofread_time['start_grid'] is None:
         synanno.proofread_time['start_grid'] = datetime.datetime.now()
 
-    # print the instances of the current page for which the label is not "Correct"
-    for instance in session.get('data')[page]:
-        if instance['Label'] != 'Correct':
-            idx = instance['Image_Index']
+    # retrieve the data for the current page
+    data = synanno.df_metadata.query('Page == @page').sort_values(by=['Image_Index']).to_dict('records')
 
-    return render_template('annotation.html', images=session.get('data')[page], page=page, n_pages=session.get('n_pages'), grid_opacity=synanno.grid_opacity, view_style=session["view_style"])
+    return render_template('annotation.html', images=data, page=page, n_pages=session.get('n_pages'), grid_opacity=synanno.grid_opacity, view_style=session["view_style"])
 
 
 @app.route('/set_grid_opacity', methods=['POST'])
@@ -97,20 +79,21 @@ def update_card() -> Dict[str, object]:
         Return:
             Passes the updated label to the frontend
     '''
+
     # retrieve the passed frontend information
     page = int(request.form['page'])
-    index = int(request.form['data_id'])-1
+    index = int(request.form['data_id'])
     label = request.form['label']
 
     # update the session data with the new label
     if (label == 'Incorrect'):
-        session.get('data')[page][index]['Label'] = 'Unsure'
+        synanno.df_metadata.loc[(synanno.df_metadata['Page'] == page) & (synanno.df_metadata['Image_Index'] == index), 'Label'] = 'Unsure'
     elif (label == 'Unsure'):
-        session.get('data')[page][index]['Label'] = 'Correct'
+        synanno.df_metadata.loc[(synanno.df_metadata['Page'] == page) & (synanno.df_metadata['Image_Index'] == index), 'Label'] = 'Correct'
     elif (label == 'Correct'):
-        session.get('data')[page][index]['Label'] = 'Incorrect'
+        synanno.df_metadata.loc[(synanno.df_metadata['Page'] == page) & (synanno.df_metadata['Image_Index'] == index), 'Label'] = 'Incorrect'
 
-    return jsonify({'result': 'success', 'label': session.get('data')[page][index]['Label']})
+    return jsonify({'result': 'success', 'label': label})
 
 
 @app.route('/get_instance', methods=['POST'])
@@ -125,27 +108,33 @@ def save_slices() -> Dict[str, object]:
     # retrieve the page and instance index
     mode = str(request.form['mode'])
     page = int(request.form['page'])
-    index = int(request.form['data_id']) - 1
+    index = int(request.form['data_id'])
 
     # when first opening a instance modal view
     if mode == 'full':
         # calculating the number of slices
         slices_len = len(os.listdir(
-            './synanno' + session.get('data')[page][index]['EM']+'/'))
+            './synanno' + synanno.df_metadata.loc[(synanno.df_metadata['Page'] == page) & (synanno.df_metadata['Image_Index'] == index), 'EM'].item() +'/'))
         # calculating the center slice
-        half_len = int(session.get('data')[page][index]['Middle_Slice'])
+        half_len = int(synanno.df_metadata.loc[(synanno.df_metadata['Page'] == page) & (synanno.df_metadata['Image_Index'] == index), 'Middle_Slice'].item())
 
         # calculating the absolute lower bound z-value with in the image volume
         if (slices_len % 2 == 0):
-            range_min = half_len - ((slices_len)//2) + 1
+            range_min = half_len - (slices_len//2) + 1
         else:
             range_min = half_len - (slices_len//2)
 
-        final_json = jsonify(data=session.get('data')[page][index], slices_len=slices_len, halflen=half_len,
+
+        data = synanno.df_metadata.query('Page == @page & Image_Index == @index').to_dict('records')[0]
+        data = json.dumps(data)
+
+        final_json = jsonify(data=data, slices_len=slices_len, halflen=half_len,
                              range_min=range_min, host=app.config['IP'], port=app.config['PORT'])
 
     # when changing the depicted slice with in the modal view
     elif mode == 'single':
-        return jsonify(data=session.get('data')[page][index])
+        data = synanno.df_metadata.query('Page == @page & Image_Index == @index').to_dict('records')[0]
+        data = json.dumps(data)
+        return jsonify(data=data)
 
     return final_json

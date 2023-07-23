@@ -16,14 +16,8 @@ from PIL import Image
 # handle binary stream from base64 decoder
 from io import BytesIO
 
-# stack individual slices to an image volume
-import numpy as np
-
 # base64 decoder to convert canvas
 import base64
-
-# read and write JSON files
-import json
 
 # regular expression matching
 import re
@@ -32,16 +26,19 @@ import re
 import os
 
 # import processing functions
-from synanno.backend.processing import crop_pad_mask_data_3d, create_dir
-from synanno.backend.utils import NpEncoder
-
-# reload the json and update the session data
-import synanno.routes.utils.json_util as json_util
+from synanno.backend.processing import calculate_crop_pad, crop_pad_mask_data_3d, create_dir
 
 # for type hinting
 from jinja2 import Template
 from typing import Dict
 
+import json 
+
+from cloudvolume import Bbox
+
+import numpy as np
+
+import pandas as pd
 
 @app.route('/draw')
 def draw() -> Template:
@@ -52,13 +49,9 @@ def draw() -> Template:
             Renders the draw view.
     '''
 
-    # overwrite the session data if json has been changed
-    if synanno.new_json:
-        json_util.reload_json(path=os.path.join(os.path.join(
-            app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']), app.config['JSON']))
-        synanno.new_json = False
-
-    return render_template('draw.html', pages=session.get('data'), view_style=session["view_style"])
+    # retrieve the data from the dataframe for which the user has marked the instance as "Incorrect" or "Unsure"
+    data = synanno.df_metadata[synanno.df_metadata['Label'].isin(['Incorrect', 'Unsure'])].to_dict('records')
+    return render_template('draw.html', images=data, view_style=session["view_style"])
 
 
 @app.route('/save_canvas', methods=['POST'])
@@ -76,7 +69,7 @@ def save_canvas() -> Dict[str, object]:
 
     # retrieve the instance specifiers
     page = int(request.form['page'])
-    index = int(request.form['data_id']) - 1
+    index = int(request.form['data_id']) 
 
     # convert the canvas to PIL image format
     im = Image.open(BytesIO(base64.b64decode(image_data)))
@@ -91,7 +84,8 @@ def save_canvas() -> Dict[str, object]:
         os.makedirs(folder_path)
 
     # retrieve the instance specific information for naming the image
-    data = session.get('data')[page][index]
+
+    data = synanno.df_metadata.query('Page == @page & Image_Index == @index').to_dict('records')[0]
     coordinates = '_'.join(map(str, data['Adjusted_Bbox']))
     middle_slice = str(data['Middle_Slice'])
     img_index = str(data['Image_Index'])
@@ -103,6 +97,7 @@ def save_canvas() -> Dict[str, object]:
     im.save(os.path.join(folder_path, img_name))
 
     # send the instance specific information to draw.js
+    data = json.dumps(data)
     final_json = jsonify(data=data)
 
     return final_json
@@ -121,9 +116,9 @@ def ng_bbox_fp()-> Dict[str, object]:
 
     # expand the bb in in z direction
     # we expand the front and the back z value dependent on their proximity to the boarders
-    cz1 = int(synanno.cz) - synanno.z_default if int(synanno.cz) - synanno.z_default > 0 else 0
-    cz2 = int(synanno.cz) + synanno.z_default if int(synanno.cz) + \
-        synanno.z_default < synanno.vol_dim_z else synanno.vol_dim_z
+    cz1 = int(synanno.cz) - session['crop_size_z'] if int(synanno.cz) - session['crop_size_z'] > 0 else 0
+    cz2 = int(synanno.cz) + session['crop_size_z'] if int(synanno.cz) + \
+        session['crop_size_z'] < synanno.vol_dim_z else synanno.vol_dim_z
 
     # server the coordinates to the front end
     return jsonify({
@@ -139,7 +134,7 @@ def ng_bbox_fp()-> Dict[str, object]:
 def ng_bbox_fp_save()-> Dict[str, object]:
     ''' Serves an Ajax request by draw_module.js, that passes the manual updated/corrected bb coordinates
         to this backend function. Additionally, the function creates a new item instance and 
-        updates the json file.
+        updates the metadata dataframe.
 
         Return:
             The x and y coordinates of the center of the newly added instance as well as the upper and the
@@ -157,27 +152,41 @@ def ng_bbox_fp_save()-> Dict[str, object]:
 
     ## add the new instance to the the json und update the session data
 
-    # open json and retrieve data
-    path_json = os.path.join(os.path.join(
-        app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']), app.config['JSON'])
-    item_list = json.load(open(path_json))['Data']
-
     # create new item
     item = dict()
 
     # index starts at one, adding item, therefore, incrementing by one
-    item['Image_Index'] = len(item_list) + 1 + 1
 
+        # calculate the number of pages needed for the instance count in the JSON
+    item['Page'] = len(synanno.df_metadata) + 1 // session.get('per_page')
+    if not (len(synanno.df_metadata) + 1 % session.get('per_page') == 0):
+        item['Page'] = item['Page'] + 1
+
+    item['Image_Index'] = len(synanno.df_metadata) + 1
+
+    # crop out and save the relevant gt and im
+    idx_dir = create_dir('./synanno/static/', 'Images')
+    img_folder = create_dir(idx_dir, 'Img')
+    img_all = create_dir(img_folder, str(item['Image_Index']))
+
+
+    item['GT'] = 'None'  # do not save the GT as we do not have masks for the FPs
+    item['EM'] = '/'+'/'.join(img_all.strip('.\\').split('/')[2:])
+    
     item['Label'] = 'Incorrect'
     item['Annotated'] = 'No'
     item['Error_Description'] = 'False Negatives'
 
     # use the marked slice incase that it is not sufficiently far awy enough from the boarder
     # - the true center might not depict the marked instance
-    if int(synanno.cz) - synanno.z_default > 0 and int(synanno.cz) + synanno.z_default < synanno.vol_dim_z:
+    if int(synanno.cz) - session['crop_size_z'] > 0 and int(synanno.cz) + session['crop_size_z'] < synanno.vol_dim_z:
         item['Middle_Slice'] = str(int(cz1 + ((cz2-cz1) // 2)))
     else:
         item['Middle_Slice'] = str(int(synanno.cz))
+    
+    item['cz0'] = item['Middle_Slice']
+    item['cy0'] = int(synanno.cy)
+    item['cx0'] = int(synanno.cx)
 
     # define the bbox
     expand_x = session['crop_size_x'] // 2
@@ -190,24 +199,63 @@ def ng_bbox_fp_save()-> Dict[str, object]:
     bb_y2 = int(synanno.cy) + expand_y if int(synanno.cy) + \
         expand_y < synanno.vol_dim_y else synanno.vol_dim_y
 
-    item['Original_Bbox'] = [cz1, cz2, bb_y1, bb_y2, bb_x1, bb_x2]
-    item['cz0'] = item['Middle_Slice']
-    item['cy0'] = int(synanno.cy)
-    item['cx0'] = int(synanno.cx)
     item['crop_size_x'] = session['crop_size_x']
     item['crop_size_y'] = session['crop_size_y']
     item['crop_size_z'] = session['crop_size_z']
+    
+    item['Original_Bbox'] = [cz1, cz2, bb_y1, bb_y2, bb_x1, bb_x2]
 
-    # crop out and save the relevant gt and im
-    idx_dir = create_dir('./synanno/static/', 'Images')
-    img_folder = create_dir(idx_dir, 'Img')
-    img_all = create_dir(img_folder, str(item['Image_Index']))
+    view_style = session.get('view_style')
+    if view_style == 'neuron':
+        crop_bbox, img_padding = calculate_crop_pad(item["Original_Bbox"] , [synanno.vol_dim_z, synanno.vol_dim_y, synanno.vol_dim_x])
+        # map the bounding box coordinates to a dictionary
+        crop_box_dict = {
+            'z1': crop_bbox[0],
+            'z2': crop_bbox[1],
+            'y1': crop_bbox[2],
+            'y2': crop_bbox[3],
+            'x1': crop_bbox[4],
+            'x2': crop_bbox[5]
+        }
 
-    bbox_3d = item['Original_Bbox']
-    cropped_img, adjusted_bbox, padding = crop_pad_mask_data_3d(synanno.source, bbox_3d)
+        # retrieve the order of the coordinates (xyz, xzy, yxz, yzx, zxy, zyx)
+        cord_order = list(synanno.coordinate_order.keys())
 
-    item["Adjusted_Bbox"] = [int(u) for u in adjusted_bbox]
-    item["Padding"] = padding
+        # create the bounding box for the current synapse based on the order of the coordinates
+        bound = Bbox(
+            [
+                crop_box_dict[cord_order[0] + '1'],
+                crop_box_dict[cord_order[1] + '1'],
+                crop_box_dict[cord_order[2] + '1']
+            ],
+            [
+                crop_box_dict[cord_order[0] + '2'],
+                crop_box_dict[cord_order[1] + '2'],
+                crop_box_dict[cord_order[2] + '2']
+            ]
+        )
+
+        # Convert coordinate resolution values to integers
+        coord_resolution = [int(res) for res in synanno.coordinate_order.values()]
+
+        # Retrieve the source and target images from the cloud volume
+        cropped_img = synanno.source_cv.download(bound, coord_resolution=coord_resolution, mip=0)
+
+        # remove the singleton dimension, take care as the z dimension might be singleton
+        cropped_img = cropped_img.squeeze(axis=3)
+
+        # given the six cases xyz, xzy, yxz, yzx, zxy, zyx, we have to permute the axes to match the zyx order
+        cropped_img = np.transpose(cropped_img, axes=[cord_order.index('z'), cord_order.index('y'), cord_order.index('x')])
+
+        # pad the images and synapse segmentation to fit the crop size (sz)
+        cropped_img = np.pad(cropped_img, img_padding, mode='constant', constant_values=148)
+
+    elif view_style == 'view':
+        cropped_img, crop_bbox, img_padding = crop_pad_mask_data_3d(synanno.source, item["Original_Bbox"])
+
+
+    item["Adjusted_Bbox"] = [int(u) for u in crop_bbox]
+    item["Padding"] = img_padding
 
     # center slice of padded subvolume
     cs_dix = (cropped_img.shape[0]-1)//2  # assumes even padding
@@ -221,24 +269,13 @@ def ng_bbox_fp_save()-> Dict[str, object]:
         img_name = str(int(z_mid_total)-cs+s)+'.png'
 
         # image
-        img_c = Image.fromarray(cropped_img[s, :, :])
+        img_c = Image.fromarray((cropped_img[s,:,:]* 255).astype(np.uint8))
         img_c.save(os.path.join(img_all, img_name), 'PNG')
 
-    item['GT'] = 'None'  # do not save the GT as we do not have masks for the FPs
-    item['EM'] = '/'+'/'.join(img_all.strip('.\\').split('/')[2:])
+    assert set(item.keys()) == set(synanno.df_metadata.columns), f"Difference: {set(item.keys()).symmetric_difference(set(synanno.df_metadata.columns))}"
 
-    # add item to list
-    item_list.append(item)
-
-    # dump and save json
-    final_file = dict()
-    final_file['Data'] = item_list
-    json_obj = json.dumps(final_file, indent=4, cls=NpEncoder)
-    with open(os.path.join(os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']), app.config['JSON']), 'w') as outfile:
-        outfile.write(json_obj)
-
-    # mark that json was updated
-    synanno.new_json = True
+    df_item = pd.DataFrame([item])
+    synanno.df_metadata = pd.concat([synanno.df_metadata, df_item], ignore_index=True)
 
     return jsonify({
         'z1': str(int(cz1)),

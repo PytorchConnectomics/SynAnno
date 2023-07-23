@@ -34,12 +34,8 @@
                 </div>
             </div>
 
-            {% for images in pages%}
 
-            {% set pages_loop = loop %}
             {% for image in images %}
-
-            {% if (image.Label == 'Incorrect' or image.Label == 'Unsure') %}
 
             {% set z1, z2, x1, x2, y1, y2 = image.Adjusted_Bbox %}
             {% set custom_mask_name = 'idx_' ~ image.Image_Index ~  '_ms_' ~ image.Middle_Slice ~ '_cor_' ~z1~ '_' ~z2~ '_' ~x1~ '_' ~x2~ '_' ~y1~ '_' ~y2 ~ '.png' %}
@@ -47,36 +43,34 @@
             {% set custom_mask_path_load =  '/static/custom_masks/' ~ custom_mask_name %}
 
             <div class="card border rounded card-body card-body-proof-read text-center"
-                style="border-width:4px !important;" id="id_error-{{pages_loop.index-1}}_{{loop.index}}">
+                style="border-width:4px !important;" id="id_error-{{image.Page}}_{{image.Image_Index}}">
                 <h5 class="card-header border-bottom-0 mb-2">{{image.Error_Description}}</h5>
                 <div class="card-block border-0 p-1 image-card-btn {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}"
-                    page="{{pages_loop.index - 1 }}" data_id="{{ loop.index }}"
+                    page="{{image.Page}}" data_id="{{ image.Image_Index }}"
                     label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}">
                     <div class="main-image-categorize">
                         {% if image.Error_Description != "False Negatives"%}
-                        <img id="imgEM-GT-{{pages_loop.index-1}}-{{loop.index}}" class="img_categorize"
+                        <img id="imgEM-GT-{{image.Page}}-{{image.Image_Index}}" class="img_categorize"
                             src="{% if os.path.exists(custom_mask_path_check) %} {{custom_mask_path_load}} {% else %} {{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
                             width="64px" height="64px" style="opacity: 0.5; ">
                         {% else %}
-                        <img id="imgEM-GT-{{pages_loop.index-1}}-{{loop.index}}" class="img_categorize"
+                        <img id="imgEM-GT-{{image.Page}}-{{image.Image_Index}}" class="img_categorize"
                             src="{% if os.path.exists(custom_mask_path_check) %} {{custom_mask_path_load}} {% else %} {{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
                             width="64px" height="64px" style="opacity: 0.5; ">
                         {% endif %}
-                        <img id="imgGT-{{pages_loop.index-1}}-{{loop.index}}" class="img_categorize"
+                        <img id="imgGT-{{image.Page}}-{{image.Image_Index}}" class="img_categorize"
                             src="{{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}}" width="64px" height="64px">
                     </div>
                 </div>
                 <div class="card-block mt-2">
                     <div class="col justify-content-center">
                         <button class="btn btn-primary"
-                            id="drawButton-{{pages_loop.index-1}}-{{loop.index}}-{{image.Label}}" type="button"
+                            id="drawButton-{{image.Page}}-{{image.Image_Index}}-{{image.Label}}" type="button"
                             data-bs-target="#drawModal" data-bs-toggle="modal" data-bs-dismiss="modal">Draw
                             Mask</button>
                     </div>
                 </div>
             </div>
-            {% endif %}
-            {% endfor %}
             {% endfor %}
 
 

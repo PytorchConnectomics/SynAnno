@@ -7,9 +7,6 @@ from synanno import app
 # flask util functions
 from flask import render_template, session, send_file, flash
 
-# flask ajax requests
-from flask_cors import cross_origin
-
 # for type hinting
 from jinja2 import Template 
 # enable multiple return types
@@ -20,6 +17,12 @@ import os
 
 # to zip folder
 import shutil
+
+import json
+
+import datetime
+
+import time
 
 
 @app.route('/export_annotate')
@@ -57,9 +60,23 @@ def export_data(data_type) -> Union[Template, app.response_class]:
             Either sends the JSON or the masks to the users download folder
             or rerenders the export view if there is now file that could be downloaded
     '''
+
+    
+    with open(os.path.join(app.config['PACKAGE_NAME'],os.path.join(app.config['UPLOAD_FOLDER']),app.config['JSON']), 'w') as f:
+        # TODO: What to do with the timing data?
+        # write the metadata to a json file
+        final_file = dict()
+        final_file['Proofread Time'] = synanno.proofread_time
+
+        json.dump(synanno.df_metadata.to_dict('records'), f, indent=4, default=json_serial)
+
+        # provide sufficient time for the json update
+        time.sleep(0.1*session.get('n_pages'))
+
+
     if data_type == 'json':
         # exporting the final json
-        if session.get('data') and session.get('n_pages'):
+        if session.get('n_pages'):
             return send_file(os.path.join(os.path.join(app.root_path,app.config['UPLOAD_FOLDER']), app.config['JSON']), as_attachment=True, download_name=app.config['JSON'])
         else:
             flash('Now file - session data is empty.', 'error')
@@ -80,7 +97,7 @@ def export_data(data_type) -> Union[Template, app.response_class]:
 @app.route('/reset')
 def reset() -> Template:
     ''' Resets all process by pooping all the session content, resting the process bar, resting the timer,
-        deleting the h5 source and target file, deleting the JSON, the images, masks and zip folder.
+        deleting deleting the JSON, the images, masks and zip folder.
 
         Return:
             Renders the landing-page view.
@@ -95,22 +112,6 @@ def reset() -> Template:
     # pop all the session content.
     for key in list(session.keys()):
         session.pop(key)
-
-    # upload folder
-    upload_folder = os.path.join(app.config['PACKAGE_NAME'],app.config['UPLOAD_FOLDER'])
-
-    # delete all the uploaded h5 files
-    if os.path.exists(os.path.join('.', upload_folder)):
-        for filename in os.listdir(os.path.join('.', upload_folder)):
-            file_path = os.path.join(
-                os.path.join('.', upload_folder), filename)
-            try:
-                if os.path.isfile(file_path) or os.path.islink(file_path):
-                    os.unlink(file_path)
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)
-            except Exception as e:
-                print('Failed to delete %s. Reason: %s' % (file_path, e))
 
     # delete json file.
     if os.path.isfile(os.path.join(os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']),app.config['JSON'])):
@@ -144,4 +145,19 @@ def reset() -> Template:
         except Exception as e:
             print('Failed to delete %s. Reason: %s' % (mask_folder, e))
 
+    # set the metadataframe back to null
+    synanno.df_metadata.drop(synanno.df_metadata.index,inplace=True) 
+
     return render_template('landingpage.html')
+
+
+# handle non json serializable data 
+def json_serial(obj):
+    '''JSON serializer for objects not serializable by default json code
+    '''
+
+    if isinstance(obj, (datetime.timedelta)):
+        return str(obj)
+    if isinstance(obj, (datetime.datetime)):
+        return obj.isoformat()
+    raise TypeError ('Type %s not serializable' % type(obj))

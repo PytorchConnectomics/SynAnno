@@ -1,12 +1,11 @@
 # os and process dependent imports
 import os
-from time import process_time
 
 # flask dependent imports
 from flask_session import Session
 from flask_cors import CORS
 from flask import Flask
-
+import pandas as pd
 
 app = Flask(__name__)
 CORS(app)
@@ -33,8 +32,6 @@ app.config['STATIC_FOLDER'] = 'static/'
 '''
 app.config['CLOUD_VOLUME_BUCKETS'] = ['gs:', 's3:', 'file:']   
 
-app.config['UPLOAD_EXTENSIONS'] = ['.json', '.h5']
-
 app.config['JSON'] = 'synAnno.json'
 
 app.config['IP'] = '127.0.0.1'
@@ -47,19 +44,19 @@ app.config['NG_PORT'] = '9015'
 global progress_bar_status
 progress_bar_status = {"status":"Loading Source File", "percent":0}
 
-# handle to the loaded image
-global source
-
-source = None
-
-# grid opacity for the annotation view
-global grid_opacity
-
-grid_opacity = 0.5
-
 # document the time needed for proofreading
 global proofread_time
 proofread_time = {"start_grid":None,"finish_grid":None,"difference_grid":None, "start_categorize":None,"finish_categorize":None,"difference_categorize":None}
+
+# neuroglancer instance
+global ng_viewer  # handle to the neurglancer viewer instance
+global ng_version  # versioning number for the neuroglancer instance
+
+ng_version = None # initialize the neuroglancer version number as noon
+
+# grid opacity for the annotation view
+global grid_opacity
+grid_opacity = 0.5
 
 # coordinate order and resolution
 global coordinate_order
@@ -73,33 +70,37 @@ global vol_dim_z
 
 vol_dim_x, vol_dim_y, vol_dim_z = 0,0,0
 
+# handle to the loaded image
+global source
+source = None
 
-# neuroglancer instance
-global ng_viewer  # handle to the neurglancer viewer instance
-global ng_version  # versioning number for the neuroglancer instance
-
-ng_version = None # initialize the neuroglancer version number as noon
-
-# backlog for the custom FN bounding boxes
+# backlog for the custom bounding boxes of the false negatives
 global cus_fp_bbs
 
 cus_fp_bbs = []
 
-# values for the current custom FN bounding box
+# values for the current false negative's custom bounding box of the false negatives
 global cz
 global cy
 global cx
 
 cz1, cz2, cy, cx = 0, 0, 0, 0
 
-# default values expansion of the z bound for the custom FN bounding box
-global z_default
+# global pandas dataframe for the unified storage and access of the instance meta data
+global df_metadata
 
-z_default = 10
+# Define the column names
+columns = ['Page', 'Image_Index', 'GT', 'EM', 'Label', 'Annotated', 'Error_Description',
+           'Middle_Slice', 'Original_Bbox', 'cz0', 'cy0', 'cx0', 'crop_size_x',
+           'crop_size_y', 'crop_size_z', 'Adjusted_Bbox', 'Padding']
 
-# indicate whether the json was changed
-global new_json
-new_json = False
+# create an empty DataFrame with these columns
+df_metadata = pd.DataFrame(columns=columns)
+
+# global materialization data object
+global materialization
+
+materialization =  {}
 
 # load all views - avoid cycle load
 from synanno.routes import annotation, finish, opendata, categorize, landingpage, manual_annotate

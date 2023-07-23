@@ -156,7 +156,7 @@ function submit_data(delete_fps) {
         });
 
         req.success(function(){
-            window.location.href = 'export_annotate'
+            window.location.href = '/export_annotate'
         })
 
         req.error(function(xhr, status, error) {

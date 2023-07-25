@@ -613,16 +613,8 @@ def visualize_cv_instances(crop_size_x: int = 148, crop_size_y: int = 148, crop_
 
         # create the bounding box for the current synapse based on the order of the coordinates
         bound = Bbox(
-            [
-                crop_box_dict[cord_order[0] + '1'],
-                crop_box_dict[cord_order[1] + '1'],
-                crop_box_dict[cord_order[2] + '1']
-            ],
-            [
-                crop_box_dict[cord_order[0] + '2'],
-                crop_box_dict[cord_order[1] + '2'],
-                crop_box_dict[cord_order[2] + '2']
-            ]
+            [crop_box_dict[cord_order[i] + '1'] for i in range(3)],
+            [crop_box_dict[cord_order[i] + '2'] for i in range(3)]
         )
 
         # Convert coordinate resolution values to integers

@@ -227,6 +227,74 @@ def set_data(task: str = 'annotate') -> Template:
         return render_template('annotation.html', images=data, page=page, n_pages=session.get('n_pages'), grid_opacity=synanno.grid_opacity, view_style=session["view_style"])
 
 
+@app.route('/get_instance', methods=['POST'])
+@cross_origin()
+def get_instance() -> Dict[str, object]:
+    ''' Serves one of two Ajax calls from annotation.js, passing instance specific information 
+
+        Return:
+            The instance specific data
+    '''
+
+    # retrieve the page and instance index
+    mode = str(request.form['mode'])
+    load = str(request.form['load'])
+    page = int(request.form['page'])
+    index = int(request.form['data_id'])
+
+    custom_mask_path = None
+
+    # when first opening a instance modal view
+    if load == 'full':
+        # calculating the number of slices
+        slices_len = len(os.listdir(
+            './synanno' + synanno.df_metadata.loc[(synanno.df_metadata['Page'] == page) & (synanno.df_metadata['Image_Index'] == index), 'EM'].item() +'/'))
+        # calculating the center slice
+        half_len = int(synanno.df_metadata.loc[(synanno.df_metadata['Page'] == page) & (synanno.df_metadata['Image_Index'] == index), 'Middle_Slice'].item())
+
+        # calculating the absolute lower bound z-value with in the image volume
+        if (slices_len % 2 == 0):
+            range_min = half_len - (slices_len//2) + 1
+        else:
+            range_min = half_len - (slices_len//2)
+
+        data = synanno.df_metadata.query('Page == @page & Image_Index == @index').to_dict('records')[0]
+
+        if mode == 'draw':
+            base_mask_path = str(request.form['base_mask_path'])
+            if base_mask_path:
+                coordinates = '_'.join(list(map(str,data["Adjusted_Bbox"])))
+                path = os.path.join(base_mask_path, 'idx_' + str(data["Image_Index"]) + '_ms_' +  str(data["Middle_Slice"]) + '_cor_' + coordinates + '.png')
+                if os.path.exists('./synanno' + path):
+                    custom_mask_path = path
+
+        data = json.dumps(data)
+
+        final_json = jsonify(data=data, slices_len=slices_len, halflen=half_len,
+                             range_min=range_min, host=app.config['IP'], port=app.config['PORT'], custom_mask_path=custom_mask_path)
+
+    # when changing the depicted slice with in the modal view
+    elif load == 'single':
+        data = synanno.df_metadata.query('Page == @page & Image_Index == @index').to_dict('records')[0]
+
+        if mode == 'draw':
+            base_mask_path = str(request.form['base_mask_path'])
+            viewed_instance_slice = request.form['viewed_instance_slice']
+
+            if base_mask_path:
+                # check if file exists
+                if viewed_instance_slice:
+                    coordinates = '_'.join(list(map(str,data["Adjusted_Bbox"])))
+                    path = os.path.join(base_mask_path, 'idx_' + str(data["Image_Index"]) + '_ms_' +  str(viewed_instance_slice) + '_cor_' + coordinates + '.png')
+                    if os.path.exists('./synanno' + path):
+                        custom_mask_path = path
+
+        data = json.dumps(data)
+        return jsonify(data=data, custom_mask_path=custom_mask_path)
+
+    return final_json
+
+
 @app.route('/progress', methods=['POST'])
 @cross_origin()
 def progress() -> Dict[str, object]:

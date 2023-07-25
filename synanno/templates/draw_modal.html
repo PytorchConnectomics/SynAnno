@@ -16,6 +16,7 @@
                         <div class="outsideWrapper border rounded" style="border-width:4px !important;">
                             <div class="insideWrapper">
                                 <img id="imgDetails-EM" class="coveredImage" src="">
+                                <img id="imgDetails-EM-GT" class="coveredImage d-none" src="">
                                 <canvas class="coveringCanvas d-none"></canvas>
                             </div>
                         </div>
@@ -36,10 +37,24 @@
                             </form>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="center">
-                            <input id="thickness_range" type="range" class="form-range" value="10" min="5" max="25"
-                                data_id="" page="">
+                    <div class="center">
+                        <input id="rangeSlices" type="range" class="form-range" value="0" min="0" max="30" data_id=""
+                            page="" data-viewed_instance_slice="">
+                        <div class="container">
+                            <div class="row">
+                                <div class="col justify-content-center">
+                                    <button id="minSlice" type="button"
+                                        class="btn btn-outline-secondary btn-sm disabled float-start"> -15 </button>
+                                </div>
+                                <div class="col justify-content-center">
+                                    <button class="btn btn-primary" id="ng-link-draw" type="button" data-bs-target="#drawModalFP"
+                                        data-bs-toggle="modal" data-bs-dismiss="modal">View in NG</button>
+                                </div>
+                                <div class="col justify-content-center">
+                                    <button id="maxSlice" type="button"
+                                        class="btn btn-outline-secondary btn-sm disabled float-end"> +15 </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

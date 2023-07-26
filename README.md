@@ -50,11 +50,18 @@ After downloading the package, double-click it and follow the steps described by
 
 ## Start up SynAnno tool
 
-1. Open a terminal 
-2. Navigate to your `SynAnno` folder within the terminal (cd `/home/user/SynAnno`)
-3. Activate the conda environment (`conda activate synanno`)
-4. Start the app by writing `python run.py` in the terminal and pressing enter
-5. The tool will write a URL to the terminal on startup. The default URL is `http://127.0.0.1:5000/`. Go to your browser and enter the URL.
+First, create a virtual environment and install relevant dependencies
+```bash
+conda create -n synanno python=3.9
+conda activate synanno
+pip install -r requirements.txt
+```
+
+Then, start SynAnno using this command
+``` python
+python run.py
+# the app is accessible at http://127.0.0.1/5000/
+```
 
 
 ## Using SynAnno

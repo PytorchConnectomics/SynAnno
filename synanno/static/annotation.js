@@ -51,14 +51,17 @@ $(document).ready(function () {
         // the instance label
         var label = $(this).attr('label')
 
+        // we are currently in the annotation mode
+        var mode = 'annotate'
+
         // we require the information about the whole instance
-        var mode = 'full'
+        var load = 'single'
 
         // retrieve the info from the backend
         req_data = $.ajax({
             url: '/get_instance',
             type: 'POST',
-            data: { mode: mode, data_id: data_id, page: page }
+            data: { mode: mode, load: load, data_id: data_id, page: page }
         });
 
         // update the modal
@@ -114,14 +117,17 @@ $(document).ready(function () {
         var data_id = $(this).attr('data_id')
         var page = $(this).attr('page')
 
+        // we are currently in the annotation mode
+        var mode = 'annotate'
+
         // we only require the path to load a single slice and the corresponding GT
-        var mode = 'single'
+        var load = 'single'
 
         // retrieve the information from the backend
         req = $.ajax({
             url: '/get_instance',
             type: 'POST',
-            data: { mode: mode, data_id: data_id, page: page }
+            data: { mode: mode, load: load, data_id: data_id, page: page }
         });
 
         // update the slice and GT that is depicted

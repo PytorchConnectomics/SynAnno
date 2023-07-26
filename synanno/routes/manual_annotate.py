@@ -70,6 +70,7 @@ def save_canvas() -> Dict[str, object]:
     # retrieve the instance specifiers
     page = int(request.form['page'])
     index = int(request.form['data_id']) 
+    viewed_instance_slice = int(request.form['viewed_instance_slice'])
 
     # convert the canvas to PIL image format
     im = Image.open(BytesIO(base64.b64decode(image_data)))
@@ -87,11 +88,10 @@ def save_canvas() -> Dict[str, object]:
 
     data = synanno.df_metadata.query('Page == @page & Image_Index == @index').to_dict('records')[0]
     coordinates = '_'.join(map(str, data['Adjusted_Bbox']))
-    middle_slice = str(data['Middle_Slice'])
     img_index = str(data['Image_Index'])
 
     # image name
-    img_name = 'idx_'+img_index + '_ms_' + middle_slice + '_cor_'+coordinates+'.png'
+    img_name = 'idx_'+img_index + '_ms_' + str(viewed_instance_slice) + '_cor_'+coordinates+'.png'
 
     # save the mask
     im.save(os.path.join(folder_path, img_name))

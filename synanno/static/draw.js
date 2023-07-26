@@ -49,12 +49,16 @@ $(document).ready(function () {
     var data_id;
     var label;
 
-    // path where to save the custom masks
-    const custom_mask_path = '/static/custom_masks/'
+    // path where to save the custom masks - carful, this variable is also set in draw_module.js
+    const base_mask_path = '/static/custom_masks/'
 
     // make sure that the modal is reset every time it get closed
     $('.modal').on('hidden.bs.modal', function () {
-        $('canvas.coveringCanvas').addClass('d-none')
+        // we only want to add the class d-none in case the module was actually closed and not just hidden
+        // behind an other module
+        if (! $('.modal:visible').length) {
+            $('canvas.coveringCanvas').addClass('d-none')          
+        }
     });
 
     // setup/reset the canvas when ever a draw button is clicked
@@ -69,7 +73,7 @@ $(document).ready(function () {
         $('#thickness_range').prop('disabled', true);
         $('#canvasButtonSplit').prop('disabled', true);
         $('#canvasButtonSave').prop('disabled', true);
-
+        
         ctx.restore() // restore default settings
 
         width = canvas.get(0).width // retrieve the width of the canvas
@@ -80,7 +84,6 @@ $(document).ready(function () {
 
         // reset activation button
         $('#canvasButtonActivate').text('Activate');
-
 
         clear_canvas() // clear previous output
         points = [] // reset the point list
@@ -103,6 +106,7 @@ $(document).ready(function () {
 
         // activate canvas for the first time after clicking a 'Draw Mask' button
         if ($('canvas.coveringCanvas').hasClass('d-none')) {
+            $('#imgDetails-EM-GT').addClass('d-none'); // hide the previously drawn mask
             $('#canvasButtonActivate').text('Reset'); // switch the button label to 'Reset'
             $('canvas.coveringCanvas').removeClass('d-none') // change the visibility of the canvas
             rect = $('canvas.coveringCanvas').get(0).getBoundingClientRect() // get absolute rect. of canvas
@@ -197,43 +201,47 @@ $(document).ready(function () {
         $('#canvasButtonSave').prop('disabled', false);
     });
 
-    // adapt the thickness of the spline
-    $('#thickness_range').on('input', function () {
-        ctx.restore() // restore default settings
-        split_mask = false; // turn of eraser
-        thickness = $(this).val() // retrieve the current thickness value
-        fill_clip(color_1, color_2, thickness, sample = false) // redraw the mask
-    });
-
     // save the current mask
     $('#canvasButtonSave').on('click', async function () {
         var dataURL = canvas.get(0).toDataURL(); // retrieve the image from the canvas as a base64 encoding
+
+        // the viewed instance slice value is set when scrolling through the individual slices of an instance
+        var viewed_instance_slice = $('#rangeSlices').data('viewed_instance_slice');
+
         // send the base64 encoded image to the backend
         await $.ajax({
             type: 'POST',
             url: '/save_canvas',
             type: 'POST',
-            data: { imageBase64: dataURL, data_id: data_id, page: page }
+            data: { imageBase64: dataURL, data_id: data_id, page: page, viewed_instance_slice: viewed_instance_slice }
             // update the depicted mask with the newly drawn mask
         }).done(function (data) {
 
             data_json = JSON.parse(data.data); 
 
+            // handle to source image of the instance module            
+            var em_source_image = '#imgGT-' + page + '-' + data_id
+
             // handle to ground truth image of the instance module
-            var save = '#imgEM-GT-' + page + '-' + data_id
+            var em_target_image = '#imgEM-GT-' + page + '-' + data_id
 
             // create path to image
             var coordinates = data_json.Adjusted_Bbox.join('_')
-            var middle_slice = data_json.Middle_Slice
             var img_index = data_json.Image_Index
-            img_name = 'idx_' + img_index + '_ms_' + middle_slice + '_cor_' + coordinates + '.png'
-            image_path = custom_mask_path + img_name
+            img_name = 'idx_' + img_index + '_ms_' + viewed_instance_slice + '_cor_' + coordinates + '.png'
+            image_path = base_mask_path + img_name
 
-            // load the image and add cache breaker
+            // update the in the tile view depicted source image 
+            var base_path = $(em_source_image).data('image_base_path')
+            $(em_source_image).attr('src', base_path + '/' + viewed_instance_slice +'.png');
+            
+            // update the in the tile view depicted target image
+            // we load the image and add cache breaker in case the mask gets drawn multiple times
+            // with out the cache breaker the mask will be updated in the backend, however, the old image will be depicted
             $(new Image()).attr('src', image_path + '?' + Date.now()).load(function () {
-                $(save).attr('src', this.src);
+                $(em_target_image).attr('src', this.src);
             });
-
+            
         });
     })
 

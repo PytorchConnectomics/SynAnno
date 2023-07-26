@@ -21,9 +21,10 @@ jobs:
 
       - name: Build and tag Docker image
         run: |
-          docker build -t $DOCKER_USERNAME/synanno:$(date +%Y%m%d%H%M%S) .
-          docker tag $DOCKER_USERNAME/synanno:latest $DOCKER_USERNAME/synanno:$(date +%Y%m%d%H%M%S)
+          docker build -t $DOCKER_USERNAME/synanno:latest .
+          docker tag $DOCKER_USERNAME/synanno:latest $DOCKER_USERNAME/synanno:${{ github.sha }}
 
       - name: Push Docker image
         run: |
-          docker push $DOCKER_USERNAME/synanno:$(date %Y%m%d%H%M%S)
+          docker push $DOCKER_USERNAME/synanno:latest
+          docker push $DOCKER_USERNAME/synanno:${{ github.sha }}

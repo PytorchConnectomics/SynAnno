@@ -39,7 +39,7 @@ def annotation(page: int = 0) -> Template:
             The annotation view
     '''
 
-    if session["view_style"] == 'neuron':
+    if synanno.view_style == 'neuron':
     # check if the data for the current page is already loaded
 
         # remove the synapse and image slices for the previous and next page
@@ -54,7 +54,7 @@ def annotation(page: int = 0) -> Template:
     # retrieve the data for the current page
     data = synanno.df_metadata.query('Page == @page').sort_values(by=['Image_Index']).to_dict('records')
 
-    return render_template('annotation.html', images=data, page=page, n_pages=session.get('n_pages'), grid_opacity=synanno.grid_opacity, view_style=session["view_style"])
+    return render_template('annotation.html', images=data, page=page, n_pages=session.get('n_pages'), grid_opacity=synanno.grid_opacity, view_style=synanno.view_style)
 
 
 @app.route('/set_grid_opacity', methods=['POST'])

@@ -54,6 +54,12 @@ global ng_version  # versioning number for the neuroglancer instance
 
 ng_version = None # initialize the neuroglancer version number as noon
 
+
+# view style
+global view_style
+
+view_style = 'view'
+
 # grid opacity for the annotation view
 global grid_opacity
 grid_opacity = 0.5

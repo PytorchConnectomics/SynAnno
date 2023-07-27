@@ -50,7 +50,7 @@
                     data_centric="{{ view_style }}"
                     label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}"></a>
             </div>
-            <span>{{image.Adjusted_Bbox[1] - image.Adjusted_Bbox[0] + 1 }} slices</span>
+            <span>{{image.Adjusted_Bbox[1] - image.Adjusted_Bbox[0] }} slices</span>
         </div>
         {% endfor %}
     </div>

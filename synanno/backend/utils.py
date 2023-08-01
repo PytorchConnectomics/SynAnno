@@ -25,6 +25,22 @@ class NpEncoder(json.JSONEncoder):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         return super(NpEncoder, self).default(obj)
+    
+def adjust_image_range(image):
+    """Adjust the range of the given image to 0-255.
+
+    Args:
+        image (np.ndarray): Image to be adjusted.
+
+    Returns:
+        np.ndarray: Adjusted image.
+    """
+    if np.max(image) > 1:
+        # image is in 0-255 range, convert to np.uint8 directly
+        return image.astype(np.uint8)
+    else:
+        # image is in 0-1 range, scale to 0-255 and then convert to np.uint8
+        return (image * 255).astype(np.uint8)
 
 
 def mkdir(folder_name):

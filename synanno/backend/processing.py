@@ -298,8 +298,8 @@ def syn2rgb(label: np.ndarray) -> np.ndarray:
     tmp[0] = np.logical_and((label % 2) == 1, label > 0)
     tmp[1] = np.logical_and((label % 2) == 0, label > 0)
     tmp[2] = (label > 0)
-    out = np.stack(tmp, -1).astype(np.uint8) # shape is (*, 3)
-    return out * 255
+    out = adjust_image_range(np.stack(tmp, -1)) # shape is (*, 3))
+    return out
 
 def visualize(seg: np.ndarray, img: np.ndarray, crop_size_x: int = 148, crop_size_y: int = 148, crop_size_z: int = 16, iterative_bbox: bool = False) -> Union[str, None]:
     ''' Visualize the synapse and EM images in 2D slices.
@@ -390,7 +390,7 @@ def visualize(seg: np.ndarray, img: np.ndarray, crop_size_x: int = 148, crop_siz
         cropped_img, ab_img, _ = crop_pad_mask_data_3d(img, bbox)
 
         # convert the images to uint8
-        cropped_img = (cropped_img * 255).astype(np.uint8)
+        cropped_img = adjust_image_range(cropped_img)
 
         assert ab_img == ab_syn, "The bounding boxes of the synapse and EM image do not match."
 
@@ -411,7 +411,6 @@ def visualize(seg: np.ndarray, img: np.ndarray, crop_size_x: int = 148, crop_siz
         for s in range(cropped_img.shape[0]):
             img_name = str(item["Adjusted_Bbox"][0] + s if synanno.df_metadata.empty else inst["Adjusted_Bbox"][0] + s)+".png"
 
-            # image
             img_c = Image.fromarray(cropped_img[s,:,:])
             img_c.save(os.path.join(img_all,img_name), "PNG")
 
@@ -666,7 +665,7 @@ def visualize_cv_instances(crop_size_x: int = 148, crop_size_y: int = 148, crop_
             img_name = str(item["Adjusted_Bbox"][0] + s if synanno.df_metadata.empty else inst["Adjusted_Bbox"][0] + s)+".png"
 
             # image
-            img_c = Image.fromarray((cropped_img_pad[s,:,:]* 255).astype(np.uint8))
+            img_c = Image.fromarray(adjust_image_range(cropped_img_pad[s,:,:]))
             img_c.save(os.path.join(img_all,img_name), "PNG")
 
             # label
@@ -752,8 +751,8 @@ def neuron_centric_3d_data_processing(source_url: str, target_url: str, table_na
     session['n_pages'] = number_pages
 
     synanno.progress_bar_status['status'] = "Loading Cloud Volumes"
-    synanno.source_cv = CloudVolume(source_url, secrets=bucket_secret_json, fill_missing=True)
-    synanno.target_cv = CloudVolume(target_url, secrets=bucket_secret_json, fill_missing=True)
+    synanno.source_cv = CloudVolume(source_url, secrets=bucket_secret_json, fill_missing=True, parallel=True)
+    synanno.target_cv = CloudVolume(target_url, secrets=bucket_secret_json, fill_missing=True, parallel=True)
 
     # assert that both volumes have the same dimensions
     if list(synanno.source_cv.volume_size) == list(synanno.target_cv.volume_size):
@@ -802,7 +801,7 @@ def view_centric_cloud_volume(im_file: str, gt_file: str, subvolume: Dict, bucke
     synanno.progress_bar_status['status'] = "Loading Source Cloud Volume"
 
     # handle to the source cloud volume
-    source = CloudVolume(im_file, secrets=bucket_secret_json, fill_missing=True)
+    source = CloudVolume(im_file, secrets=bucket_secret_json, fill_missing=True, parallel=True)
 
     # should no cropping coordinates be provided, use the whole volume
     if subvolume['x2'] == -1:
@@ -829,11 +828,10 @@ def view_centric_cloud_volume(im_file: str, gt_file: str, subvolume: Dict, bucke
     synanno.progress_bar_status['status'] = "Loading Target Cloud Volume"
 
     # handle to the target cloud volume
-    target = CloudVolume(gt_file, secrets=bucket_secret_json, fill_missing=True)
+    target = CloudVolume(gt_file, secrets=bucket_secret_json, fill_missing=True, parallel=True)
 
     # retrieve the image subvolume
     gt = np.squeeze(target.download(bound_target, coord_resolution=coord_resolution_target, mip=0))
-
 
     synanno.progress_bar_status['status'] = "Adjust the scale of the label volume"
 

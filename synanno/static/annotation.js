@@ -67,7 +67,6 @@ $(document).ready(function () {
         // update the modal
         await req_data.done(function (data) {
             data_json = JSON.parse(data.data);
-            console.log(data)
             $('#rangeSlices').attr('min', data.range_min);
             $('#rangeSlices').attr('max', data.range_min + data.slices_len - 1);
             $('#rangeSlices').val(data.halflen);

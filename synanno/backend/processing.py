@@ -55,6 +55,7 @@ def process_syn(gt: np.ndarray, small_thres: int = 16, view_style: str ='view') 
         # remove small objects
         seg = remove_small_objects(seg, small_thres)
     elif view_style == 'neuron':
+        # identify the largest connected component in the center of the volume and mask out the rest
         center_blob_value = get_center_blob_value_vectorized(seg, np.unique(seg)[1:])
         seg *= (seg == center_blob_value)
     return seg
@@ -385,7 +386,7 @@ def visualize(seg: np.ndarray, img: np.ndarray, crop_size_x: int = 148, crop_siz
         y1, y2 = adjust_bbox(bbox[2], bbox[3], crop_size_y)
         x1, x2 = adjust_bbox(bbox[4], bbox[5], crop_size_x)
         bbox = [z1, z2, y1, y2, x1, x2]
-        
+
         cropped_syn, ab_syn, pad_syn = crop_pad_mask_data_3d(seg, bbox, mask=instance_binary_mask)
         cropped_img, ab_img, _ = crop_pad_mask_data_3d(img, bbox)
 
@@ -457,12 +458,8 @@ def visualize(seg: np.ndarray, img: np.ndarray, crop_size_x: int = 148, crop_siz
                 synanno.df_metadata = pd.concat([synanno.df_metadata, df_list], ignore_index=True)
 
 
-def free_page(page: int = 0) -> None:
-    ''' Remove the segmentation and images from the EM and GT folder for the previous and next page.
-
-    Args:
-        page (int): the current page number for which to compute the data.
-    '''
+def free_page() -> None:
+    ''' Remove the segmentation and images from the EM and GT folder for the previous and next page.'''
 
     # create the handles to the directories
     base_folder = os.path.join(os.path.join(app.config['PACKAGE_NAME'], app.config['STATIC_FOLDER']), 'Images')
@@ -521,7 +518,7 @@ def visualize_cv_instances(crop_size_x: int = 148, crop_size_y: int = 148, crop_
         raise ValueError('The mode should either be \'annotate\' or \'draw\'')
 
     if page_metadata.empty:
-        print(f"Page number {page} not found in the DataFrame.")
+        print(f"Page number {page} does not exists yet in the DataFrame. Generating the page's data.")
         page_exists = False
     else:
         page_metadata = page_metadata.sort_values(by='Image_Index').to_dict('records')  # convert dataframe to list of dicts
@@ -872,11 +869,14 @@ def view_centric_3d_data_processing(im: np.ndarray, gt: np.ndarray, crop_size_x:
     # retrieve the instance level segmentation
     seg = process_syn(gt, view_style=view_style)
 
+    # adjust the datatype of the given data to the smallest possible NG compatible datatype
+    seg, _ = adjust_datatype(seg)
+
     assert seg.shape == gt.shape, "The shape of the segmentation and the ground truth do not match."
 
     synanno.progress_bar_status['status'] = "Retrieve 2D patches from 3D volume"
     # if a json was provided process the data accordingly
     visualize(seg, im, crop_size_x=crop_size_x, crop_size_y=crop_size_y, crop_size_z=crop_size_z) 
     synanno.progress_bar_status['percent'] = int(100) 
-    return im, gt
+    return im, seg
 

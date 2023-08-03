@@ -29,6 +29,9 @@ from typing import Dict
 
 import pandas as pd
 
+import numpy as np
+from skimage.measure import label as label_cc
+
 # global variables
 global draw_or_annotate  # defines the downstream task; either draw or annotate - default to annotate
 draw_or_annotate = 'annotate'
@@ -152,7 +155,7 @@ def upload_file() -> Template:
                     crop_size_x=session.get('crop_size_x'),
                     crop_size_y=session.get('crop_size_y'),
                     crop_size_z=session.get('crop_size_z'))
-            
+
         # if the user chose the neuron view_style mode, retrieve a list of all the synapses of the provided neuron ids and then process the data on synapse level 
         elif synanno.view_style == 'neuron':
             # if the user chose the neuron view_style mode retrieve the neuron ids

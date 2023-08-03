@@ -42,6 +42,25 @@ def adjust_image_range(image):
         # image is in 0-1 range, scale to 0-255 and then convert to np.uint8
         return (image * 255).astype(np.uint8)
 
+def adjust_datatype(data):
+    """Adjust the datatype of the given data to the smallest possible NG compatible datatype.
+    
+    Args:
+        data (np.ndarray): Data to be adjusted.
+        
+    Returns:
+        np.ndarray: Adjusted data.
+        str: Datatype of the adjusted data.
+    """
+    max_val = np.max(data)
+    if max_val <= np.iinfo(np.uint8).max:
+        return data.astype(np.uint8), 'uint8'
+    elif max_val <= np.iinfo(np.uint16).max:
+        return data.astype(np.uint16), 'uint16'
+    elif max_val <= np.iinfo(np.uint32).max:
+        return data.astype(np.uint32), 'uint32'
+    else:
+        return data.astype(np.uint64), 'uint64'
 
 def mkdir(folder_name):
     """Create a folder if it does not exist.

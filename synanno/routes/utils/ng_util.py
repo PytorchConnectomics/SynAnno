@@ -36,14 +36,14 @@ def setup_ng(source: Union[npt.NDArray, str], target: Union[npt.NDArray, str], v
     res_source = neuroglancer.CoordinateSpace(
         names= ['z', 'y', 'x'] if view_style == 'view' else [list(synanno.coordinate_order.keys())[0], list(synanno.coordinate_order.keys())[1], list(synanno.coordinate_order.keys())[2]],
         units=['nm', 'nm', 'nm'],
-        scales=[int(synanno.coordinate_order['z'][0]), int(synanno.coordinate_order['y'][0]), int(synanno.coordinate_order['x'][0])])
+        scales = np.array([int(synanno.coordinate_order['z'][0]), int(synanno.coordinate_order['y'][0]), int(synanno.coordinate_order['x'][0])]) if view_style == 'view' else np.array([int(res[0]) for res in synanno.coordinate_order.values()]).astype(int))
 
     # specify the NG coordinate space
     res_target = neuroglancer.CoordinateSpace(
-        
         names= ['z', 'y', 'x'] if view_style == 'view' else [list(synanno.coordinate_order.keys())[0], list(synanno.coordinate_order.keys())[1], list(synanno.coordinate_order.keys())[2]],
         units=['nm', 'nm', 'nm'],
-        scales=[int(synanno.coordinate_order['z'][1]), int(synanno.coordinate_order['y'][1]), int(synanno.coordinate_order['x'][1])])
+        # setting the scale to that of the of image volume since we downsampled the segmentation volume to match the image volume
+        scales = np.array([int(synanno.coordinate_order['z'][0]), int(synanno.coordinate_order['y'][0]), int(synanno.coordinate_order['x'][0])]) if view_style == 'view' else np.array([int(res[0]) for res in synanno.coordinate_order.values()]).astype(int))
 
 
     # config viewer: Add image layer, add segmentation mask layer, define position
@@ -51,16 +51,20 @@ def setup_ng(source: Union[npt.NDArray, str], target: Union[npt.NDArray, str], v
         if isinstance(source, np.ndarray):
             s.layers.append(name='im', layer=neuroglancer.LocalVolume(
                 data=source, dimensions=res_source, volume_type='image', voxel_offset=[0, 0, 0]))
-        else:  # Assuming it's a string URL for the precomputed source
+        elif isinstance(source, str):  # Assuming it's a string URL for the precomputed source
             s.layers.append(name='im', layer=neuroglancer.ImageLayer(
                 source=source))
+        else:
+            raise ValueError('Unknown source type')
 
         if isinstance(target, np.ndarray):
             s.layers.append(name='gt', layer=neuroglancer.LocalVolume(
                 data=target, dimensions=res_target, volume_type='segmentation', voxel_offset=[0, 0, 0]))
-        else:  # Assuming it's a string URL for the precomputed source
+        elif isinstance(target, str):  # Assuming it's a string URL for the precomputed target
             s.layers.append(name='gt', layer=neuroglancer.SegmentationLayer(
                 source=target))
+        else:
+            raise ValueError('Unknown target type')
         
         # additional layer that lets the user mark the center of FPs
         s.layers.append(

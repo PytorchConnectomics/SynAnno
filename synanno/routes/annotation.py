@@ -43,7 +43,7 @@ def annotation(page: int = 0) -> Template:
     # check if the data for the current page is already loaded
 
         # remove the synapse and image slices for the previous and next page
-        ip.free_page(page=page)
+        ip.free_page()
 
         ip.visualize_cv_instances(crop_size_x=session['crop_size_x'], crop_size_y=session['crop_size_y'], crop_size_z=session['crop_size_z'], page=page)
 

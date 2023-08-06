@@ -1,10 +1,12 @@
 from __future__ import print_function, division
-from typing import Dict
+from typing import Dict, Callable
+
 
 import os
 import json
 import numpy as np
 
+import concurrent.futures
 
 class NpEncoder(json.JSONEncoder):
     """Encoder for numpy data types.
@@ -83,3 +85,27 @@ def get_sub_dict_within_range(dictionary: Dict, start_key: int, end_key: int) ->
         Dict: Sub-dictionary within the given key range.
     """
     return {key: value for key, value in dictionary.items() if start_key <= int(key) <= end_key}
+
+def submit_with_retry(executor: concurrent.futures.Executor, func: Callable[[dict, str, str], None], *args, retries: int = 3) -> object:
+    """Submit a task to the given executor and retry if it fails.
+
+    Args:
+        executor (concurrent.futures.Executor): Executor to submit the task to.
+        func (function): Function to be executed.
+        retries (int, optional): Number of retries. Defaults to 3.
+
+    Raises:
+        exc: Exception thrown by the function.
+    
+    Returns:
+        object: Result of the function.
+    """
+    for attempt in range(retries):
+        future = executor.submit(func, *args)
+        try:
+            _ = future.result(timeout=15)  # adjust timeout as needed
+            return future
+        except Exception as e:
+            print(f"Attempt {attempt+1} failed with error: {str(e)}")
+    print(f"All {retries} attempts failed.")
+    return None

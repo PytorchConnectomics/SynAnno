@@ -30,7 +30,7 @@ from typing import Dict
 import pandas as pd
 
 import numpy as np
-from skimage.measure import label as label_cc
+
 
 # global variables
 global draw_or_annotate  # defines the downstream task; either draw or annotate - default to annotate

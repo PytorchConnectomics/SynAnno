@@ -45,7 +45,7 @@ def annotation(page: int = 0) -> Template:
         # remove the synapse and image slices for the previous and next page
         ip.free_page()
 
-        ip.visualize_cv_instances(crop_size_x=session['crop_size_x'], crop_size_y=session['crop_size_y'], crop_size_z=session['crop_size_z'], page=page)
+        ip.retrieve_instance_metadata(crop_size_x=session['crop_size_x'], crop_size_y=session['crop_size_y'], crop_size_z=session['crop_size_z'], page=page)
 
     # start the timer for the annotation process
     if synanno.proofread_time['start_grid'] is None:

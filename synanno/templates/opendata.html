@@ -64,7 +64,7 @@
       </div>
       
       <div id="view-form" {% if view_style == 'neuron' %} class="hidden-form" {% endif %}>
-      <label for="coordinate-container-view" class="form-label">Slicing indices for the Subvolume</label>
+      <label for="coordinate-container-view" class="form-label">Slicing Indices for the Segmentation Volume (will be scalled for the image volume in case of a resolution missmatch)</label>
       <div class="coordinate-container" id='coordinate-container-view'>
         <input class="coordinate-dims" type="number" id="x1" name="x1" placeholder="X1 - Default: 0" value="257036">
         <input class="coordinate-dims" type="number" id="x2" name="x2" placeholder="X2 - Default: max(X)" value="258448">

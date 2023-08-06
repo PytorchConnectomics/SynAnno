@@ -127,6 +127,13 @@ def upload_file() -> Template:
 
     # retrieve the coordinate order and resolution from the form and save them in a dict, used by the NG instance and the processing functions
     synanno.coordinate_order = {c: (request.form.get('res-source-'+str(i+1)), request.form.get('res-target-'+str(i+1))) for i, c in enumerate(list(request.form.get('coordinates')))}
+    
+    # Convert coordinate resolution values to integers
+    synanno.coord_resolution_source = np.array([int(res[0]) for res in synanno.coordinate_order.values()]).astype(int)
+    synanno.coord_resolution_target = np.array([int(res[1]) for res in synanno.coordinate_order.values()]).astype(int)
+
+    # calculate the scale factor for the source and target cloud volume
+    synanno.scale = {c: v for c,v in zip(list(synanno.coordinate_order.keys()),np.where(synanno.coord_resolution_target/synanno.coord_resolution_source > 0, synanno.coord_resolution_target/synanno.coord_resolution_source, 1))}
 
     # retrieve the urls for the source and target cloud volume buckets
     source_url = request.form.get('source_url')
@@ -328,13 +335,18 @@ def neuro() -> Dict[str, object]:
 
     center = {}
     if mode == "annotate":
-        center['z'] = int(request.form['cz0'])
-        center['y'] = int(request.form['cy0'])
-        center['x'] = int(request.form['cx0'])
+        if view_style == 'view':
+            center['z'] = int(request.form['cz0'])
+            center['y'] = int(request.form['cy0'])
+            center['x'] = int(request.form['cx0'])
+        else:
+            center['z'] = int(int(request.form['cz0']) * synanno.scale['z'])
+            center['y'] = int(int(request.form['cy0']) * synanno.scale['y'])
+            center['x'] = int(int(request.form['cx0']) * synanno.scale['x'])
     elif mode == 'draw':
-        center['z'] = synanno.vol_dim_z // 2
-        center['y'] = synanno.vol_dim_y // 2
-        center['x'] = synanno.vol_dim_x // 2
+        center['z'] = int((synanno.vol_dim_z // 2) * synanno.scale['z'])
+        center['y'] = int((synanno.vol_dim_y // 2) * synanno.scale['y'])
+        center['x'] = int((synanno.vol_dim_x // 2) * synanno.scale['x'])
         
     if synanno.ng_version is not None:
         # update the view focus of the running NG instance
@@ -344,6 +356,7 @@ def neuro() -> Dict[str, object]:
                 s.position = [center['z'], center['y'], center['x']]
             else:
                 s.position = [center[list(synanno.coordinate_order.keys())[0]], center[list(synanno.coordinate_order.keys())[1]], center[list(synanno.coordinate_order.keys())[2]]]
+
     else:
         raise Exception('No NG instance running')
 

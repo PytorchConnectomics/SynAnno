@@ -239,6 +239,9 @@ def calculate_crop_pad(bbox_3d: list, volume_shape: tuple, pad_z: bool = False) 
     z1m, z2m, y1m, y2m, x1m, x2m = 0, volume_shape[0], 0, volume_shape[1], 0, volume_shape[2]
     z1, y1, x1 = max(z1o, z1m), max(y1o, y1m), max(x1o, x1m)
     z2, y2, x2 = min(z2o, z2m), min(y2o, y2m), min(x2o, x2m)
+
+    assert z1 < z2 and y1 < y2 and x1 < x2, "Invalid bounding box."
+
     if pad_z:
         pad = [[z1 - z1o, z2o - z2], [y1 - y1o, y2o - y2], [x1 - x1o, x2o - x2]]
     else:
@@ -367,6 +370,7 @@ def visualize(seg: np.ndarray, img: np.ndarray, crop_size_x: int = 148, crop_siz
 
             # update the item with the middle slice and original bounding box
             item["Original_Bbox"] = [int(u) for u in list(bbox)]
+
             item["Middle_Slice"] = (item["Original_Bbox"][1] + item["Original_Bbox"][0])//2 
             item["cz0"] = (item["Original_Bbox"][1] + item["Original_Bbox"][0])//2 
             item["cy0"] = (item["Original_Bbox"][2] + item["Original_Bbox"][3])//2 
@@ -374,6 +378,7 @@ def visualize(seg: np.ndarray, img: np.ndarray, crop_size_x: int = 148, crop_siz
             item["crop_size_x"] = crop_size_x
             item["crop_size_y"] = crop_size_y
             item["crop_size_z"] = crop_size_z
+
 
         else:
             instance_binary_mask = (seg == idx) # binary mask of the current synapse
@@ -577,7 +582,7 @@ def visualize_cv_instances(crop_size_x: int = 148, crop_size_y: int = 148, crop_
             x1 = item["cx0"] - crop_size_x // 2
             x2 = item["cx0"] + crop_size_x // 2
 
-            item["Original_Bbox"]  = [z1, z2, y1, y2, x1, x2]
+            item["Original_Bbox"]  = list(map(int, [z1, z2, y1, y2, x1, x2]))
 
             # retrieve the actual crop coordinates and possible padding based on the max dimensions of the whole cloud volume
             crop_bbox, img_padding = calculate_crop_pad(item["Original_Bbox"] , [synanno.vol_dim_z, synanno.vol_dim_y, synanno.vol_dim_x])
@@ -593,6 +598,9 @@ def visualize_cv_instances(crop_size_x: int = 148, crop_size_y: int = 148, crop_
 
         synanno.progress_bar_status['status'] = f"Inst.{str(idx)}: Pre-process sub-volume."
         
+        # retrieve the coordinate order of the cloud volume | xyz, xzy, yxz, yzx, zxy, zyx
+        coord_order = list(synanno.coordinate_order.keys())
+
         # map the bounding box coordinates to a dictionary
         crop_box_dict = {
             'z1': crop_bbox[0],
@@ -603,28 +611,18 @@ def visualize_cv_instances(crop_size_x: int = 148, crop_size_y: int = 148, crop_
             'x2': crop_bbox[5]
         }
 
-        # retrieve the order of the coordinates (xyz, xzy, yxz, yzx, zxy, zyx)
-        cord_order = list(synanno.coordinate_order.keys())
-        
-        # Convert coordinate resolution values to integers
-        coord_resolution_source = np.array([int(res[0]) for res in synanno.coordinate_order.values()]).astype(int)
-        coord_resolution_target = np.array([int(res[1]) for res in synanno.coordinate_order.values()]).astype(int)
-
-        # calculate the scale factor for the source and target cloud volume
-        scale = np.where(coord_resolution_target/coord_resolution_source > 0, coord_resolution_target/coord_resolution_source, 1)
-        
         # create the bounding box for the current synapse based on the order of the coordinates
         bound_target = Bbox(
-            [crop_box_dict[cord_order[i] + '1'] for i in range(3)],
-            [crop_box_dict[cord_order[i] + '2'] for i in range(3)]
+            [crop_box_dict[coord_order[i] + '1'] for i in range(3)],
+            [crop_box_dict[coord_order[i] + '2'] for i in range(3)]
         )
 
         # scale the bounding box to the resolution of the source cloud volume
-        bound_source = Bbox((bound_target.minpt * scale).astype(int), (bound_target.maxpt * scale).astype(int))
+        bound_source = Bbox((bound_target.minpt * list(synanno.scale.values())).astype(int), (bound_target.maxpt * list(synanno.scale.values())).astype(int))
 
         # retrieve the source and target images from the cloud volume
-        cropped_img = synanno.source_cv.download(bound_source, coord_resolution=coord_resolution_source, mip=0)
-        cropped_gt = synanno.target_cv.download(bound_target, coord_resolution=coord_resolution_target, mip=0)
+        cropped_img = synanno.source_cv.download(bound_source, coord_resolution=synanno.coord_resolution_source, mip=0)
+        cropped_gt = synanno.target_cv.download(bound_target, coord_resolution=synanno.coord_resolution_target, mip=0)
 
         # remove the singleton dimension, take care as the z dimension might be singleton
         cropped_img = cropped_img.squeeze(axis=3)
@@ -639,8 +637,8 @@ def visualize_cv_instances(crop_size_x: int = 148, crop_size_y: int = 148, crop_
             cropped_gt = (cropped_gt > 0.5).astype(int) # convert to binary mask
 
         # given the six cases xyz, xzy, yxz, yzx, zxy, zyx, we have to permute the axes to match the zyx order
-        cropped_img = np.transpose(cropped_img, axes=[cord_order.index('z'), cord_order.index('y'), cord_order.index('x')])
-        cropped_gt = np.transpose(cropped_gt, axes=[cord_order.index('z'), cord_order.index('y'), cord_order.index('x')])
+        cropped_img = np.transpose(cropped_img, axes=[coord_order.index('z'), coord_order.index('y'), coord_order.index('x')])
+        cropped_gt = np.transpose(cropped_gt, axes=[coord_order.index('z'), coord_order.index('y'), coord_order.index('x')])
 
         # process the 3D gt segmentation by removing small objects and converting it to instance-level segmentation.
         cropped_seg = process_syn(cropped_gt, view_style='neuron')
@@ -765,6 +763,7 @@ def neuron_centric_3d_data_processing(source_url: str, target_url: str, table_na
             vol_dim = {c: dim for c, dim in zip(synanno.coordinate_order.keys(), synanno.target_cv.volume_size)}
 
     synanno.vol_dim_x, synanno.vol_dim_y, synanno.vol_dim_z = vol_dim['x'], vol_dim['y'], vol_dim['z']
+    synanno.vol_dim_x_scaled, synanno.vol_dim_y_scaled, synanno.vol_dim_z_scaled = synanno.vol_dim_x * synanno.scale['x'], synanno.vol_dim_y * synanno.scale['y'], synanno.vol_dim_z * synanno.scale['z']
 
     return visualize_cv_instances(crop_size_x=crop_size_x, crop_size_y=crop_size_y, crop_size_z=crop_size_z, page=0, mode=mode)
 
@@ -785,15 +784,6 @@ def view_centric_cloud_volume(im_file: str, gt_file: str, subvolume: Dict, bucke
 
     # retrieve the order of the coordinates (xyz, xzy, yxz, yzx, zxy, zyx)
     coordinate_order = list(synanno.coordinate_order.keys())
-
-    # convert coordinate resolution values to integers
-    coord_resolution_source = np.array([int(res[0]) for res in synanno.coordinate_order.values()]).astype(int)
-        
-    # convert coordinate resolution values to integers
-    coord_resolution_target = np.array([int(res[1]) for res in synanno.coordinate_order.values()]).astype(int)
-
-    # calculate the scale factor for the source and target cloud volume
-    scale = np.where(coord_resolution_target/coord_resolution_source > 0, coord_resolution_target/coord_resolution_source, 1)
 
     synanno.progress_bar_status['status'] = "Loading Source Cloud Volume"
 
@@ -817,10 +807,10 @@ def view_centric_cloud_volume(im_file: str, gt_file: str, subvolume: Dict, bucke
     )
 
     # scale the bounding box to the resolution of the source cloud volume
-    bound_source = Bbox((bound_target.minpt * scale).astype(int), (bound_target.maxpt * scale).astype(int))
+    bound_source = Bbox((bound_target.minpt * list(synanno.scale.values())).astype(int), (bound_target.maxpt * list(synanno.scale.values())).astype(int))
 
     # retrieve the image subvolume
-    img = np.squeeze(source.download(bound_source, coord_resolution=coord_resolution_source, mip=0))
+    img = np.squeeze(source.download(bound_source, coord_resolution=synanno.coord_resolution_source, mip=0))
 
     synanno.progress_bar_status['status'] = "Loading Target Cloud Volume"
 
@@ -828,7 +818,7 @@ def view_centric_cloud_volume(im_file: str, gt_file: str, subvolume: Dict, bucke
     target = CloudVolume(gt_file, secrets=bucket_secret_json, fill_missing=True, parallel=True)
 
     # retrieve the image subvolume
-    gt = np.squeeze(target.download(bound_target, coord_resolution=coord_resolution_target, mip=0))
+    gt = np.squeeze(target.download(bound_target, coord_resolution=synanno.coord_resolution_target, mip=0))
 
     synanno.progress_bar_status['status'] = "Adjust the scale of the label volume"
 
@@ -863,8 +853,8 @@ def view_centric_3d_data_processing(im: np.ndarray, gt: np.ndarray, crop_size_x:
         gt (np.ndarray): the mask annotation (GT: ground truth).
     """
 
-    # retrieve the dimensions of the cropped volume, after the dimension swap
-    synanno.vol_dim_z, synanno.vol_dim_y, synanno.vol_dim_x = tuple([s-1 for s in gt.shape])
+    # retrieve the dimensions of the cropped volume, after the dimension swap and scaling
+    synanno.vol_dim_z_scaled, synanno.vol_dim_y_scaled, synanno.vol_dim_x_scaled  = synanno.vol_dim_z, synanno.vol_dim_y, synanno.vol_dim_x = tuple([s-1 for s in gt.shape])
 
     # retrieve the instance level segmentation
     seg = process_syn(gt, view_style=view_style)

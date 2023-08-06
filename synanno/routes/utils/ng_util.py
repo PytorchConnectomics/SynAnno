@@ -33,44 +33,38 @@ def setup_ng(source: Union[npt.NDArray, str], target: Union[npt.NDArray, str], v
     synanno.ng_viewer = neuroglancer.Viewer(token=synanno.ng_version)
 
     # specify the NG coordinate space
-    res_source = neuroglancer.CoordinateSpace(
+    coordinate_space = neuroglancer.CoordinateSpace(
         names= ['z', 'y', 'x'] if view_style == 'view' else [list(synanno.coordinate_order.keys())[0], list(synanno.coordinate_order.keys())[1], list(synanno.coordinate_order.keys())[2]],
         units=['nm', 'nm', 'nm'],
         scales = np.array([int(synanno.coordinate_order['z'][0]), int(synanno.coordinate_order['y'][0]), int(synanno.coordinate_order['x'][0])]) if view_style == 'view' else np.array([int(res[0]) for res in synanno.coordinate_order.values()]).astype(int))
-
-    # specify the NG coordinate space
-    res_target = neuroglancer.CoordinateSpace(
-        names= ['z', 'y', 'x'] if view_style == 'view' else [list(synanno.coordinate_order.keys())[0], list(synanno.coordinate_order.keys())[1], list(synanno.coordinate_order.keys())[2]],
-        units=['nm', 'nm', 'nm'],
-        # setting the scale to that of the of image volume since we downsampled the segmentation volume to match the image volume
-        scales = np.array([int(synanno.coordinate_order['z'][0]), int(synanno.coordinate_order['y'][0]), int(synanno.coordinate_order['x'][0])]) if view_style == 'view' else np.array([int(res[0]) for res in synanno.coordinate_order.values()]).astype(int))
-
 
     # config viewer: Add image layer, add segmentation mask layer, define position
     with synanno.ng_viewer.txn() as s:
         if isinstance(source, np.ndarray):
-            s.layers.append(name='im', layer=neuroglancer.LocalVolume(
-                data=source, dimensions=res_source, volume_type='image', voxel_offset=[0, 0, 0]))
+            source = neuroglancer.LocalVolume(data=source, dimensions=coordinate_space, volume_type='image', voxel_offset=[0, 0, 0])
+            s.layers['image'] = neuroglancer.ImageLayer(source=source)
         elif isinstance(source, str):  # Assuming it's a string URL for the precomputed source
-            s.layers.append(name='im', layer=neuroglancer.ImageLayer(
-                source=source))
+            s.layers['image'] = neuroglancer.ImageLayer(source=source)
         else:
             raise ValueError('Unknown source type')
 
         if isinstance(target, np.ndarray):
-            s.layers.append(name='gt', layer=neuroglancer.LocalVolume(
-                data=target, dimensions=res_target, volume_type='segmentation', voxel_offset=[0, 0, 0]))
+            target = neuroglancer.LocalVolume(data=target, dimensions=coordinate_space, volume_type='segmentation', voxel_offset=[0, 0, 0])
+            s.layers['annotation'] = neuroglancer.SegmentationLayer(source=target)
         elif isinstance(target, str):  # Assuming it's a string URL for the precomputed target
-            s.layers.append(name='gt', layer=neuroglancer.SegmentationLayer(
-                source=target))
+            s.layers['annotation'] = neuroglancer.SegmentationLayer(source=target)
         else:
-            raise ValueError('Unknown target type')
+            raise ValueError('Unknown annotation type')
         
+        s.selected_layer.layer = 'image'
+        s.selected_layer.visible = True
+        s.show_slices = True
+
         # additional layer that lets the user mark the center of FPs
         s.layers.append(
             name="center_dot",
             layer=neuroglancer.LocalAnnotationLayer(
-                dimensions=res_source,
+                dimensions=coordinate_space,
                 annotation_properties=[
                     neuroglancer.AnnotationPropertySpec(
                         id='color',
@@ -113,9 +107,9 @@ def setup_ng(source: Union[npt.NDArray, str], target: Union[npt.NDArray, str], v
             center_coord = {key: int(value) for key, value in zip(list(synanno.coordinate_order.keys()), center)}
 
             # split the position and convert to int
-            synanno.cz = center_coord['z']
-            synanno.cy = center_coord['y']
-            synanno.cx = center_coord['x']
+            synanno.cz = int(center_coord['z'])
+            synanno.cy = int(center_coord['y'])
+            synanno.cx = int(center_coord['x'])
         elif view_style == 'view':
             # split the position and convert to int
             synanno.cz = int(center[0])

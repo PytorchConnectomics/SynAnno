@@ -1,10 +1,12 @@
 from __future__ import print_function, division
-from typing import Dict
+from typing import Dict, Callable
+
 
 import os
 import json
 import numpy as np
 
+import concurrent.futures
 
 class NpEncoder(json.JSONEncoder):
     """Encoder for numpy data types.
@@ -25,7 +27,42 @@ class NpEncoder(json.JSONEncoder):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         return super(NpEncoder, self).default(obj)
+    
+def adjust_image_range(image):
+    """Adjust the range of the given image to 0-255.
 
+    Args:
+        image (np.ndarray): Image to be adjusted.
+
+    Returns:
+        np.ndarray: Adjusted image.
+    """
+    if np.max(image) > 1:
+        # image is in 0-255 range, convert to np.uint8 directly
+        return image.astype(np.uint8)
+    else:
+        # image is in 0-1 range, scale to 0-255 and then convert to np.uint8
+        return (image * 255).astype(np.uint8)
+
+def adjust_datatype(data):
+    """Adjust the datatype of the given data to the smallest possible NG compatible datatype.
+    
+    Args:
+        data (np.ndarray): Data to be adjusted.
+        
+    Returns:
+        np.ndarray: Adjusted data.
+        str: Datatype of the adjusted data.
+    """
+    max_val = np.max(data)
+    if max_val <= np.iinfo(np.uint8).max:
+        return data.astype(np.uint8), 'uint8'
+    elif max_val <= np.iinfo(np.uint16).max:
+        return data.astype(np.uint16), 'uint16'
+    elif max_val <= np.iinfo(np.uint32).max:
+        return data.astype(np.uint32), 'uint32'
+    else:
+        return data.astype(np.uint64), 'uint64'
 
 def mkdir(folder_name):
     """Create a folder if it does not exist.
@@ -48,3 +85,27 @@ def get_sub_dict_within_range(dictionary: Dict, start_key: int, end_key: int) ->
         Dict: Sub-dictionary within the given key range.
     """
     return {key: value for key, value in dictionary.items() if start_key <= int(key) <= end_key}
+
+def submit_with_retry(executor: concurrent.futures.Executor, func: Callable[[dict, str, str], None], *args, retries: int = 3) -> object:
+    """Submit a task to the given executor and retry if it fails.
+
+    Args:
+        executor (concurrent.futures.Executor): Executor to submit the task to.
+        func (function): Function to be executed.
+        retries (int, optional): Number of retries. Defaults to 3.
+
+    Raises:
+        exc: Exception thrown by the function.
+    
+    Returns:
+        object: Result of the function.
+    """
+    for attempt in range(retries):
+        future = executor.submit(func, *args)
+        try:
+            _ = future.result(timeout=15)  # adjust timeout as needed
+            return future
+        except Exception as e:
+            print(f"Attempt {attempt+1} failed with error: {str(e)}")
+    print(f"All {retries} attempts failed.")
+    return None

@@ -29,6 +29,9 @@ from typing import Dict
 
 import pandas as pd
 
+import numpy as np
+
+
 # global variables
 global draw_or_annotate  # defines the downstream task; either draw or annotate - default to annotate
 draw_or_annotate = 'annotate'
@@ -73,6 +76,9 @@ def upload_file() -> Template:
 
     # init the number of pages to 0
     session['n_pages'] = 0
+
+    # retrieve the view_style mode from the form, either view or neuron
+    synanno.view_style = request.form.get('view_style')
 
     # Check if files folder exists, if not create it
     if not os.path.exists(os.path.join('.', os.path.join(app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']))):
@@ -120,7 +126,14 @@ def upload_file() -> Template:
             raise ValueError('The provided JSON does not match the expected format!')
 
     # retrieve the coordinate order and resolution from the form and save them in a dict, used by the NG instance and the processing functions
-    synanno.coordinate_order = {c: request.form.get('res'+str(i+1)) for i, c in enumerate(list(request.form.get('coordinates')))}
+    synanno.coordinate_order = {c: (request.form.get('res-source-'+str(i+1)), request.form.get('res-target-'+str(i+1))) for i, c in enumerate(list(request.form.get('coordinates')))}
+    
+    # Convert coordinate resolution values to integers
+    synanno.coord_resolution_source = np.array([int(res[0]) for res in synanno.coordinate_order.values()]).astype(int)
+    synanno.coord_resolution_target = np.array([int(res[1]) for res in synanno.coordinate_order.values()]).astype(int)
+
+    # calculate the scale factor for the source and target cloud volume
+    synanno.scale = {c: v for c,v in zip(list(synanno.coordinate_order.keys()),np.where(synanno.coord_resolution_target/synanno.coord_resolution_source > 0, synanno.coord_resolution_target/synanno.coord_resolution_source, 1))}
 
     # retrieve the urls for the source and target cloud volume buckets
     source_url = request.form.get('source_url')
@@ -129,15 +142,13 @@ def upload_file() -> Template:
     # check if the provided urls are valid based on the cloud provider prefix
     if any( bucket in source_url for bucket in app.config['CLOUD_VOLUME_BUCKETS']) and any(bucket in target_url for bucket in app.config['CLOUD_VOLUME_BUCKETS']):
         
-        # retrieve the view_style mode from the form, either view or neuron
-        session["view_style"] = request.form.get('view_style')
 
         # retrieve the bucket secret if the user provided one
         if bucket_secret:= request.files.get('secrets_file'):
             bucket_secret = json.loads(bucket_secret.read())
         
         # if the user chose the view view_style mode load the bbox specific subvolume and then process the data like in the local case
-        if session["view_style"] == 'view':
+        if synanno.view_style == 'view':
 
             subvolume = {'x1': int(request.form.get('x1')) if request.form.get('x1') else 0, 'x2': int(request.form.get('x2')) if request.form.get('x2') else -1,
                          'y1': int(request.form.get('y1')) if request.form.get('y1') else 0, 'y2': int(request.form.get('y2')) if request.form.get('y2') else -1,
@@ -151,9 +162,9 @@ def upload_file() -> Template:
                     crop_size_x=session.get('crop_size_x'),
                     crop_size_y=session.get('crop_size_y'),
                     crop_size_z=session.get('crop_size_z'))
-            
+
         # if the user chose the neuron view_style mode, retrieve a list of all the synapses of the provided neuron ids and then process the data on synapse level 
-        elif session["view_style"] == 'neuron':
+        elif synanno.view_style == 'neuron':
             # if the user chose the neuron view_style mode retrieve the neuron ids
             preid = int(request.form.get('preid')) if request.form.get('preid') else None
             postid = int(request.form.get('postid')) if request.form.get('postid') else None
@@ -170,14 +181,14 @@ def upload_file() -> Template:
         
     # if the NG version number is None setup a new NG viewer
     if synanno.ng_version is None:
-        if session["view_style"] == 'view':
-            ng_util.setup_ng(source = synanno.source, target = target_seg, view_style = session["view_style"])    
-        elif session["view_style"] == 'neuron':
-            ng_util.setup_ng(source = 'precomputed://'+ source_url, target = 'precomputed://'+ target_url, view_style = session["view_style"])
+        if synanno.view_style == 'view':
+            ng_util.setup_ng(source = synanno.source, target = target_seg, view_style = synanno.view_style)    
+        elif synanno.view_style == 'neuron':
+            ng_util.setup_ng(source = 'precomputed://'+ source_url, target = 'precomputed://'+ target_url, view_style = synanno.view_style)
 
 
     flash('Data ready!')
-    return render_template('opendata.html', modecurrent='disabled', modeform='formFileDisabled', view_style=session["view_style"], mode=draw_or_annotate)
+    return render_template('opendata.html', modecurrent='disabled', modeform='formFileDisabled', view_style=synanno.view_style, mode=draw_or_annotate)
 
 @app.route('/set-data/<string:task>', methods=['GET'])
 @app.route('/set-data')
@@ -198,10 +209,10 @@ def set_data(task: str = 'annotate') -> Template:
         # retrieve the the data from the metadata dataframe as a list of dicts
         data = synanno.df_metadata.query('Label != "Correct"').sort_values(by='Image_Index')
         data = data.to_dict('records')
-        return render_template('draw.html', images=data, view_style=session["view_style"])
+        return render_template('draw.html', images=data, view_style=synanno.view_style)
     # setup the session
     else:
-        if session["view_style"] == 'view':
+        if synanno.view_style == 'view':
             
             number_images = len(synanno.df_metadata.index)
             per_page = session.get('per_page')
@@ -224,7 +235,7 @@ def set_data(task: str = 'annotate') -> Template:
         page = 0 
         data = synanno.df_metadata.query('Page == @page').sort_values(by='Image_Index').to_dict('records')
 
-        return render_template('annotation.html', images=data, page=page, n_pages=session.get('n_pages'), grid_opacity=synanno.grid_opacity, view_style=session["view_style"])
+        return render_template('annotation.html', images=data, page=page, n_pages=session.get('n_pages'), grid_opacity=synanno.grid_opacity, view_style=synanno.view_style)
 
 
 @app.route('/get_instance', methods=['POST'])
@@ -249,16 +260,14 @@ def get_instance() -> Dict[str, object]:
         # calculating the number of slices
         slices_len = len(os.listdir(
             './synanno' + synanno.df_metadata.loc[(synanno.df_metadata['Page'] == page) & (synanno.df_metadata['Image_Index'] == index), 'EM'].item() +'/'))
-        # calculating the center slice
-        half_len = int(synanno.df_metadata.loc[(synanno.df_metadata['Page'] == page) & (synanno.df_metadata['Image_Index'] == index), 'Middle_Slice'].item())
+        # retrieve the middle slice
+        middle_slice = int(synanno.df_metadata.loc[(synanno.df_metadata['Page'] == page) & (synanno.df_metadata['Image_Index'] == index), 'Middle_Slice'].item())
 
-        # calculating the absolute lower bound z-value with in the image volume
-        if (slices_len % 2 == 0):
-            range_min = half_len - (slices_len//2) + 1
-        else:
-            range_min = half_len - (slices_len//2)
-
+        # retrieve the instance specific data
         data = synanno.df_metadata.query('Page == @page & Image_Index == @index').to_dict('records')[0]
+
+        # retrieve the first slice of the instance
+        range_min = data['Adjusted_Bbox'][0]
 
         if mode == 'draw':
             base_mask_path = str(request.form['base_mask_path'])
@@ -270,7 +279,7 @@ def get_instance() -> Dict[str, object]:
 
         data = json.dumps(data)
 
-        final_json = jsonify(data=data, slices_len=slices_len, halflen=half_len,
+        final_json = jsonify(data=data, slices_len=slices_len, halflen=middle_slice,
                              range_min=range_min, host=app.config['IP'], port=app.config['PORT'], custom_mask_path=custom_mask_path)
 
     # when changing the depicted slice with in the modal view
@@ -326,13 +335,18 @@ def neuro() -> Dict[str, object]:
 
     center = {}
     if mode == "annotate":
-        center['z'] = int(request.form['cz0'])
-        center['y'] = int(request.form['cy0'])
-        center['x'] = int(request.form['cx0'])
+        if view_style == 'view':
+            center['z'] = int(request.form['cz0'])
+            center['y'] = int(request.form['cy0'])
+            center['x'] = int(request.form['cx0'])
+        else:
+            center['z'] = int(int(request.form['cz0']) * synanno.scale['z'])
+            center['y'] = int(int(request.form['cy0']) * synanno.scale['y'])
+            center['x'] = int(int(request.form['cx0']) * synanno.scale['x'])
     elif mode == 'draw':
-        center['z'] = synanno.vol_dim_z // 2
-        center['y'] = synanno.vol_dim_y // 2
-        center['x'] = synanno.vol_dim_x // 2
+        center['z'] = int((synanno.vol_dim_z // 2) * synanno.scale['z'])
+        center['y'] = int((synanno.vol_dim_y // 2) * synanno.scale['y'])
+        center['x'] = int((synanno.vol_dim_x // 2) * synanno.scale['x'])
         
     if synanno.ng_version is not None:
         # update the view focus of the running NG instance
@@ -342,6 +356,7 @@ def neuro() -> Dict[str, object]:
                 s.position = [center['z'], center['y'], center['x']]
             else:
                 s.position = [center[list(synanno.coordinate_order.keys())[0]], center[list(synanno.coordinate_order.keys())[1]], center[list(synanno.coordinate_order.keys())[2]]]
+
     else:
         raise Exception('No NG instance running')
 

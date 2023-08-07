@@ -169,7 +169,7 @@ $(document).ready(function () {
             url: '/ng_bbox_fp_save',
             type: 'POST',
             data: { z1: $('#d_z1').val(), z2: $('#d_z2').val(), my: $('#m_y').val(), mx: $('#m_x').val() }
-        }).done(function (data) {
+        }).done(function () {
 
             // hide modules
             $('#drawModalFPSave, #drawModalFP').modal('hide');

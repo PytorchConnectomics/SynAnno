@@ -55,7 +55,7 @@ $(document).ready(function () {
         var mode = 'annotate'
 
         // we require the information about the whole instance
-        var load = 'single'
+        var load = 'full'
 
         // retrieve the info from the backend
         req_data = $.ajax({

@@ -27,7 +27,7 @@
                 </div>
                 <div class="card-block mt-2 mt-auto">
                     <div class="col justify-content-center">
-                        <button id="add_new_instance" class="btn btn-primary" type="button" view_style="{{ view_style }}"
+                        <button id="add_new_instance" class="btn btn-primary" type="button"
                             data-bs-target="#drawModalFP" data-bs-toggle="modal" data-bs-dismiss="modal">Add New
                             Instance</button>
                     </div>
@@ -53,29 +53,29 @@
                 style="border-width:4px !important;" id="id_error-{{image.Page}}_{{image.Image_Index}}">
                 <h5 class="card-header border-bottom-0 mb-2">{{image.Error_Description}}</h5>
                 <div class="card-block border-0 p-1 image-card-btn redraw-images {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}"
-                    page="{{ image.Page }}" data_id="{{ image.Image_Index }}" view_style="{{ view_style }}"
+                    page="{{ image.Page }}" data_id="{{ image.Image_Index }}"
                     label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}">
                     <div class="main-image-categorize">
                         <!-- In case of a FN we depict we use the source image also as the target to act as placholder -->
                         {% if image.Error_Description != "False Negatives"%}
                         <img id="img-target-curve-{{image.Page}}-{{image.Image_Index}}" class="img_categorize"
-                            src="{% if os.path.exists(custom_mask_path_check_curve) %} {{custom_mask_path_load_custom_mask_path_check_curve}} {% else %} {{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
+                            src="{% if os.path.exists(custom_mask_path_check_curve) %} {{custom_mask_path_load_curve}} {% else %} {{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
                             width="64px" height="64px" style="opacity: 0.5; ">
                         <img id="img-target-circlePre-{{image.Page}}-{{image.Image_Index}}" class="img_categorize d-none"
-                            src="{% if os.path.exists(custom_mask_path_check_circle_pre) %} {{custom_mask_path_load_custom_mask_path_check_circle_pre}} {% else %} {{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
+                            src="{% if os.path.exists(custom_mask_path_check_circle_pre) %} {{custom_mask_path_load_circle_pre}} {% else %} {{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
                             width="64px" height="64px" style="opacity: 0.5; ">
                         <img id="img-target-circlePost-{{image.Page}}-{{image.Image_Index}}" class="img_categorize d-none"
-                            src="{% if os.path.exists(custom_mask_path_check_circle_post) %} {{custom_mask_path_load_custom_mask_path_check_circle_post}} {% else %} {{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
+                            src="{% if os.path.exists(custom_mask_path_check_circle_post) %} {{custom_mask_path_load_circle_post}} {% else %} {{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
                             width="64px" height="64px" style="opacity: 0.5; ">
                         {% else %}
                         <img id="img-target-curve-{{image.Page}}-{{image.Image_Index}}" class="img_categorize"
-                            src="{% if os.path.exists(custom_mask_path_check_curve) %} {{custom_mask_path_load_custom_mask_path_check_curve}} {% else %} {{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
+                            src="{% if os.path.exists(custom_mask_path_check_curve) %} {{custom_mask_path_load_curve}} {% else %} {{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
                             width="64px" height="64px" style="opacity: 0.5; ">
                         <img id="img-target-circlePre-{{image.Page}}-{{image.Image_Index}}" class="img_categorize d-none"
-                            src="{% if os.path.exists(custom_mask_path_check_circle_pre) %} {{custom_mask_path_load_custom_mask_path_check_circle_pre}} {% else %} {{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
+                            src="{% if os.path.exists(custom_mask_path_check_circle_pre) %} {{custom_mask_path_load_circle_pre}} {% else %} {{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
                             width="64px" height="64px" style="opacity: 0.5; ">
                         <img id="img-target-circlePost-{{image.Page}}-{{image.Image_Index}}" class="img_categorize d-none"
-                            src="{% if os.path.exists(custom_mask_path_check_circle_post) %} {{custom_mask_path_load_custom_mask_path_check_circle_post}} {% else %} {{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
+                            src="{% if os.path.exists(custom_mask_path_check_circle_post) %} {{custom_mask_path_load_circle_post}} {% else %} {{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
                             width="64px" height="64px" style="opacity: 0.5; ">
                         {% endif %}
                         <img id="imgGT-{{image.Page}}-{{image.Image_Index}}" class="img_categorize" data-image_base_path="{{ image.EM }}"

@@ -27,9 +27,8 @@ global delete_fps
 
 delete_fps = False
 
-@app.route('/categorize/<string:view_style>')
 @app.route('/categorize')
-def categorize(view_style: str = 'view') -> Template:
+def categorize() -> Template:
     ''' Stop the annotation timer, start the categorization timer, and render the categorize view
 
         Return:
@@ -51,7 +50,7 @@ def categorize(view_style: str = 'view') -> Template:
     output_dict = synanno.df_metadata[synanno.df_metadata['Label'].isin(['Incorrect', 'Unsure'])].to_dict('records')
 
     # retrieve the data for the current page
-    return render_template('categorize.html', images=output_dict, view_style=view_style)
+    return render_template('categorize.html', images=output_dict)
 
 
 @app.route('/pass_flags', methods=['GET','POST'])

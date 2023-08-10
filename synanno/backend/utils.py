@@ -111,9 +111,6 @@ def submit_with_retry(executor: concurrent.futures.Executor, func: Callable[[dic
     return None
 
 
-from typing import Tuple
-import numpy as np
-
 def draw_cylinder(image: np.ndarray, center_x: int, center_y: int, center_z: int, radius: int, color_1: Tuple[int, int, int], color_2: Tuple[int, int, int]) -> np.ndarray:
     """
     Function to draw a cylinder in a 4D numpy array. The color of the cylinder changes based on the distance from the center_z.

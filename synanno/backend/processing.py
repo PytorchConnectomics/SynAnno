@@ -24,44 +24,26 @@ import pandas as pd
 
 from flask import session
 
-import timeit
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
-def process_syn(gt: np.ndarray, small_thres: int = 16, view_style: str ='view') -> Tuple[np.ndarray, np.ndarray]:
+def process_syn(gt: np.ndarray) -> np.ndarray:
     """Process the ground truth segmentation.
 
     Args:
         gt (np.ndarray): the ground truth segmentation.
         small_thres (int): the threshold for removing small objects.
-        view_style (str): the view style.
 
     Returns:
         seg (np.ndarray): the processed segmentation.
     """
 
-    # check whether the segmentation is semantic or instance-level
-    # this can only hold true if we did not up- or down-sample the data
-    if view_style == 'view':    
-        indices = np.unique(gt)
-        is_semantic = len(indices) == 2 and (indices==[0,1]).all()
-        if not is_semantic: # already an instance-level segmentation
-            return gt
-
-    synanno.progress_bar_status['percent'] = int(8) if view_style == 'view' else None
-
     # convert the semantic segmentation to instance-level segmentation
     # assign each synapse a unique index
     seg = label_cc(gt).astype(int)
-    # mask out unwanted artifacts
-    if view_style == 'view':
-        seg *= (gt != 0).astype(int)
-        # remove small objects
-        seg = remove_small_objects(seg, small_thres)
-    elif view_style == 'neuron':
-        # identify the largest connected component in the center of the volume and mask out the rest
-        center_blob_value = get_center_blob_value_vectorized(seg, np.unique(seg)[1:])
-        seg *= (seg == center_blob_value)
+    # identify the largest connected component in the center of the volume and mask out the rest
+    center_blob_value = get_center_blob_value_vectorized(seg, np.unique(seg)[1:])
+    seg *= (seg == center_blob_value)
     return seg
 
 
@@ -114,118 +96,6 @@ def bbox_ND(img: np.ndarray) -> tuple:
         out.extend(np.where(nonzero)[0][[0, -1]])
     return tuple(out)
 
-def crop_ND(img: np.ndarray, coord: Tuple[int], 
-            end_included: bool = False) -> np.ndarray:
-    """Crop a chunk from a N-dimensional array based on the 
-    bounding box coordinates.
-
-    Args:
-        img (np.ndarray): the N-dimensional array.
-        coord (tuple): the bounding box coordinates.
-        end_included (bool): whether the end coordinates are included.
-
-    Returns:
-        cropped (np.ndarray): the cropped chunk.
-    """
-    N = img.ndim
-    assert len(coord) == N * 2
-    slicing = []
-    for i in range(N):
-        start = coord[2*i]
-        end = coord[2*i+1] + 1 if end_included else coord[2*i+1]
-        slicing.append(slice(start, end))
-    slicing = tuple(slicing)
-    return img[slicing].copy()
-
-def adjust_bbox(low: int, high: int, sz: int) -> Tuple[int]:
-    """Adjust the bounding box coordinates to a given size.
-
-    Args:
-        low (int): the lower bound of the bounding box.
-        high (int): the upper bound of the bounding box.
-        sz (int): the size of the bounding box.
-
-    Returns:
-        low (int): the adjusted lower bound of the bounding box.
-        high (int): the adjusted upper bound of the bounding box.
-    """
-    assert high >= low
-    bbox_sz = high - low
-    diff = abs(sz - bbox_sz) // 2
-    if bbox_sz >= sz:
-        return low + diff, low + diff + sz
-
-    return low - diff, low - diff + sz
-
-def bbox_relax(coord: Union[tuple, list], 
-               shape: tuple, 
-               relax: int = 0) -> tuple:
-    """Relax the bounding box coordinates by a given value.
-
-    Args:
-        coord (tuple): the bounding box coordinates.
-        shape (tuple): the shape of the image.
-        relax (int): the relaxation size for the bounding box.
-
-    Returns:
-        coord (tuple): the relaxed bounding box coordinates.
-    """
-    assert len(coord) == len(shape) * 2
-    coord = list(coord)
-    for i in range(len(shape)):
-        coord[2*i] = max(0, coord[2*i]-relax)
-        coord[2*i+1] = min(shape[i], coord[2*i+1]+relax)
-
-    return tuple(coord)
-
-
-def index2bbox(seg: np.ndarray, indices: list, relax: int = 0,
-               iterative: bool = False) -> dict:
-    """Calculate the bounding boxes associated with the given mask indices. 
-    For a small number of indices, the iterative approach may be preferred.
-    Note:
-        Since labels with value 0 are ignored in ``scipy.ndimage.find_objects``,
-        the first tuple in the output list is associated with label index 1. 
-
-    Args:
-        seg (np.ndarray): the binary mask of the segmentation.
-        indices (list): the list of indices.
-        relax (int): the relaxation size for the bounding box.
-        iterative (bool): whether to use iterative approach to calculate bounding boxes.
-
-    Returns:
-        bbox_dict (dict): the dictionary of bounding boxes.
-    """
-    bbox_dict = OrderedDict()
-
-    if iterative:
-        # calculate the bounding boxes of each segment iteratively
-        for idx in indices:
-            temp = (seg == idx) # binary mask of the current seg
-            bbox = bbox_ND(temp, relax=relax)
-            bbox_dict[idx] = bbox
-        return bbox_dict
-
-    # calculate the bounding boxes using scipy.ndimage.find_objects
-    loc = find_objects(seg)
-    seg_shape = seg.shape
-    for idx, item in enumerate(loc):
-        if item is None:
-            # For scipy.ndimage.find_objects, if a number is 
-            # missing, None is returned instead of a slice.
-            continue
-
-        object_idx = idx + 1 # 0 is ignored in find_objects
-        if object_idx not in indices:
-            continue
-
-        bbox = []
-        for x in item: # slice() object
-            bbox.append(x.start)
-            bbox.append(x.stop-1) # bbox is inclusive by definition
-        bbox_dict[object_idx] = bbox_relax(bbox, seg_shape, relax)
-    return bbox_dict
-
 def calculate_crop_pad(bbox_3d: list, volume_shape: tuple, pad_z: bool = False) -> Tuple[list, tuple]:
     """Calculate the crop and pad parameters for the given bounding box and volume shape.
     
@@ -253,31 +123,6 @@ def calculate_crop_pad(bbox_3d: list, volume_shape: tuple, pad_z: bool = False) 
 
     return [z1, z2, y1, y2, x1, x2], pad
 
-def crop_pad_mask_data_3d(data: np.ndarray, bbox_3d: list, mask: np.ndarray = None) -> Union[np.ndarray, Tuple[np.ndarray, list, tuple]]:
-    """Crop and pad the 3D volume based on the given bounding box.
-
-    Args:
-        data (np.ndarray): the 3D volume.
-        bbox_3d (list): the bounding box of the 3D volume.
-        mask (np.ndarray): the binary mask of the 3D volume.
-
-    Returns:
-        cropped (np.ndarray): the cropped and padded 3D volume.
-        bbox (list): the bounding box of the 3D volume.
-        pad (tuple): the padding parameters.
-    """
-    bbox, pad = calculate_crop_pad(bbox_3d, data.shape)
-
-    cropped = data[bbox[0]:bbox[1], bbox[2]:bbox[3], bbox[4]:bbox[5]]
-
-    if mask is not None:
-        mask_3d = mask[bbox[0]:bbox[1], bbox[2]:bbox[3], bbox[4]:bbox[5]]
-        cropped = cropped * (mask_3d != 0).astype(cropped.dtype)
-
-    if not all(v == 0 for v in pad):
-        cropped = np.pad(cropped, pad, mode='constant', constant_values=0)
-
-    return cropped, bbox, pad
 
 def create_dir(parent_dir_path: str, dir_name: str) -> str:
     ''' Create a directory if it does not exist.
@@ -308,164 +153,6 @@ def syn2rgb(label: np.ndarray) -> np.ndarray:
     out = adjust_image_range(np.stack(tmp, -1)) # shape is (*, 3))
     return out
 
-def visualize(seg: np.ndarray, img: np.ndarray, crop_size_x: int = 148, crop_size_y: int = 148, crop_size_z: int = 16, iterative_bbox: bool = False) -> Union[str, None]:
-    ''' Visualize the synapse and EM images in 2D slices.
-    
-    Args:
-        seg (np.ndarray): instance-level segmentation where each synapse is labeled with an individual index.
-        img (np.ndarray): the original EM image.
-        crop_size_x (int): the size of the 2D patch in x direction.
-        crop_size_y (int): the size of the 2D patch in y direction.
-        crop_size_z (int): the number of the 2D patches in z direction.
-        iterative_bbox (bool): whether to use iterative approach to calculate bounding boxes.
-        
-    Returns:
-        synanno_json (str): the path to the JSON file.
-    '''
-
-    item_list = [] # collect all items before appending them to the df
-
-    if synanno.df_metadata.empty:
-        instance_list = np.unique(seg)[1:] # ignore background
-
-        # throw a warning if the number of synapses is zero
-        if len(instance_list) == 0:
-            warnings.warn("No synapses found in the segmentation.")
-            raise ValueError("No synapses found in the segmentation. Does the subvolume contain synapses?")
-
-        if not iterative_bbox:
-            # calculate the bounding boxes of each segment based on scipy.ndimage.find_objects
-            bbox_dict = index2bbox(seg, instance_list, iterative=False)
-
-    # create the directories for saving the source and target images
-    idx_dir = create_dir('./synanno/static/', 'Images')
-    syn_dir, img_dir = create_dir(idx_dir, 'Syn'), create_dir(idx_dir, 'Img')
-
-    # calculate process time for progress bar
-    len_instances = len(synanno.df_metadata) if not synanno.df_metadata.empty else len(instance_list)
-    perc = (100)/len_instances 
-
-    # iterate over the synapses. save the middle slices and before/after ones for navigation.
-    for i, inst in synanno.df_metadata.iterrows() if not synanno.df_metadata.empty else enumerate(instance_list):
-
-        # retrieve the index of the current synapse
-        idx = inst["Image_Index"] if not synanno.df_metadata.empty else inst
-
-        # create the instance specific directories for saving the source and target images
-        syn_dir_instance, img_dir_instance = create_dir(syn_dir, str(idx)), create_dir(img_dir, str(idx))
-
-        # create the binary mask of the current synapse based on the index
-        instance_binary_mask = (seg == idx)
-
-        # create a new item for the pandas dataframe
-        if synanno.df_metadata.empty:
-            item = dict()
-            item['Page'] = int(int(idx)//session.get('per_page'))
-            item["Image_Index"] = int(idx)
-            item["GT"] = "/"+"/".join(syn_dir_instance.strip(".\\").split("/")[2:])
-            item["EM"] = "/"+"/".join(img_dir_instance.strip(".\\").split("/")[2:])
-            item["Label"] = "Correct"
-            item["Annotated"] = "No"            
-            item["Error_Description"] = "None"
-        
-            # either retrieve the 3D bounding box from the previous iterative generated bb dict or calculate it on individual basis
-            bbox = bbox_ND(instance_binary_mask) if iterative_bbox else bbox_dict[idx]
-
-            # update the item with the middle slice and original bounding box
-            item["Original_Bbox"] = [int(u) for u in list(bbox)]
-
-            item["Middle_Slice"] = (item["Original_Bbox"][1] + item["Original_Bbox"][0])//2 
-            item["cz0"] = (item["Original_Bbox"][1] + item["Original_Bbox"][0])//2 
-            item["cy0"] = (item["Original_Bbox"][2] + item["Original_Bbox"][3])//2 
-            item["cx0"] = (item["Original_Bbox"][4] + item["Original_Bbox"][5])//2
-            item["crop_size_x"] = crop_size_x
-            item["crop_size_y"] = crop_size_y
-            item["crop_size_z"] = crop_size_z
-
-
-        else:
-            instance_binary_mask = (seg == idx) # binary mask of the current synapse
-            bbox = list(map(int,inst["Original_Bbox"]))
-            crop_size_x = int(inst["crop_size_x"])
-            crop_size_y = int(inst["crop_size_y"])
-            crop_size_z = int(inst["crop_size_z"])
-
-        z1, z2 = adjust_bbox(bbox[0], bbox[1], crop_size_z//2) if bbox[1]-bbox[0] < 2 else (bbox[0], bbox[1])
-        y1, y2 = adjust_bbox(bbox[2], bbox[3], crop_size_y)
-        x1, x2 = adjust_bbox(bbox[4], bbox[5], crop_size_x)
-        bbox = [z1, z2, y1, y2, x1, x2]
-
-        cropped_syn, ab_syn, pad_syn = crop_pad_mask_data_3d(seg, bbox, mask=instance_binary_mask)
-        cropped_img, ab_img, _ = crop_pad_mask_data_3d(img, bbox)
-
-        # convert the images to uint8
-        cropped_img = adjust_image_range(cropped_img)
-
-        assert ab_img == ab_syn, "The bounding boxes of the synapse and EM image do not match."
-
-        if synanno.df_metadata.empty:
-            item["Adjusted_Bbox"] = [int(u) for u in list(ab_syn)]
-            item["Padding"] = pad_syn
-            item_list.append(item)
-        else:
-            inst["Adjusted_Bbox"] = [int(u) for u in list(ab_syn)]
-            inst["Padding"] = pad_syn
-            item_list.append(inst)
-        
-        # create an RGB mask of the synapse from the single channel binary mask
-        # colors all even values in the mask with turquoise and all odd values with pink
-        vis_label = syn2rgb(cropped_syn) # z, y, x, c
-
-        # save volume slices
-        for s in range(cropped_img.shape[0]):
-            img_name = str(item["Adjusted_Bbox"][0] + s if synanno.df_metadata.empty else inst["Adjusted_Bbox"][0] + s)+".png"
-
-            img_c = Image.fromarray(cropped_img[s,:,:])
-            img_c.save(os.path.join(img_dir_instance,img_name), "PNG")
-
-            # label
-            lab_c = Image.fromarray(vis_label[s,:,:,:])
-
-            # reduce the opacity of all black pixels to zero
-            lab_c = lab_c.convert("RGBA")
-
-            lab_c = np.asarray(lab_c) 
-            r, g, b, a = np.rollaxis(lab_c, axis=-1) # split into 4 n x m arrays 
-            r_m = r != 0 # binary mask for red channel, True for all non black values
-            g_m = g != 0 # binary mask for green channel, True for all non black values
-            b_m = b != 0 # binary mask for blue channel, True for all non black values
-
-            # combine the three binary masks by multiplying them (1*1=1, 1*0=0, 0*1=0, 0*0=0)
-            # multiply the combined binary mask with the alpha channel
-            a = a * ((r_m == 1) | (g_m == 1) | (b_m == 1))
-
-            lab_c = Image.fromarray(np.dstack([r, g, b, a]), 'RGBA') # stack the img back together 
-
-            lab_c.save(os.path.join(syn_dir_instance,img_name), "PNG")
-
-            # update progress bar
-            synanno.progress_bar_status['percent'] = min(int(i * perc) + 15, 100)
-
-    if synanno.df_metadata.empty:
-        # write all items to the df
-        # convert the list to a data frame
-        df_list = pd.DataFrame(item_list)
-        # concatenate the metadata and the df_list data frame
-        synanno.df_metadata = pd.concat([synanno.df_metadata, df_list], ignore_index=True)
-    else:
-        for item in item_list:
-            # check if the data frame already contains the current instance based on the image index
-            if item["Image_Index"] in synanno.df_metadata["Image_Index"].values:
-                # assert that the keys in the item and the data frame match
-                assert set(item.keys()) == set(synanno.df_metadata.keys()), "The keys in the item and the data frame do not match."
-                # update the data frame with the new item
-                synanno.df_metadata.loc[synanno.df_metadata["Image_Index"] == item["Image_Index"]] = [pd.Series(item)]
-            else:
-                df_list = pd.DataFrame([item])
-                # concatenate the metadata and the df_list data frame
-                synanno.df_metadata = pd.concat([synanno.df_metadata, df_list], ignore_index=True)
-
-
 def free_page() -> None:
     ''' Remove the segmentation and images from the EM and GT folder for the previous and next page.'''
 
@@ -494,7 +181,6 @@ def free_page() -> None:
             except Exception as e:
                 print('Failed to delete %s. Reason: %s' % (img_dir_idx, e))
     
-
 
 def retrieve_instance_metadata(crop_size_x: int = 148, crop_size_y: int = 148, crop_size_z: int = 16, page: int =0, mode: str = 'annotate') -> Union[str, None]:
     ''' Visualize the synapse and EM images in 2D slices for each instance by cropping the bounding box of the instance.
@@ -667,7 +353,7 @@ def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) 
     cropped_gt = np.transpose(cropped_gt, axes=[coord_order.index('z'), coord_order.index('y'), coord_order.index('x')])
 
     # process the 3D gt segmentation by removing small objects and converting it to instance-level segmentation.
-    cropped_seg = process_syn(cropped_gt, view_style='neuron')
+    cropped_seg = process_syn(cropped_gt)
 
     # pad the images and synapse segmentation to fit the crop size (sz)
     cropped_img_pad = np.pad(cropped_img, img_padding, mode='constant', constant_values=148)
@@ -732,7 +418,7 @@ def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) 
         lab_c.save(os.path.join(syn_dir_instance,img_name), "PNG")
 
 
-def neuron_centric_3d_data_processing(source_url: str, target_url: str, table_name: str, preid: int = None, postid: int = None, bucket_secret_json: json = '~/.cloudvolume/secrets', crop_size_x: int = 148, crop_size_y: int = 148, crop_size_z: int = 16, mode: str = 'annotate') -> Union[str, Tuple[np.ndarray, np.ndarray]]:
+def neuron_centric_3d_data_processing(source_url: str, target_url: str, table_name: str, preid: int = None, postid: int = None, subvolume: dict = None, bucket_secret_json: json = '~/.cloudvolume/secrets', crop_size_x: int = 148, crop_size_y: int = 148, crop_size_z: int = 16, mode: str = 'annotate', view_style: str = None) -> Union[str, Tuple[np.ndarray, np.ndarray]]:
     """ Retrieve the bounding boxes and instances indexes from the table and call the render function to render the 3D data as 2D images.
 
     Args:
@@ -744,44 +430,13 @@ def neuron_centric_3d_data_processing(source_url: str, target_url: str, table_na
         bucket_secret_json (json): the path to the JSON file.
         patch_size (int): the size of the 2D patch.
     """
-
     # create the handles to the global materialization data object
     global materialization
-    
-    # read data as dict from path table_name
-    synanno.progress_bar_status['status'] = "Retrieving Materialization"
 
-    # Read the CSV file
-    df = pd.read_csv(table_name)
+    # retrieve the order of the coordinates (xyz, xzy, yxz, yzx, zxy, zyx)
+    coordinate_order = list(synanno.coordinate_order.keys())
 
-    # Select only the necessary columns
-    df = df[['pre_pt_x', 'pre_pt_y', 'pre_pt_z', 'post_pt_x', 'post_pt_y', 'post_pt_z', 'x', 'y', 'z']]
-
-    # Convert the DataFrame to a dictionary
-    bbox_dict = df.to_dict('index')
-
-    if preid is None:
-        preid = 0
-
-    if postid is None:
-        postid = len(df.index)
-
-    # cut the dictionary to the desired number of instances
-    bbox_dict = get_sub_dict_within_range(bbox_dict, preid, postid)
-
-    # save the materialization to the global variable
-    materialization = bbox_dict
-
-    # number of rows in df
-    session['n_images'] = len(bbox_dict.keys())
-
-    # calculate the number of pages needed for the instance count in the JSON
-    number_pages = session.get('n_images') // session.get('per_page')
-    if not (session.get('n_images') % session.get('per_page') == 0):
-        number_pages = number_pages + 1
-
-    session['n_pages'] = number_pages
-
+    # load the cloud volumes
     synanno.progress_bar_status['status'] = "Loading Cloud Volumes"
     synanno.source_cv = CloudVolume(source_url, secrets=bucket_secret_json, fill_missing=True, parallel=True)
     synanno.target_cv = CloudVolume(target_url, secrets=bucket_secret_json, fill_missing=True, parallel=True)
@@ -801,109 +456,57 @@ def neuron_centric_3d_data_processing(source_url: str, target_url: str, table_na
 
     synanno.vol_dim_x, synanno.vol_dim_y, synanno.vol_dim_z = vol_dim['x'], vol_dim['y'], vol_dim['z']
     synanno.vol_dim_x_scaled, synanno.vol_dim_y_scaled, synanno.vol_dim_z_scaled = synanno.vol_dim_x * synanno.scale['x'], synanno.vol_dim_y * synanno.scale['y'], synanno.vol_dim_z * synanno.scale['z']
+    
+    # read data as dict from path table_name
+    synanno.progress_bar_status['status'] = "Retrieving Materialization"
+
+    # Read the CSV file
+    df = pd.read_csv(table_name)
+
+    if view_style == 'view':
+        # should no cropping coordinates be provided, use the whole volume
+        if subvolume[coordinate_order[2]+'2'] == -1:
+            subvolume[coordinate_order[2]+'2'] = synanno.source_cv.info['scales'][0]['size'][2]
+        
+        if subvolume[coordinate_order[1]+'2'] == -1:
+            subvolume[coordinate_order[1]+'2'] = synanno.source_cv.info['scales'][0]['size'][1]
+       
+        if subvolume[coordinate_order[0]+'2'] == -1:
+            subvolume[coordinate_order[0]+'2'] = synanno.source_cv.info['scales'][0]['size'][0]
+        
+        # query the dataframe for all instances with their coordinates x,y,z with in the range of the subvolume
+        df = df.query('x >= @subvolume["x1"] and x <= @subvolume["x2"] and y >= @subvolume["y1"] and y <= @subvolume["y2"] and z >= @subvolume["z1"] and z <= @subvolume["z2"]')
+
+    if view_style == 'neuron':
+        # TODO: This is currently a dummy solution. 
+        # query the dataframe for all instances with an index between preid and postid
+        if preid is None:
+            preid = 0
+
+        if postid is None:
+            postid = len(df.index)
+
+        # query the dataframe for all instances with an index between preid and postid
+        df = df.query('index >= @preid and index <= @postid')
+
+    # select only the necessary columns, save the real materialization table index as column 'index'
+    df = df.reset_index()
+    df = df[['index', 'pre_pt_x', 'pre_pt_y', 'pre_pt_z', 'post_pt_x', 'post_pt_y', 'post_pt_z', 'x', 'y', 'z']]
+
+    # Convert the DataFrame to a dictionary
+    bbox_dict = df.to_dict('index')
+
+    # save the materialization to the global variable
+    materialization = bbox_dict
+
+    # number of rows in df
+    session['n_images'] = len(bbox_dict.keys())
+
+    # calculate the number of pages needed for the instance count in the JSON
+    number_pages = session.get('n_images') // session.get('per_page')
+    if not (session.get('n_images') % session.get('per_page') == 0):
+        number_pages = number_pages + 1
+
+    session['n_pages'] = number_pages
 
     return retrieve_instance_metadata(crop_size_x=crop_size_x, crop_size_y=crop_size_y, crop_size_z=crop_size_z, page=0, mode=mode)
-
-
-def view_centric_cloud_volume(im_file: str, gt_file: str, subvolume: Dict, bucket_secret_json: json = '~/.cloudvolume/secrets') -> Tuple[np.ndarray, np.ndarray]:
-    """ Retrieve the view specific subvolume from the cloud target and source volume.
-
-    Args:
-        im_file (str): the path to the source cloud volume (EM).
-        gt_file (str): the path to the target cloud volume (synapse).
-        subvolume (Dict): the subvolume coordinates.
-        bucket_secret_json (json): the path to the JSON file.
-
-    Returns:
-        img (np.ndarray): the original image (EM).
-        gt (np.ndarray): the mask annotation (GT: ground truth).
-    """
-
-    # retrieve the order of the coordinates (xyz, xzy, yxz, yzx, zxy, zyx)
-    coordinate_order = list(synanno.coordinate_order.keys())
-
-    synanno.progress_bar_status['status'] = "Loading Source Cloud Volume"
-
-    # handle to the source cloud volume
-    source = CloudVolume(im_file, secrets=bucket_secret_json, fill_missing=True, parallel=True)
-
-    # should no cropping coordinates be provided, use the whole volume
-    if subvolume['x2'] == -1:
-        subvolume['x2'] = source.info['scales'][0]['size'][2]
-
-    if subvolume['y2'] == -1:
-        subvolume['y2'] = source.info['scales'][0]['size'][1]
-    
-    if subvolume['z2'] == -1:
-        subvolume['z2'] = source.info['scales'][0]['size'][0]
-
-    # create the bounding box for the current synapse based on the order of the coordinates
-    bound_target = Bbox(
-        [subvolume[coordinate_order[i]+'1'] for i in range(3)],
-        [subvolume[coordinate_order[i]+'2'] for i in range(3)]
-    )
-
-    # scale the bounding box to the resolution of the source cloud volume
-    bound_source = Bbox((bound_target.minpt * list(synanno.scale.values())).astype(int), (bound_target.maxpt * list(synanno.scale.values())).astype(int))
-
-    # retrieve the image subvolume
-    img = np.squeeze(source.download(bound_source, coord_resolution=synanno.coord_resolution_source, mip=0))
-
-    synanno.progress_bar_status['status'] = "Loading Target Cloud Volume"
-
-    # handle to the target cloud volume
-    target = CloudVolume(gt_file, secrets=bucket_secret_json, fill_missing=True, parallel=True)
-
-    # retrieve the image subvolume
-    gt = np.squeeze(target.download(bound_target, coord_resolution=synanno.coord_resolution_target, mip=0))
-
-    synanno.progress_bar_status['status'] = "Adjust the scale of the label volume"
-
-    # adjust the scale of the label volume
-    if sum(img.shape) > sum(gt.shape): # up-sampling
-        gt = resize(gt, img.shape, mode='constant', preserve_range=True, anti_aliasing=False)
-        gt = (gt > 0.5).astype(int) # convert to binary mask
-    elif sum(img.shape) < sum(gt.shape): # down-sampling
-        gt = resize(gt, img.shape, mode='constant', preserve_range=True, anti_aliasing=True)
-        gt = (gt > 0.5).astype(int) # convert to binary mask
-    
-    # transpose the image to match the zyx order
-    img = np.transpose(img, axes=[coordinate_order.index('z'), coordinate_order.index('y'), coordinate_order.index('x')])
-
-    # transpose the image to match the zyx order
-    gt = np.transpose(gt, axes=[coordinate_order.index('z'), coordinate_order.index('y'), coordinate_order.index('x')])
-
-    return img, gt
-
-
-def view_centric_3d_data_processing(im: np.ndarray, gt: np.ndarray, crop_size_x: int = 148, crop_size_y: int = 148, crop_size_z: int = 16, view_style: str ='view') -> Union[str, Tuple[np.ndarray, np.ndarray]]:
-    """ Render the 3D data as 2D images.
-
-    Args:
-        im (np.ndarray): the original image (EM).
-        gt (np.ndarray): the mask annotation (GT: ground truth).
-        patch_size (int): the size of the 2D patch.
-        view_style (str): the view style of the synapse (view, neuron, synapse).
-    
-    Returns:
-        im (np.ndarray): the original image (EM).
-        gt (np.ndarray): the mask annotation (GT: ground truth).
-    """
-
-    # retrieve the dimensions of the cropped volume, after the dimension swap and scaling
-    synanno.vol_dim_z_scaled, synanno.vol_dim_y_scaled, synanno.vol_dim_x_scaled  = synanno.vol_dim_z, synanno.vol_dim_y, synanno.vol_dim_x = tuple([s-1 for s in gt.shape])
-
-    # retrieve the instance level segmentation
-    seg = process_syn(gt, view_style=view_style)
-
-    # adjust the datatype of the given data to the smallest possible NG compatible datatype
-    seg, _ = adjust_datatype(seg)
-
-    assert seg.shape == gt.shape, "The shape of the segmentation and the ground truth do not match."
-
-    synanno.progress_bar_status['status'] = "Retrieve 2D patches from 3D volume"
-    # if a json was provided process the data accordingly
-    visualize(seg, im, crop_size_x=crop_size_x, crop_size_y=crop_size_y, crop_size_z=crop_size_z) 
-    synanno.progress_bar_status['percent'] = int(100) 
-    return im, seg
-

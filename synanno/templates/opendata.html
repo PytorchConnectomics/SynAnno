@@ -40,7 +40,10 @@
     <p><input class="form-control" type="url" id="source_url" name="source_url" placeholder="Cloud Volume Bucket - file://<path_to_your_file>" value='gs://h01-release/data/20210601/4nm_raw'></p>
     <label for="target_url" class="form-label">Target bucket (precomputed: Neuroglancer's native format) - Required</label>
     <p><input class="form-control" type="url" id="target_url" name="target_url" placeholder="Cloud Volume Bucket - file://<path_to_your_file>" value='gs://h01-release/data/20210729/c3/synapses/whole_ei_onlyvol'></p>
+    <label for="materialization_url" class="form-label">Materialization (url/name of the table containing the ID association and bounding box information)</label>
+    <p><input class="form-control" type="text" id="materialization_url" name="materialization_url" placeholder="Materialization - synapses" value='/Users/lando/Code/SynAnno/h01/synapse-export_000000000000.csv'></p>
 
+      
     <label class="form-check-label">
         <input type="radio" class="form-check-input" id='view_centric_button' name="view_style" value="view" {% if view_style == 'view' %} checked {% endif %}>
         View Centric
@@ -49,13 +52,9 @@
         <input type="radio" class="form-check-input" id='neuron_centric_button' name="view_style" value="neuron" {% if view_style == 'neuron' %} checked {% endif %}>
         Neuron Centric
     </label>
-
     <div class="mb-1"></div>
 
-
       <div id="neuron-form" {% if view_style == 'view' %} class="hidden-form" {% endif %}>
-        <label for="materialization_url" class="form-label">Materialization (url/name of the table containing the ID association and bounding box information)</label>
-        <p><input class="form-control" type="text" id="materialization_url" name="materialization_url" placeholder="Materialization - synapses" value='/Users/lando/Code/SynAnno/h01/synapse-export_000000000000.csv'></p>
         <label for="pre-post-syn" class="form-label">Pre- and postsynaptic IDs</label>
         <div class="number-container" id='pre-post-syn'>
           <input class="number-dims" type="number" id="preid" name="preid" placeholder="Presynaptic ID">
@@ -66,12 +65,12 @@
       <div id="view-form" {% if view_style == 'neuron' %} class="hidden-form" {% endif %}>
       <label for="coordinate-container-view" class="form-label">Slicing Indices for the Segmentation Volume (will be scalled for the image volume in case of a resolution missmatch)</label>
       <div class="coordinate-container" id='coordinate-container-view'>
-        <input class="coordinate-dims" type="number" id="x1" name="x1" placeholder="X1 - Default: 0" value="257036">
-        <input class="coordinate-dims" type="number" id="x2" name="x2" placeholder="X2 - Default: max(X)" value="258448">
-        <input class="coordinate-dims" type="number" id="y1" name="y1" placeholder="Y1 - Default: 0" value="178039">
-        <input class="coordinate-dims" type="number" id="y2" name="y2" placeholder="Y2 - Default: max(Y)" value="178651">
-        <input class="coordinate-dims" type="number" id="z1" name="z1" placeholder="Z1 - Default: 0" value="1308">
-        <input class="coordinate-dims" type="number" id="z2" name="z2" placeholder="Z2 - Default: max(Z)" value="1392">
+        <input class="coordinate-dims" type="number" id="x1" name="x1" placeholder="X1 - Default: 0" value="199891">
+        <input class="coordinate-dims" type="number" id="x2" name="x2" placeholder="X2 - Default: max(X)" value="437848">
+        <input class="coordinate-dims" type="number" id="y1" name="y1" placeholder="Y1 - Default: 0" value="169018">
+        <input class="coordinate-dims" type="number" id="y2" name="y2" placeholder="Y2 - Default: max(Y)" value="262596">
+        <input class="coordinate-dims" type="number" id="z1" name="z1" placeholder="Z1 - Default: 0" value="1280">
+        <input class="coordinate-dims" type="number" id="z2" name="z2" placeholder="Z2 - Default: max(Z)" value="1536">
       </div>
       </div>
 

@@ -72,15 +72,12 @@ $(document).ready(function () {
 
         });
 
-        // view style identifier: view centric or instance centric
-        var view_style = $('.redraw-images').attr('view_style')
-
         // retrieve the updated NG link
         req_ng = $.ajax({
             url: '/neuro',
             type: 'POST',
             // we set mode to 'annotate' as we would like to set the focus on the particular instance
-            data: { view_style: view_style, cz0: cz0, cy0: cy0, cx0: cx0, mode: 'annotate' }
+            data: {cz0: cz0, cy0: cy0, cx0: cx0, mode: 'annotate' }
         });
 
         req_ng.done(function (data) {
@@ -176,12 +173,11 @@ $(document).ready(function () {
 
     
     $('#add_new_instance').click(async function (e) {
-        var view_style = $(this).attr('view_style')
         // open a new Neuroglancer view
         req_ng = $.ajax({
             url: '/neuro',
             type: 'POST',
-            data: { view_style: view_style, cz0: 0, cy0: 0, cx0: 0, mode: 'draw' }
+            data: {cz0: 0, cy0: 0, cx0: 0, mode: 'draw' }
         });
 
         req_ng.done(function (data) {

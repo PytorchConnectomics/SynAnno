@@ -26,7 +26,7 @@ import re
 import os
 
 # import processing functions
-from synanno.backend.processing import calculate_crop_pad, crop_pad_mask_data_3d, create_dir
+from synanno.backend.processing import calculate_crop_pad, create_dir
 
 # for type hinting
 from jinja2 import Template
@@ -55,7 +55,7 @@ def draw() -> Template:
 
     # retrieve the data from the dataframe for which the user has marked the instance as "Incorrect" or "Unsure"
     data = synanno.df_metadata[synanno.df_metadata['Label'].isin(['Incorrect', 'Unsure'])].to_dict('records')
-    return render_template('draw.html', images=data, view_style=synanno.view_style)
+    return render_template('draw.html', images=data)
 
 
 @app.route('/save_canvas', methods=['POST'])
@@ -233,56 +233,50 @@ def ng_bbox_fp_save()-> Dict[str, object]:
     # scale the coordinates to the original target size
     item['Original_Bbox'] = [int(bbox[0]/synanno.scale['z']), int(bbox[1]/synanno.scale['z']), int(bbox[2]/synanno.scale['y']), int(bbox[3]/synanno.scale['y']), int(bbox[4]/synanno.scale['x']), int(bbox[5]/synanno.scale['x'])]
 
-    view_style = synanno.view_style
+    crop_bbox, img_padding = calculate_crop_pad(bbox , [synanno.vol_dim_z_scaled, synanno.vol_dim_y_scaled, synanno.vol_dim_x_scaled])
+    # map the bounding box coordinates to a dictionary
+    crop_box_dict = {
+        'z1': crop_bbox[0],
+        'z2': crop_bbox[1],
+        'y1': crop_bbox[2],
+        'y2': crop_bbox[3],
+        'x1': crop_bbox[4],
+        'x2': crop_bbox[5]
+    }
 
-    if view_style == 'neuron':
-        crop_bbox, img_padding = calculate_crop_pad(bbox , [synanno.vol_dim_z_scaled, synanno.vol_dim_y_scaled, synanno.vol_dim_x_scaled])
-        # map the bounding box coordinates to a dictionary
-        crop_box_dict = {
-            'z1': crop_bbox[0],
-            'z2': crop_bbox[1],
-            'y1': crop_bbox[2],
-            'y2': crop_bbox[3],
-            'x1': crop_bbox[4],
-            'x2': crop_bbox[5]
-        }
+    # retrieve the order of the coordinates (xyz, xzy, yxz, yzx, zxy, zyx)
+    cord_order = list(synanno.coordinate_order.keys())
 
-        # retrieve the order of the coordinates (xyz, xzy, yxz, yzx, zxy, zyx)
-        cord_order = list(synanno.coordinate_order.keys())
+    # create the bounding box for the current synapse based on the order of the coordinates
+    bound = Bbox(
+        [
+            crop_box_dict[cord_order[0] + '1'],
+            crop_box_dict[cord_order[1] + '1'],
+            crop_box_dict[cord_order[2] + '1']
+        ],
+        [
+            crop_box_dict[cord_order[0] + '2'],
+            crop_box_dict[cord_order[1] + '2'],
+            crop_box_dict[cord_order[2] + '2']
+        ]
+    )
 
-        # create the bounding box for the current synapse based on the order of the coordinates
-        bound = Bbox(
-            [
-                crop_box_dict[cord_order[0] + '1'],
-                crop_box_dict[cord_order[1] + '1'],
-                crop_box_dict[cord_order[2] + '1']
-            ],
-            [
-                crop_box_dict[cord_order[0] + '2'],
-                crop_box_dict[cord_order[1] + '2'],
-                crop_box_dict[cord_order[2] + '2']
-            ]
-        )
+    # Convert coordinate resolution values to integers
+    # Each coordinate resolution is a tuple where the first value is the resolution of the source image 
+    # and the second value is the resolution of the target image 
+    coord_resolution = [int(res[0]) for res in synanno.coordinate_order.values()]
 
-        # Convert coordinate resolution values to integers
-        # Each coordinate resolution is a tuple where the first value is the resolution of the source image 
-        # and the second value is the resolution of the target image 
-        coord_resolution = [int(res[0]) for res in synanno.coordinate_order.values()]
+    # Retrieve the source and target images from the cloud volume
+    cropped_img = synanno.source_cv.download(bound, coord_resolution=coord_resolution, mip=0)
 
-        # Retrieve the source and target images from the cloud volume
-        cropped_img = synanno.source_cv.download(bound, coord_resolution=coord_resolution, mip=0)
+    # remove the singleton dimension, take care as the z dimension might be singleton
+    cropped_img = cropped_img.squeeze(axis=3)
 
-        # remove the singleton dimension, take care as the z dimension might be singleton
-        cropped_img = cropped_img.squeeze(axis=3)
+    # given the six cases xyz, xzy, yxz, yzx, zxy, zyx, we have to permute the axes to match the zyx order
+    cropped_img = np.transpose(cropped_img, axes=[cord_order.index('z'), cord_order.index('y'), cord_order.index('x')])
 
-        # given the six cases xyz, xzy, yxz, yzx, zxy, zyx, we have to permute the axes to match the zyx order
-        cropped_img = np.transpose(cropped_img, axes=[cord_order.index('z'), cord_order.index('y'), cord_order.index('x')])
-
-        # pad the images and synapse segmentation to fit the crop size (sz)
-        cropped_img = np.pad(cropped_img, img_padding, mode='constant', constant_values=148)
-
-    elif view_style == 'view':
-        cropped_img, crop_bbox, img_padding = crop_pad_mask_data_3d(synanno.source, item["Original_Bbox"])
+    # pad the images and synapse segmentation to fit the crop size (sz)
+    cropped_img = np.pad(cropped_img, img_padding, mode='constant', constant_values=148)
 
     # scale the coordinates to the original target size
     item["Adjusted_Bbox"] = [int(crop_bbox[0]/synanno.scale['z']), int(crop_bbox[1]/synanno.scale['z']), int(crop_bbox[2]/synanno.scale['y']), int(crop_bbox[3]/synanno.scale['y']), int(crop_bbox[4]/synanno.scale['x']), int(crop_bbox[5]/synanno.scale['x'])]

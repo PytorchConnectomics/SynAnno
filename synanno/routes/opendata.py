@@ -147,6 +147,10 @@ def upload_file() -> Template:
         if bucket_secret:= request.files.get('secrets_file'):
             bucket_secret = json.loads(bucket_secret.read())
         
+        # TODO: The URL should be a url currently it is set to text, if providing a false path no error handling is in place
+        # retrieve the materialization url
+        materialization_url = request.form.get('materialization_url')
+
         # if the user chose the view view_style mode load the bbox specific subvolume and then process the data like in the local case
         if synanno.view_style == 'view':
 
@@ -154,26 +158,14 @@ def upload_file() -> Template:
                          'y1': int(request.form.get('y1')) if request.form.get('y1') else 0, 'y2': int(request.form.get('y2')) if request.form.get('y2') else -1,
                          'z1': int(request.form.get('z1')) if request.form.get('z1') else 0, 'z2': int(request.form.get('z2')) if request.form.get('z2') else -1}
 
-            source, raw_target = ip.view_centric_cloud_volume(source_url, target_url, subvolume, bucket_secret_json= bucket_secret if bucket_secret else '~/.cloudvolume/secrets' ) 
-            
-            synanno.source, target_seg = ip.view_centric_3d_data_processing(
-                    source,
-                    raw_target,
-                    crop_size_x=session.get('crop_size_x'),
-                    crop_size_y=session.get('crop_size_y'),
-                    crop_size_z=session.get('crop_size_z'))
-
+            ip.neuron_centric_3d_data_processing(source_url, target_url, materialization_url, subvolume=subvolume, bucket_secret_json=bucket_secret if bucket_secret else '~/.cloudvolume/secrets', crop_size_x=session['crop_size_x'], crop_size_y=session['crop_size_y'], crop_size_z=session['crop_size_z'], mode=draw_or_annotate, view_style=synanno.view_style)
         # if the user chose the neuron view_style mode, retrieve a list of all the synapses of the provided neuron ids and then process the data on synapse level 
         elif synanno.view_style == 'neuron':
             # if the user chose the neuron view_style mode retrieve the neuron ids
             preid = int(request.form.get('preid')) if request.form.get('preid') else None
             postid = int(request.form.get('postid')) if request.form.get('postid') else None
 
-            # TODO: The URL should be a url currently it is set to text, if providing a false path no error handling is in place
-            # retrieve the materialization url
-            materialization_url = request.form.get('materialization_url')
-
-            ip.neuron_centric_3d_data_processing(source_url, target_url, materialization_url, preid, postid, bucket_secret_json= bucket_secret if bucket_secret else '~/.cloudvolume/secrets', crop_size_x=session['crop_size_x'], crop_size_y=session['crop_size_y'], crop_size_z=session['crop_size_z'], mode=draw_or_annotate)
+            ip.neuron_centric_3d_data_processing(source_url, target_url, materialization_url, preid, postid, bucket_secret_json= bucket_secret if bucket_secret else '~/.cloudvolume/secrets', crop_size_x=session['crop_size_x'], crop_size_y=session['crop_size_y'], crop_size_z=session['crop_size_z'], mode=draw_or_annotate, view_style=synanno.view_style)
 
     else:
         flash('Please provide at least the paths to valid source and target cloud volume buckets!', 'error')
@@ -181,10 +173,7 @@ def upload_file() -> Template:
         
     # if the NG version number is None setup a new NG viewer
     if synanno.ng_version is None:
-        if synanno.view_style == 'view':
-            ng_util.setup_ng(source = synanno.source, target = target_seg, view_style = synanno.view_style)    
-        elif synanno.view_style == 'neuron':
-            ng_util.setup_ng(source = 'precomputed://'+ source_url, target = 'precomputed://'+ target_url, view_style = synanno.view_style)
+        ng_util.setup_ng(source = 'precomputed://'+ source_url, target = 'precomputed://'+ target_url)
 
 
     flash('Data ready!')
@@ -209,33 +198,13 @@ def set_data(task: str = 'annotate') -> Template:
         # retrieve the the data from the metadata dataframe as a list of dicts
         data = synanno.df_metadata.query('Label != "Correct"').sort_values(by='Image_Index')
         data = data.to_dict('records')
-        return render_template('draw.html', images=data, view_style=synanno.view_style)
+        return render_template('draw.html', images=data)
     # setup the session
     else:
-        if synanno.view_style == 'view':
-            
-            number_images = len(synanno.df_metadata.index)
-            per_page = session.get('per_page')
-
-            if number_images == 0:
-                flash(
-                    'No synapsis detect in the GT data or the provided JSON does not list any')
-                return render_template('opendata.html', modenext='disabled')
-
-            # calculate the number of pages needed for the instance count in the JSON
-            number_pages = number_images // per_page
-            if not (number_images % per_page == 0):
-                number_pages = number_pages + 1
-
-            # save the number of required pages to the session
-            if not session.get('n_pages'):
-                session['n_pages'] = number_pages
-
-        # retrieve the data for the current page from the metadata dataframe as a list of dicts
         page = 0 
         data = synanno.df_metadata.query('Page == @page').sort_values(by='Image_Index').to_dict('records')
 
-        return render_template('annotation.html', images=data, page=page, n_pages=session.get('n_pages'), grid_opacity=synanno.grid_opacity, view_style=synanno.view_style)
+        return render_template('annotation.html', images=data, page=page, n_pages=session.get('n_pages'), grid_opacity=synanno.grid_opacity)
 
 
 @app.route('/get_instance', methods=['POST'])
@@ -345,18 +314,11 @@ def neuro() -> Dict[str, object]:
 
     # unpack the coordinates for the new focus point of the view
     mode = str(request.form['mode'])
-    view_style = str(request.form['view_style'])
-
     center = {}
     if mode == "annotate":
-        if view_style == 'view':
-            center['z'] = int(request.form['cz0'])
-            center['y'] = int(request.form['cy0'])
-            center['x'] = int(request.form['cx0'])
-        else:
-            center['z'] = int(int(request.form['cz0']) * synanno.scale['z'])
-            center['y'] = int(int(request.form['cy0']) * synanno.scale['y'])
-            center['x'] = int(int(request.form['cx0']) * synanno.scale['x'])
+        center['z'] = int(int(request.form['cz0']) * synanno.scale['z'])
+        center['y'] = int(int(request.form['cy0']) * synanno.scale['y'])
+        center['x'] = int(int(request.form['cx0']) * synanno.scale['x'])
     elif mode == 'draw':
         center['z'] = int((synanno.vol_dim_z // 2) * synanno.scale['z'])
         center['y'] = int((synanno.vol_dim_y // 2) * synanno.scale['y'])
@@ -365,11 +327,7 @@ def neuro() -> Dict[str, object]:
     if synanno.ng_version is not None:
         # update the view focus of the running NG instance
         with synanno.ng_viewer.txn() as s:
-            # in the view view_style mode the coordinates are in the order z,y,x, as we downloaded and transposed the data
-            if view_style == 'view':
-                s.position = [center['z'], center['y'], center['x']]
-            else:
-                s.position = [center[list(synanno.coordinate_order.keys())[0]], center[list(synanno.coordinate_order.keys())[1]], center[list(synanno.coordinate_order.keys())[2]]]
+            s.position = [center[list(synanno.coordinate_order.keys())[0]], center[list(synanno.coordinate_order.keys())[1]], center[list(synanno.coordinate_order.keys())[2]]]
 
     else:
         raise Exception('No NG instance running')

@@ -1,0 +1,3 @@
+from synanno import app
+
+

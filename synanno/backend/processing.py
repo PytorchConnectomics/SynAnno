@@ -303,9 +303,8 @@ def syn2rgb(label: np.ndarray) -> np.ndarray:
         out (np.ndarray): the RGB mask of the synapse.
     '''
     tmp = [None] * 3
-    tmp[0] = np.logical_and((label % 2) == 1, label > 0)
-    tmp[1] = np.logical_and((label % 2) == 0, label > 0)
-    tmp[2] = (label > 0)
+    tmp[0] = tmp[2] = (label > 0)
+    tmp[1] = np.zeros_like(label)
     out = adjust_image_range(np.stack(tmp, -1)) # shape is (*, 3))
     return out
 
@@ -539,6 +538,8 @@ def retrieve_instance_metadata(crop_size_x: int = 148, crop_size_y: int = 148, c
             # create the instance specific directories for saving the source and target images
             syn_dir_instance, img_dir_instance = create_dir(syn_dir, str(idx)), create_dir(img_dir, str(idx))
 
+            ### Note that all dimensions are saved in then scale of the target (segmentation) volume. ###
+
             # create a new item
             item = dict()
             item["Page"] = int(page)
@@ -552,6 +553,12 @@ def retrieve_instance_metadata(crop_size_x: int = 148, crop_size_y: int = 148, c
             item["cz0"] = int(bbox_dict[idx]['z'])
             item["cy0"] = int(bbox_dict[idx]['y'])
             item["cx0"] = int(bbox_dict[idx]['x'])
+            item["pre_pt_x"] = int(bbox_dict[idx]['pre_pt_x'])
+            item["pre_pt_y"] = int(bbox_dict[idx]['pre_pt_y'])
+            item["pre_pt_z"] = int(bbox_dict[idx]['pre_pt_z'])
+            item["post_pt_x"] = int(bbox_dict[idx]['post_pt_x'])
+            item["post_pt_y"] = int(bbox_dict[idx]['post_pt_y'])
+            item["post_pt_z"] = int(bbox_dict[idx]['post_pt_z'])
             item["crop_size_x"] = crop_size_x
             item["crop_size_y"] = crop_size_y
             item["crop_size_z"] = crop_size_z
@@ -642,7 +649,6 @@ def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) 
     # retrieve the source and target images from the cloud volume
     cropped_img = synanno.source_cv.download(bound_source, coord_resolution=synanno.coord_resolution_source, mip=0)
     cropped_gt = synanno.target_cv.download(bound_target, coord_resolution=synanno.coord_resolution_target, mip=0)
-    stop_download = timeit.default_timer()
 
     # remove the singleton dimension, take care as the z dimension might be singleton
     cropped_img = cropped_img.squeeze(axis=3)
@@ -669,9 +675,34 @@ def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) 
     
     assert cropped_img_pad.shape == cropped_seg_pad.shape, "The shape of the source and target images do not match."
 
+
+    ### mark the position of the post and pre synapses using pre_pt and post_pt
+
+    # adjust pre_pt and post_pt to cropped out section
+    pre_pt_x = item["pre_pt_x"] - crop_bbox[4] + img_padding[2][0]
+    pre_pt_y = item["pre_pt_y"] - crop_bbox[2] + img_padding[1][0]
+    pre_pt_z = item["pre_pt_z"] - crop_bbox[0] + img_padding[0][0]
+    
+    post_pt_x = item["post_pt_x"] - crop_bbox[4] + img_padding[2][0]
+    post_pt_y = item["post_pt_y"] - crop_bbox[2] + img_padding[1][0]
+    post_pt_z = item["post_pt_z"] - crop_bbox[0] + img_padding[0][0]
+
+    # scale the the points to the resolution of the source cloud volume
+    pre_pt_x = int(pre_pt_x * synanno.scale['x'])
+    pre_pt_y = int(pre_pt_y * synanno.scale['y'])
+    pre_pt_z = int(pre_pt_z * synanno.scale['z'])
+
+    post_pt_x = int(post_pt_x * synanno.scale['x'])
+    post_pt_y = int(post_pt_y * synanno.scale['y'])
+    post_pt_z = int(post_pt_z * synanno.scale['z'])
+
     # create an RGB mask of the synapse from the single channel binary mask
     # colors all non zero values turquoise 
     vis_label = syn2rgb(cropped_seg_pad) # z, y, x, c
+
+    # draw a bright circle at the position of the pre and post synapse
+    vis_label = draw_cylinder(vis_label, pre_pt_x, pre_pt_y, pre_pt_z, radius=10, color_1=(0, 255, 0), color_2=(200, 255, 200))
+    vis_label = draw_cylinder(vis_label, post_pt_x, post_pt_y, post_pt_z, radius=10, color_1=(0, 0, 255), color_2=(200, 200, 255))
 
     for s in range(cropped_img_pad.shape[0]):
         img_name = str(item["Adjusted_Bbox"][0] + s)+".png"
@@ -722,7 +753,6 @@ def neuron_centric_3d_data_processing(source_url: str, target_url: str, table_na
 
     # Read the CSV file
     df = pd.read_csv(table_name)
-    stop = timeit.default_timer()
 
     # Select only the necessary columns
     df = df[['pre_pt_x', 'pre_pt_y', 'pre_pt_z', 'post_pt_x', 'post_pt_y', 'post_pt_z', 'x', 'y', 'z']]

@@ -1,5 +1,5 @@
 from __future__ import print_function, division
-from typing import Dict, Callable
+from typing import Dict, Callable, Tuple
 
 
 import os
@@ -109,3 +109,41 @@ def submit_with_retry(executor: concurrent.futures.Executor, func: Callable[[dic
             print(f"Attempt {attempt+1} failed with error: {str(e)}")
     print(f"All {retries} attempts failed.")
     return None
+
+
+from typing import Tuple
+import numpy as np
+
+def draw_cylinder(image: np.ndarray, center_x: int, center_y: int, center_z: int, radius: int, color_1: Tuple[int, int, int], color_2: Tuple[int, int, int]) -> np.ndarray:
+    """
+    Function to draw a cylinder in a 4D numpy array. The color of the cylinder changes based on the distance from the center_z.
+    
+    Parameters:
+    image (np.ndarray): Input 4D numpy array.
+    center_x (int): X-coordinate of the cylinder center.
+    center_y (int): Y-coordinate of the cylinder center.
+    center_z (int): Z-coordinate of the cylinder center.
+    radius (int): Radius of the cylinder.
+    color_1 (Tuple[int, int, int]): RGB color of the circle in the center_z layer.
+    color_2 (Tuple[int, int, int]): RGB color of the circles in the other layers.
+    
+    Returns:
+    np.ndarray: 4D numpy array with the cylinder drawn.
+    """
+
+    z_len, y_len, x_len, _ = image.shape
+
+    # Create coordinate grid
+    Y, X = np.meshgrid(np.arange(y_len), np.arange(x_len), indexing='ij')
+
+    # Create 3D mask for the cylinder
+    mask_cylinder = (X - center_x) ** 2 + (Y - center_y) ** 2 <= radius ** 2
+
+    for i in range(z_len):
+        if i != center_z:
+            image[i, mask_cylinder, :] = color_2
+        else:
+            image[i, mask_cylinder, :] = color_1
+            
+    return image
+

@@ -49,14 +49,14 @@ jobs:
 
     - name: Read VERSION
       id: version
-      run: echo "version=$(cat version.txt)" >> $TAG_NAME
+      run: echo "version=$(cat version.txt)" >> $GITHUB_ENV
 
     - name: Build and Push Docker Image
       uses: docker/build-push-action@v2
       with:
         context: .
         push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/synanno:$version
+        tags: ${{ secrets.DOCKER_USERNAME }}/synanno:${{ env.version }}
         # Add your DockerHub username and password as secrets in the GitHub repo
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}

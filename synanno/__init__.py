@@ -110,8 +110,9 @@ global df_metadata
 
 # Define the column names
 columns = ['Page', 'Image_Index', 'GT', 'EM', 'Label', 'Annotated', 'Error_Description',
-           'Middle_Slice', 'Original_Bbox', 'cz0', 'cy0', 'cx0', 'crop_size_x',
-           'crop_size_y', 'crop_size_z', 'Adjusted_Bbox', 'Padding']
+           'Middle_Slice', 'Original_Bbox', 'cz0', 'cy0', 'cx0', 'pre_pt_z', 
+           'pre_pt_x', 'pre_pt_y', 'post_pt_y', 'post_pt_z', 'post_pt_x',
+           'crop_size_x', 'crop_size_y', 'crop_size_z', 'Adjusted_Bbox', 'Padding']
 
 # create an empty DataFrame with these columns
 df_metadata = pd.DataFrame(columns=columns)

@@ -24,17 +24,35 @@ $(document).ready(function () {
             $('#imgDetails-EM').addClass(label.toLowerCase());
             $('#imgDetails-EM').attr('src', data_json.EM + '/' + data_json.Middle_Slice + '.png');
 
-            if (data.custom_mask_path === null) {
-                $('#imgDetails-EM-GT').addClass('d-none');
+            // curve mask
+            if (data.custom_mask_path_curve === null) {
+                $('#imgDetails-EM-GT-curve').addClass('d-none');
             } else {
-                $(new Image()).attr('src', data.custom_mask_path + '?' + Date.now()).load(function () {
-                    $('#imgDetails-EM-GT').attr('src', this.src);
+                $(new Image()).attr('src', data.custom_mask_path_curve + '?' + Date.now()).load(function () {
+                    $('#imgDetails-EM-GT-curve').attr('src', this.src);
                 });
-                $('#imgDetails-EM-GT').removeClass('d-none');
+                $('#imgDetails-EM-GT-curve').removeClass('d-none');
             }
 
+            // pre-synaptic coordinate mask
+            if (data.custom_mask_path_pre === null) {
+                $('#imgDetails-EM-GT-circlePre').addClass('d-none');
+            } else {
+                $(new Image()).attr('src', data.custom_mask_path_pre + '?' + Date.now()).load(function () {
+                    $('#imgDetails-EM-GT-circlePre').attr('src', this.src);
+                });
+                $('#imgDetails-EM-GT-circlePre').removeClass('d-none');
+            }
 
-            $('#detailsModal').modal('show');
+            // post-synaptic coordinate mask
+            if (data.custom_mask_path_post === null) {
+                $('#imgDetails-EM-GT-circlePost').addClass('d-none');
+            } else {
+                $(new Image()).attr('src', data.custom_mask_path_post + '?' + Date.now()).load(function () {
+                    $('#imgDetails-EM-GT-circlePost').attr('src', this.src);
+                });
+                $('#imgDetails-EM-GT-circlePost').removeClass('d-none');
+            }
 
             // update the range slider
             $('#rangeSlices').attr('min', data.range_min);
@@ -74,7 +92,29 @@ $(document).ready(function () {
     // with in the modal view retrieve the instance specific data
     // to switch between the slices 
     $('#rangeSlices').on('input', function () {
-        // get the curren slice slice index
+
+        // set the visibility of the canvases to hidden
+        // this will trigger the deletion of the canvas
+        $('canvas.curveCanvas').addClass('d-none')
+        $('canvas.circleCanvasPre').addClass('d-none')
+        $('canvas.circleCanvasPost').addClass('d-none')
+
+        // reset all buttons
+        $('#canvasButtonPreCRD').text('Pre-Synaptic CRD');
+        $('#canvasButtonPostCRD').text('Post-Synaptic CRD');
+        $('#canvasButtonPreCRD').prop('disabled', false);
+        $('#canvasButtonPostCRD').prop('disabled', false);
+
+        // reset the draw mask button
+        $('#canvasButtonDrawMask').text('Draw Mask');
+        $('#canvasButtonDrawMask').prop('disabled', false);
+
+        // disable all options except the activate canvas button
+        $('#canvasButtonFill').prop('disabled', true);
+        $('#canvasButtonSplit').prop('disabled', true);
+        $('#canvasButtonSave').prop('disabled', true);
+
+        // get the current slice slice index
         viewed_instance_slice = $(this).val();
         // update the appropriate attribute to be used by the draw.js script
         $(this).data('viewed_instance_slice', viewed_instance_slice);
@@ -101,13 +141,34 @@ $(document).ready(function () {
             data_json = JSON.parse(data.data);
             $('#imgDetails-EM').attr('src', data_json.EM + '/' + viewed_instance_slice + '.png');
 
-            if (data.custom_mask_path === null) {
-                $('#imgDetails-EM-GT').addClass('d-none');
+            // curve mask
+            if (data.custom_mask_path_curve === null) {
+                $('#imgDetails-EM-GT-curve').addClass('d-none');
             } else {
-                $(new Image()).attr('src', data.custom_mask_path + '?' + Date.now()).load(function () {
-                    $('#imgDetails-EM-GT').attr('src', this.src);
+                $(new Image()).attr('src', data.custom_mask_path_curve + '?' + Date.now()).load(function () {
+                    $('#imgDetails-EM-GT-curve').attr('src', this.src);
                 });
-                $('#imgDetails-EM-GT').removeClass('d-none');
+                $('#imgDetails-EM-GT-curve').removeClass('d-none');
+            }
+
+            // pre-synaptic coordinate mask
+            if (data.custom_mask_path_pre === null) {
+                $('#imgDetails-EM-GT-circlePre').addClass('d-none');
+            } else {
+                $(new Image()).attr('src', data.custom_mask_path_pre + '?' + Date.now()).load(function () {
+                    $('#imgDetails-EM-GT-circlePre').attr('src', this.src);
+                });
+                $('#imgDetails-EM-GT-circlePre').removeClass('d-none');
+            }
+
+            // post-synaptic coordinate mask
+            if (data.custom_mask_path_post === null) {
+                $('#imgDetails-EM-GT-circlePost').addClass('d-none');
+            } else {
+                $(new Image()).attr('src', data.custom_mask_path_post + '?' + Date.now()).load(function () {
+                    $('#imgDetails-EM-GT-circlePost').attr('src', this.src);
+                });
+                $('#imgDetails-EM-GT-circlePost').removeClass('d-none');
             }
         });
 
@@ -141,7 +202,9 @@ $(document).ready(function () {
 
     // ensure that the canvas is depicted when returning to the 2D view
     $('#back_to_2d').on('click', function(){
-        $('canvas.coveringCanvas').removeClass('d-none') // change the visibility of the canvas
+        $('canvas.curveCanvas').removeClass('d-none') // change the visibility of the canvas
+        // TODO if I check the ng before drawing any thing we will see the picture logo instead of the canvas
+        // Have to also check this logic for the circle canvas
     });
 
     $('#review_bbox').click(async function (e) {
@@ -164,7 +227,7 @@ $(document).ready(function () {
 
     $('#save_bbox').click(function () {
         // update the bb information with the manuel corrections and pass them to the backend
-        // trigger the processing/save to Json process in the backend
+        // trigger the processing/save to the pandas df in the backend
         $.ajax({
             url: '/ng_bbox_fp_save',
             type: 'POST',

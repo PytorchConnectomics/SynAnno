@@ -38,9 +38,16 @@
             {% for image in images %}
 
             {% set z1, z2, x1, x2, y1, y2 = image.Adjusted_Bbox %}
-            {% set custom_mask_name = 'idx_' ~ image.Image_Index ~  '_ms_' ~ image.Middle_Slice ~ '_cor_' ~z1~ '_' ~z2~ '_' ~x1~ '_' ~x2~ '_' ~y1~ '_' ~y2 ~ '.png' %}
-            {% set custom_mask_path_check =  './synanno/static/custom_masks/' ~ custom_mask_name %}
-            {% set custom_mask_path_load =  '/static/custom_masks/' ~ custom_mask_name %}
+            {% set custom_base_path = 'idx_' ~ image.Image_Index ~  '_slice_' ~ image.Middle_Slice ~ '_cor_' ~z1~ '_' ~z2~ '_' ~x1~ '_' ~x2~ '_' ~y1~ '_' ~y2 ~ '.png' %}
+            {% set custom_mask_name_curve = 'curve_' ~ custom_base_path %}
+            {% set custom_mask_name_circle_pre = 'circlePre_' ~ custom_base_path %}
+            {% set custom_mask_name_circle_post = 'circlePost_' ~ custom_base_path %}
+            {% set custom_mask_path_check_curve =  './synanno/static/custom_masks/' ~ custom_mask_name_curve %}
+            {% set custom_mask_path_check_circle_pre =  './synanno/static/custom_masks/' ~ custom_mask_name_circle_pre %}
+            {% set custom_mask_path_check_circle_post =  './synanno/static/custom_masks/' ~ custom_mask_name_circle_post %}
+            {% set custom_mask_path_load_curve =  '/static/custom_masks/' ~ custom_mask_name_curve %}
+            {% set custom_mask_path_load_circle_pre =  '/static/custom_masks/' ~ custom_mask_name_circle_pre %}
+            {% set custom_mask_path_load_circle_post =  '/static/custom_masks/' ~ custom_mask_name_circle_post %}
 
             <div class="card border rounded card-body card-body-proof-read text-center"
                 style="border-width:4px !important;" id="id_error-{{image.Page}}_{{image.Image_Index}}">
@@ -49,13 +56,26 @@
                     page="{{ image.Page }}" data_id="{{ image.Image_Index }}" view_style="{{ view_style }}"
                     label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}">
                     <div class="main-image-categorize">
+                        <!-- In case of a FN we depict we use the source image also as the target to act as placholder -->
                         {% if image.Error_Description != "False Negatives"%}
-                        <img id="imgEM-GT-{{image.Page}}-{{image.Image_Index}}" class="img_categorize"
-                            src="{% if os.path.exists(custom_mask_path_check) %} {{custom_mask_path_load}} {% else %} {{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
+                        <img id="img-target-curve-{{image.Page}}-{{image.Image_Index}}" class="img_categorize"
+                            src="{% if os.path.exists(custom_mask_path_check_curve) %} {{custom_mask_path_load_custom_mask_path_check_curve}} {% else %} {{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
+                            width="64px" height="64px" style="opacity: 0.5; ">
+                        <img id="img-target-circlePre-{{image.Page}}-{{image.Image_Index}}" class="img_categorize d-none"
+                            src="{% if os.path.exists(custom_mask_path_check_circle_pre) %} {{custom_mask_path_load_custom_mask_path_check_circle_pre}} {% else %} {{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
+                            width="64px" height="64px" style="opacity: 0.5; ">
+                        <img id="img-target-circlePost-{{image.Page}}-{{image.Image_Index}}" class="img_categorize d-none"
+                            src="{% if os.path.exists(custom_mask_path_check_circle_post) %} {{custom_mask_path_load_custom_mask_path_check_circle_post}} {% else %} {{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
                             width="64px" height="64px" style="opacity: 0.5; ">
                         {% else %}
-                        <img id="imgEM-GT-{{image.Page}}-{{image.Image_Index}}" class="img_categorize"
-                            src="{% if os.path.exists(custom_mask_path_check) %} {{custom_mask_path_load}} {% else %} {{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
+                        <img id="img-target-curve-{{image.Page}}-{{image.Image_Index}}" class="img_categorize"
+                            src="{% if os.path.exists(custom_mask_path_check_curve) %} {{custom_mask_path_load_custom_mask_path_check_curve}} {% else %} {{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
+                            width="64px" height="64px" style="opacity: 0.5; ">
+                        <img id="img-target-circlePre-{{image.Page}}-{{image.Image_Index}}" class="img_categorize d-none"
+                            src="{% if os.path.exists(custom_mask_path_check_circle_pre) %} {{custom_mask_path_load_custom_mask_path_check_circle_pre}} {% else %} {{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
+                            width="64px" height="64px" style="opacity: 0.5; ">
+                        <img id="img-target-circlePost-{{image.Page}}-{{image.Image_Index}}" class="img_categorize d-none"
+                            src="{% if os.path.exists(custom_mask_path_check_circle_post) %} {{custom_mask_path_load_custom_mask_path_check_circle_post}} {% else %} {{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}} {% endif %}"
                             width="64px" height="64px" style="opacity: 0.5; ">
                         {% endif %}
                         <img id="imgGT-{{image.Page}}-{{image.Image_Index}}" class="img_categorize" data-image_base_path="{{ image.EM }}"

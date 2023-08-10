@@ -253,7 +253,9 @@ def get_instance() -> Dict[str, object]:
     page = int(request.form['page'])
     index = int(request.form['data_id'])
 
-    custom_mask_path = None
+    custom_mask_path_curve = None
+    custom_mask_path_pre = None
+    custom_mask_path_post = None
 
     # when first opening a instance modal view
     if load == 'full':
@@ -273,14 +275,20 @@ def get_instance() -> Dict[str, object]:
             base_mask_path = str(request.form['base_mask_path'])
             if base_mask_path:
                 coordinates = '_'.join(list(map(str,data["Adjusted_Bbox"])))
-                path = os.path.join(base_mask_path, 'idx_' + str(data["Image_Index"]) + '_ms_' +  str(data["Middle_Slice"]) + '_cor_' + coordinates + '.png')
-                if os.path.exists('./synanno' + path):
-                    custom_mask_path = path
+                path_curve = os.path.join(base_mask_path, 'curve_idx_' + str(data["Image_Index"]) + '_slice_' +  str(data["Middle_Slice"]) + '_cor_' + coordinates + '.png')
+                path_circle_pre = os.path.join(base_mask_path, 'circlePre_idx_' + str(data["Image_Index"]) + '_slice_' +  str(data["Middle_Slice"]) + '_cor_' + coordinates + '.png')
+                path_circle_post = os.path.join(base_mask_path, 'circlePost_idx_' + str(data["Image_Index"]) + '_slice_' +  str(data["Middle_Slice"]) + '_cor_' + coordinates + '.png')
+                if os.path.exists('./synanno' + path_curve):
+                    custom_mask_path_curve = path_curve
+                if os.path.exists('./synanno' + path_circle_pre):
+                    custom_mask_path_pre = path_circle_pre
+                if os.path.exists('./synanno' + path_circle_post):
+                    custom_mask_path_post = path_circle_post
 
         data = json.dumps(data)
 
         final_json = jsonify(data=data, slices_len=slices_len, halflen=middle_slice,
-                             range_min=range_min, host=app.config['IP'], port=app.config['PORT'], custom_mask_path=custom_mask_path)
+                             range_min=range_min, host=app.config['IP'], port=app.config['PORT'], custom_mask_path_curve=custom_mask_path_curve, custom_mask_path_pre=custom_mask_path_pre, custom_mask_path_post=custom_mask_path_post)
 
     # when changing the depicted slice with in the modal view
     elif load == 'single':
@@ -294,12 +302,18 @@ def get_instance() -> Dict[str, object]:
                 # check if file exists
                 if viewed_instance_slice:
                     coordinates = '_'.join(list(map(str,data["Adjusted_Bbox"])))
-                    path = os.path.join(base_mask_path, 'idx_' + str(data["Image_Index"]) + '_ms_' +  str(viewed_instance_slice) + '_cor_' + coordinates + '.png')
-                    if os.path.exists('./synanno' + path):
-                        custom_mask_path = path
+                    path_curve = os.path.join(base_mask_path, 'curve_idx_' + str(data["Image_Index"]) + '_slice_' +  str(viewed_instance_slice) + '_cor_' + coordinates + '.png')
+                    path_circle_pre = os.path.join(base_mask_path, 'circlePre_idx_' + str(data["Image_Index"]) + '_slice_' +  str(viewed_instance_slice) + '_cor_' + coordinates + '.png')
+                    path_circle_post = os.path.join(base_mask_path, 'circlePost_idx_' + str(data["Image_Index"]) + '_slice_' +  str(viewed_instance_slice) + '_cor_' + coordinates + '.png')
+                    if os.path.exists('./synanno' + path_curve):
+                        custom_mask_path_curve = path_curve
+                    if os.path.exists('./synanno' + path_circle_pre):
+                        custom_mask_path_pre = path_circle_pre
+                    if os.path.exists('./synanno' + path_circle_post):
+                        custom_mask_path_post = path_circle_post
 
         data = json.dumps(data)
-        return jsonify(data=data, custom_mask_path=custom_mask_path)
+        return jsonify(data=data, custom_mask_path_curve=custom_mask_path_curve, custom_mask_path_pre=custom_mask_path_pre, custom_mask_path_post=custom_mask_path_post)
 
     return final_json
 

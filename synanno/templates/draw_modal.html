@@ -11,13 +11,27 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body mx-auto">
+                <div class="center">
+                    <div class="row justify-content-center">
+                        <div class="col-md-12 text-center">
+                            <form>
+                                <button type="button" class="btn btn-secondary" id="canvasButtonPreCRD">Pre-Synaptic CRD</button>
+                                <button type="button" class="btn btn-secondary" id="canvasButtonPostCRD">Post-Synaptic CRD</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
                 <div class="d-flex justify-content-center">
                     <div id="cardDetails" class="card border-0 p-1">
                         <div class="outsideWrapper border rounded" style="border-width:4px !important;">
                             <div class="insideWrapper">
                                 <img id="imgDetails-EM" class="coveredImage" src="">
-                                <img id="imgDetails-EM-GT" class="coveredImage d-none" src="">
-                                <canvas class="coveringCanvas d-none"></canvas>
+                                <img id="imgDetails-EM-GT-curve" class="coveredImage d-none" style="opacity: 0.5; " src="">
+                                <img id="imgDetails-EM-GT-circlePre" class="coveredImage d-none" style="opacity: 0.5; " src="">
+                                <img id="imgDetails-EM-GT-circlePost" class="coveredImage d-none" style="opacity: 0.5; " src="">
+                                <canvas class="curveCanvas d-none"></canvas>
+                                <canvas class="circleCanvasPre d-none"></canvas>
+                                <canvas class="circleCanvasPost d-none"></canvas>
                             </div>
                         </div>
                     </div>
@@ -27,13 +41,10 @@
                         <div class="col-md-12 text-center">
                             <form>
                                 <button type="button" class="btn btn-secondary"
-                                    id="canvasButtonActivate">Activate</button>
-                                <button type="button" class="btn btn-secondary" id="canvasButtonCreate">Fill</button>
-                                <button type="button" class="btn btn-secondary"
-                                    id="canvasButtonPolarity">Switch</button>
+                                id="canvasButtonDrawMask">Draw Mask</button>
+                                <button type="button" class="btn btn-secondary" id="canvasButtonFill">Fill</button>
                                 <button type="button" class="btn btn-secondary" id="canvasButtonSplit">Revise</button>
-                                <button type="button" class="btn btn-secondary" id="canvasButtonSave"
-                                    data-bs-dismiss="modal">Save</button>
+                                <button type="button" class="btn btn-secondary" id="canvasButtonSave">Save</button>
                             </form>
                         </div>
                     </div>

@@ -1,30 +1,58 @@
-name: Build and push Docker image
+# name: Build and push Docker image
+
+# on:
+#   push:
+#     branches:
+#       - main
+
+# env:
+#   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+#   DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+# jobs:
+#   build-and-push:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v2
+
+#       - name: Log in to Docker Hub
+#         run: docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+
+#       - name: Build and tag Docker image
+#         run: |
+#           docker build -t $DOCKER_USERNAME/synanno:latest .
+#           docker tag $DOCKER_USERNAME/synanno:latest $DOCKER_USERNAME/synanno:${{ github.sha }}
+
+#       - name: Push Docker image
+#         run: |
+#           docker push $DOCKER_USERNAME/synanno:latest
+#           docker push $DOCKER_USERNAME/synanno:${{ github.sha }}
+name: Docker Build and Push
 
 on:
   push:
-    branches:
-      - main
-
-env:
-  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+    paths:
+      - 'version.txt'
 
 jobs:
-  build-and-push:
+  build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+    - name: Checkout code
+      uses: actions/checkout@v2
 
-      - name: Log in to Docker Hub
-        run: docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+    - name: Read VERSION
+      id: version
+      run: echo "::set-output name=version::$(cat VERSION.txt)"
 
-      - name: Build and tag Docker image
-        run: |
-          docker build -t $DOCKER_USERNAME/synanno:latest .
-          docker tag $DOCKER_USERNAME/synanno:latest $DOCKER_USERNAME/synanno:${{ github.sha }}
-
-      - name: Push Docker image
-        run: |
-          docker push $DOCKER_USERNAME/synanno:latest
-          docker push $DOCKER_USERNAME/synanno:${{ github.sha }}
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        push: true
+        tags: $DOCKER_USERNAME/synanno:${{ steps.version.outputs.version }}
+        # Add your DockerHub username and password as secrets in the GitHub repo
+        username: $DOCKER_USERNAME
+        password: $DOCKER_PASSWORD

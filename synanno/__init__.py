@@ -15,6 +15,8 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 app.secret_key = os.urandom(32)
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
+app.config['SESSION_FILE_DIR'] = '/tmp/flask_session'
+
 Session(app)
 
 ''' DANGER! 

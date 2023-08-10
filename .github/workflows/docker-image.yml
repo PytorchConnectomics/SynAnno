@@ -43,9 +43,8 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    # - name: Read VERSION
-    #   id: version
-    #   run: echo "::set-output name=version::$(cat version.txt)"
+    - name: Log in to Docker Hub
+      run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
 
     - name: Read VERSION
       id: version

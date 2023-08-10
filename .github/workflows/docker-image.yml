@@ -49,7 +49,7 @@ jobs:
 
     - name: Read VERSION
       id: version
-      run: echo "version=$(cat VERSION.txt)" >> $TAG_NAME
+      run: echo "version=$(cat version.txt)" >> $TAG_NAME
 
     - name: Build and Push Docker Image
       uses: docker/build-push-action@v2

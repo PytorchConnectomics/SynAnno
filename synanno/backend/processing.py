@@ -1,11 +1,9 @@
 from typing import Union, Tuple, Dict
-from collections import OrderedDict
 
 import os
 import json
 import shutil
-import warnings
-import itertools
+import traceback
 import numpy as np
 from PIL import Image
 from skimage.morphology import remove_small_objects
@@ -77,25 +75,6 @@ def get_center_blob_value_vectorized(labeled_array: np.ndarray, blob_values: np.
     return blob_values[center_blob_index]
 
 
-def bbox_ND(img: np.ndarray) -> tuple:
-    """Calculate the bounding box coordinates of a N-dimensional array by finding the range of indices in each dimension of the input array that contain non-zero values. 
-        For a 2D image, these would correspond to the top-left and bottom-right corners of the bounding box. In a 3D space, it would correspond to the eight corners of the bounding box.
-        Please note that the function may not work as expected if there are isolated non-zero elements in the array (outliers). It works best when the non-zero elements are contiguous or close together.
-
-    Args:
-        img (np.ndarray): the N-dimensional array.
-
-    Returns:
-        bbox (tuple): the bounding box coordinates.
-    """
-
-    N = img.ndim
-    out = []
-    for ax in itertools.combinations(reversed(range(N)), N - 1):
-        nonzero = np.any(img, axis=ax)
-        out.extend(np.where(nonzero)[0][[0, -1]])
-    return tuple(out)
-
 def calculate_crop_pad(bbox_3d: list, volume_shape: tuple, pad_z: bool = False) -> Tuple[list, tuple]:
     """Calculate the crop and pad parameters for the given bounding box and volume shape.
     
@@ -109,19 +88,19 @@ def calculate_crop_pad(bbox_3d: list, volume_shape: tuple, pad_z: bool = False) 
         pad (tuple): the padding parameters.
 
     """
-    z1o, z2o, y1o, y2o, x1o, x2o = bbox_3d  # region to crop
-    z1m, z2m, y1m, y2m, x1m, x2m = 0, volume_shape[0], 0, volume_shape[1], 0, volume_shape[2]
-    z1, y1, x1 = max(z1o, z1m), max(y1o, y1m), max(x1o, x1m)
-    z2, y2, x2 = min(z2o, z2m), min(y2o, y2m), min(x2o, x2m)
+    c11o, c12o, c21o, c22o, c31o, c32o = bbox_3d  # region to crop
+    c11m, c12m, c21m, c22m, c31m, c32m = 0, volume_shape[0], 0, volume_shape[1], 0, volume_shape[2]
+    c11, c21, c31 = max(c11o, c11m), max(c21o, c21m), max(c31o, c31m)
+    c12, c22, c32 = min(c12o, c12m), min(c22o, c22m), min(c32o, c32m)
 
-    assert z1 < z2 and y1 < y2 and x1 < x2, "Invalid bounding box."
+    assert c11 < c12 and c21 < c22 and c31 < c32, "Invalid bounding box."
 
-    if pad_z:
-        pad = [[z1 - z1o, z2o - z2], [y1 - y1o, y2o - y2], [x1 - x1o, x2o - x2]]
-    else:
-        pad = [[0,0], [y1 - y1o, y2o - y2], [x1 - x1o, x2o - x2]]
+    pad = [[c11 - c11o, c12o - c12], [c21 - c21o, c22o - c22], [c31 - c31o, c32o - c32]]
 
-    return [z1, z2, y1, y2, x1, x2], pad
+    if not pad_z:
+        pad[list(synanno.coordinate_order.keys()).index('z')] = [0, 0]
+
+    return [c11, c12, c21, c22, c31, c32], pad
 
 
 def create_dir(parent_dir_path: str, dir_name: str) -> str:
@@ -199,6 +178,9 @@ def retrieve_instance_metadata(crop_size_x: int = 148, crop_size_y: int = 148, c
     # create the handles to materialization data object
     global materialization
 
+    # retrieve the order of the coordinates (xyz, xzy, yxz, yzx, zxy, zyx)
+    coordinate_order = list(synanno.coordinate_order.keys())
+
     # set the progress bar to zero
     if page != 0:      
         synanno.progress_bar_status['percent'] = 0
@@ -235,6 +217,9 @@ def retrieve_instance_metadata(crop_size_x: int = 148, crop_size_y: int = 148, c
             item["Label"] = "Correct"
             item["Annotated"] = "No"            
             item["Error_Description"] = "None"
+            item["X_Index"] = coordinate_order.index('x')
+            item["Y_Index"] = coordinate_order.index('y')
+            item["Z_Index"] = coordinate_order.index('z')
             item["Middle_Slice"] = int(bbox_dict[idx]['z'])
             item["cz0"] = int(bbox_dict[idx]['z'])
             item["cy0"] = int(bbox_dict[idx]['y'])
@@ -258,10 +243,13 @@ def retrieve_instance_metadata(crop_size_x: int = 148, crop_size_y: int = 148, c
             x1 = item["cx0"] - crop_size_x // 2
             x2 = item["cx0"] + crop_size_x // 2
 
-            item["Original_Bbox"]  = list(map(int, [z1, z2, y1, y2, x1, x2]))
+            bbox_org  = list(map(int, [z1, z2, y1, y2, x1, x2]))
+
+            # save the original bounding box using the provided coordinate order
+            item["Original_Bbox"] = [bbox_org[coordinate_order.index(coord)*2 + i] for coord in ['z', 'y', 'x'] for i in range(2)]
 
             # retrieve the actual crop coordinates and possible padding based on the max dimensions of the whole cloud volume
-            crop_bbox, img_padding = calculate_crop_pad(item["Original_Bbox"] , [synanno.vol_dim_z, synanno.vol_dim_y, synanno.vol_dim_x])
+            crop_bbox, img_padding = calculate_crop_pad(item["Original_Bbox"] , synanno.vol_dim)
 
             item["Adjusted_Bbox"], item["Padding"] = crop_bbox, img_padding
             instance_list.append(item)
@@ -294,6 +282,7 @@ def retrieve_instance_metadata(crop_size_x: int = 148, crop_size_y: int = 148, c
                     future.result(timeout=15)
                 except Exception as exc:
                     print('The exception persists: %s' % exc)
+                    traceback.print_exc()
             
     synanno.progress_bar_status['percent'] = int(100) 
 
@@ -313,14 +302,14 @@ def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) 
     # retrieve the coordinate order of the cloud volume | xyz, xzy, yxz, yzx, zxy, zyx
     coord_order = list(synanno.coordinate_order.keys())
 
-    # map the bounding box coordinates to a dictionary
+    # map the bounding box coordinates to a dictionary using the provided coordinate order
     crop_box_dict = {
-        'z1': crop_bbox[0],
-        'z2': crop_bbox[1],
-        'y1': crop_bbox[2],
-        'y2': crop_bbox[3],
-        'x1': crop_bbox[4],
-        'x2': crop_bbox[5]
+        coord_order[0]+'1': crop_bbox[0],
+        coord_order[0]+'2': crop_bbox[1],
+        coord_order[1]+'1': crop_bbox[2],
+        coord_order[1]+'2': crop_bbox[3],
+        coord_order[2]+'1': crop_bbox[4],
+        coord_order[2]+'2': crop_bbox[5]
     }
 
     # create the bounding box for the current synapse based on the order of the coordinates
@@ -333,8 +322,8 @@ def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) 
     bound_source = Bbox((bound_target.minpt * list(synanno.scale.values())).astype(int), (bound_target.maxpt * list(synanno.scale.values())).astype(int))
 
     # retrieve the source and target images from the cloud volume
-    cropped_img = synanno.source_cv.download(bound_source, coord_resolution=synanno.coord_resolution_source, mip=0)
-    cropped_gt = synanno.target_cv.download(bound_target, coord_resolution=synanno.coord_resolution_target, mip=0)
+    cropped_img = synanno.source_cv.download(bound_source, coord_resolution=synanno.coord_resolution_source, mip=0, parallel=True)
+    cropped_gt = synanno.target_cv.download(bound_target, coord_resolution=synanno.coord_resolution_target, mip=0, parallel=True)
 
     # remove the singleton dimension, take care as the z dimension might be singleton
     cropped_img = cropped_img.squeeze(axis=3)
@@ -348,10 +337,6 @@ def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) 
         cropped_gt = resize(cropped_gt, cropped_img.shape, mode='constant', preserve_range=True, anti_aliasing=True)
         cropped_gt = (cropped_gt > 0.5).astype(int) # convert to binary mask
 
-    # given the six cases xyz, xzy, yxz, yzx, zxy, zyx, we have to permute the axes to match the zyx order
-    cropped_img = np.transpose(cropped_img, axes=[coord_order.index('z'), coord_order.index('y'), coord_order.index('x')])
-    cropped_gt = np.transpose(cropped_gt, axes=[coord_order.index('z'), coord_order.index('y'), coord_order.index('x')])
-
     # process the 3D gt segmentation by removing small objects and converting it to instance-level segmentation.
     cropped_seg = process_syn(cropped_gt)
 
@@ -361,17 +346,16 @@ def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) 
     
     assert cropped_img_pad.shape == cropped_seg_pad.shape, "The shape of the source and target images do not match."
 
-
     ### mark the position of the post and pre synapses using pre_pt and post_pt
 
     # adjust pre_pt and post_pt to cropped out section
-    pre_pt_x = item["pre_pt_x"] - crop_bbox[4] + img_padding[2][0]
-    pre_pt_y = item["pre_pt_y"] - crop_bbox[2] + img_padding[1][0]
-    pre_pt_z = item["pre_pt_z"] - crop_bbox[0] + img_padding[0][0]
+    pre_pt_x = item["pre_pt_x"] - crop_box_dict['x1'] + img_padding[coord_order.index('x')][0]
+    pre_pt_y = item["pre_pt_y"] - crop_box_dict['y1'] + img_padding[coord_order.index('y')][0]
+    pre_pt_z = item["pre_pt_z"] - crop_box_dict['z1'] + img_padding[coord_order.index('z')][0]
     
-    post_pt_x = item["post_pt_x"] - crop_bbox[4] + img_padding[2][0]
-    post_pt_y = item["post_pt_y"] - crop_bbox[2] + img_padding[1][0]
-    post_pt_z = item["post_pt_z"] - crop_bbox[0] + img_padding[0][0]
+    post_pt_x = item["post_pt_x"] - crop_box_dict['x1'] + img_padding[coord_order.index('x')][0]
+    post_pt_y = item["post_pt_y"] - crop_box_dict['y1'] + img_padding[coord_order.index('y')][0]
+    post_pt_z = item["post_pt_z"] - crop_box_dict['z1'] + img_padding[coord_order.index('z')][0]
 
     # scale the the points to the resolution of the source cloud volume
     pre_pt_x = int(pre_pt_x * synanno.scale['x'])
@@ -384,21 +368,33 @@ def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) 
 
     # create an RGB mask of the synapse from the single channel binary mask
     # colors all non zero values turquoise 
-    vis_label = syn2rgb(cropped_seg_pad) # z, y, x, c
+    vis_label = syn2rgb(cropped_seg_pad) # coord_0, coord_1, coord_2, c, e.g., x,y,z,3
 
     # draw a bright circle at the position of the pre and post synapse
-    vis_label = draw_cylinder(vis_label, pre_pt_x, pre_pt_y, pre_pt_z, radius=10, color_1=(0, 255, 0), color_2=(200, 255, 200))
-    vis_label = draw_cylinder(vis_label, post_pt_x, post_pt_y, post_pt_z, radius=10, color_1=(0, 0, 255), color_2=(200, 200, 255))
+    print(pre_pt_x, pre_pt_y, pre_pt_z)
+    print(post_pt_x, post_pt_y, post_pt_z)
+    print(vis_label.shape)
+    print(coord_order)
+    vis_label = draw_cylinder(vis_label, pre_pt_x, pre_pt_y, pre_pt_z, radius=10, color_1=(0, 255, 0), color_2=(200, 255, 200), layout=coord_order)
+    vis_label = draw_cylinder(vis_label, post_pt_x, post_pt_y, post_pt_z, radius=10, color_1=(0, 0, 255), color_2=(200, 200, 255), layout=coord_order)
 
-    for s in range(cropped_img_pad.shape[0]):
-        img_name = str(item["Adjusted_Bbox"][0] + s)+".png"
+    # Determine the slice axis index based on the first entry in coord_order
+    slice_axis = coord_order.index('z')
 
+    for s in range(cropped_img_pad.shape[slice_axis]):
+        img_name = str(item["Adjusted_Bbox"][slice_axis*2] + s)+".png"
+
+        # Create a dynamic slicing tuple based on the determined slice axis
+        # slice(None) is equivalent to the colon (:) operator
+        slicing_img = [s if idx == slice_axis else slice(None) for idx in range(3)]
+        slicing_seg = [s if idx == slice_axis else slice(None) for idx in range(4)]
+        
         # image
-        img_c = Image.fromarray(adjust_image_range(cropped_img_pad[s,:,:]))
+        img_c = Image.fromarray(adjust_image_range(cropped_img_pad[tuple(slicing_img)]))
         img_c.save(os.path.join(img_dir_instance,img_name), "PNG")
 
         # label
-        lab_c = Image.fromarray(vis_label[s,:,:,:])
+        lab_c = Image.fromarray(vis_label[tuple(slicing_seg)])
 
         # reduce the opacity of all black pixels to zero
         lab_c = lab_c.convert("RGBA")
@@ -450,12 +446,12 @@ def neuron_centric_3d_data_processing(source_url: str, target_url: str, table_na
 
         # test which size is smaller
         if np.prod(synanno.source_cv.volume_size) < np.prod(synanno.target_cv.volume_size):
-            vol_dim = {c: dim for c, dim in zip(synanno.coordinate_order.keys(), synanno.source_cv.volume_size)}
+            vol_dim = tuple([s-1 for s in synanno.source_cv.volume_size]) 
         else:
-            vol_dim = {c: dim for c, dim in zip(synanno.coordinate_order.keys(), synanno.target_cv.volume_size)}
+            vol_dim = tuple([s-1 for s in synanno.target_cv.volume_size]) 
 
-    synanno.vol_dim_x, synanno.vol_dim_y, synanno.vol_dim_z = vol_dim['x'], vol_dim['y'], vol_dim['z']
-    synanno.vol_dim_x_scaled, synanno.vol_dim_y_scaled, synanno.vol_dim_z_scaled = synanno.vol_dim_x * synanno.scale['x'], synanno.vol_dim_y * synanno.scale['y'], synanno.vol_dim_z * synanno.scale['z']
+    synanno.vol_dim = vol_dim
+    synanno.vol_dim_scaled = (int(a * b) for a, b in zip(vol_dim, synanno.scale.values()))
     
     # read data as dict from path table_name
     synanno.progress_bar_status['status'] = "Retrieving Materialization"

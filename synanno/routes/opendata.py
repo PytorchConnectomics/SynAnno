@@ -128,6 +128,8 @@ def upload_file() -> Template:
     # retrieve the coordinate order and resolution from the form and save them in a dict, used by the NG instance and the processing functions
     synanno.coordinate_order = {c: (request.form.get('res-source-'+str(i+1)), request.form.get('res-target-'+str(i+1))) for i, c in enumerate(list(request.form.get('coordinates')))}
     
+    coordinate_order = list(synanno.coordinate_order.keys())
+
     # Convert coordinate resolution values to integers
     synanno.coord_resolution_source = np.array([int(res[0]) for res in synanno.coordinate_order.values()]).astype(int)
     synanno.coord_resolution_target = np.array([int(res[1]) for res in synanno.coordinate_order.values()]).astype(int)
@@ -154,9 +156,10 @@ def upload_file() -> Template:
         # if the user chose the view view_style mode load the bbox specific subvolume and then process the data like in the local case
         if synanno.view_style == 'view':
 
-            subvolume = {'x1': int(request.form.get('x1')) if request.form.get('x1') else 0, 'x2': int(request.form.get('x2')) if request.form.get('x2') else -1,
-                         'y1': int(request.form.get('y1')) if request.form.get('y1') else 0, 'y2': int(request.form.get('y2')) if request.form.get('y2') else -1,
-                         'z1': int(request.form.get('z1')) if request.form.get('z1') else 0, 'z2': int(request.form.get('z2')) if request.form.get('z2') else -1}
+            subvolume = {}
+            for coord in coordinate_order:
+                subvolume[coord + '1'] = int(request.form.get(coord + '1')) if request.form.get(coord + '1') else 0
+                subvolume[coord + '2'] = int(request.form.get(coord + '2')) if request.form.get(coord + '2') else -1
 
             ip.neuron_centric_3d_data_processing(source_url, target_url, materialization_url, subvolume=subvolume, bucket_secret_json=bucket_secret if bucket_secret else '~/.cloudvolume/secrets', crop_size_x=session['crop_size_x'], crop_size_y=session['crop_size_y'], crop_size_z=session['crop_size_z'], mode=draw_or_annotate, view_style=synanno.view_style)
         # if the user chose the neuron view_style mode, retrieve a list of all the synapses of the provided neuron ids and then process the data on synapse level 
@@ -216,6 +219,8 @@ def get_instance() -> Dict[str, object]:
             The instance specific data
     '''
 
+    coordinate_order = list(synanno.coordinate_order.keys())
+
     # retrieve the page and instance index
     mode = str(request.form['mode'])
     load = str(request.form['load'])
@@ -238,7 +243,7 @@ def get_instance() -> Dict[str, object]:
         data = synanno.df_metadata.query('Page == @page & Image_Index == @index').to_dict('records')[0]
 
         # retrieve the first slice of the instance
-        range_min = data['Adjusted_Bbox'][0]
+        range_min = data['Adjusted_Bbox'][coordinate_order.index('z')*2]
 
         if mode == 'draw':
             base_mask_path = str(request.form['base_mask_path'])

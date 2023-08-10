@@ -111,10 +111,10 @@ def submit_with_retry(executor: concurrent.futures.Executor, func: Callable[[dic
     return None
 
 
-def draw_cylinder(image: np.ndarray, center_x: int, center_y: int, center_z: int, radius: int, color_1: Tuple[int, int, int], color_2: Tuple[int, int, int]) -> np.ndarray:
+def draw_cylinder(image: np.ndarray, center_x: int, center_y: int, center_z: int, radius: int, color_1: Tuple[int, int, int], color_2: Tuple[int, int, int], layout: str) -> np.ndarray:
     """
     Function to draw a cylinder in a 4D numpy array. The color of the cylinder changes based on the distance from the center_z.
-    
+
     Parameters:
     image (np.ndarray): Input 4D numpy array.
     center_x (int): X-coordinate of the cylinder center.
@@ -123,12 +123,21 @@ def draw_cylinder(image: np.ndarray, center_x: int, center_y: int, center_z: int
     radius (int): Radius of the cylinder.
     color_1 (Tuple[int, int, int]): RGB color of the circle in the center_z layer.
     color_2 (Tuple[int, int, int]): RGB color of the circles in the other layers.
-    
+    layout (str): The layout of the axes, for example, "zyxc".
+
     Returns:
     np.ndarray: 4D numpy array with the cylinder drawn.
     """
 
-    z_len, y_len, x_len, _ = image.shape
+    # Find the index for each coordinate in the image shape based on the provided layout
+    z_index = layout.index('z')
+    y_index = layout.index('y')
+    x_index = layout.index('x')
+
+    # Get the lengths along each axis
+    z_len = image.shape[z_index]
+    y_len = image.shape[y_index]
+    x_len = image.shape[x_index]
 
     # Create coordinate grid
     Y, X = np.meshgrid(np.arange(y_len), np.arange(x_len), indexing='ij')
@@ -136,11 +145,18 @@ def draw_cylinder(image: np.ndarray, center_x: int, center_y: int, center_z: int
     # Create 3D mask for the cylinder
     mask_cylinder = (X - center_x) ** 2 + (Y - center_y) ** 2 <= radius ** 2
 
+    # Use a list of slices to index the array dynamically
+    slice_list = [slice(None)] * 4
+
     for i in range(z_len):
+        slice_list[z_index] = i
         if i != center_z:
-            image[i, mask_cylinder, :] = color_2
+            slice_list[y_index], slice_list[x_index] = np.where(mask_cylinder), np.where(mask_cylinder)[1]
+            image[tuple(slice_list)] = color_2
         else:
-            image[i, mask_cylinder, :] = color_1
-            
+            slice_list[y_index], slice_list[x_index] = np.where(mask_cylinder), np.where(mask_cylinder)[1]
+            image[tuple(slice_list)] = color_1
+
     return image
+
 

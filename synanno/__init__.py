@@ -71,21 +71,17 @@ coordinate_order = {}
 
 # record the volume dimensions of the smaller volume (image or segmentation)
 # the dimensions are used restrict the cropping range
-global vol_dim_x
-global vol_dim_y
-global vol_dim_z
+global vol_dim
 
-vol_dim_x, vol_dim_y, vol_dim_z = 0,0,0
+vol_dim = (0,0,0)
 
 
 # scale the volume dimensions to the resolution of the larger volume (image or segmentation)
 # for this we multiply the smaller volume's dimensions with scaling factor
 # the scaled versions are required to calculate the cropping range of the false negatives 
-global vol_dim_x_scaled
-global vol_dim_y_scaled
-global vol_dim_z_scaled
+global vol_dim_scaled
 
-vol_dim_x_scaled, vol_dim_y_scaled, vol_dim_z_scaled = 0,0,0
+vol_dim_scaled= (0,0,0)
 
 # handle to the loaded image
 global source

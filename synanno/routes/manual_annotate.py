@@ -127,6 +127,8 @@ def ng_bbox_fp()-> Dict[str, object]:
             lower z bound of the instance as JSON to draw_module.js
     '''
 
+    coordinate_order = list(synanno.coordinate_order.keys())
+
     # expand the bb in in z direction
     # we expand the front and the back z value dependent on their proximity to the boarders
 
@@ -134,7 +136,7 @@ def ng_bbox_fp()-> Dict[str, object]:
 
     cz1 = int(synanno.cz) - expand_z if int(synanno.cz) - expand_z > 0 else 0
     cz2 = int(synanno.cz) + expand_z if int(synanno.cz) + \
-        expand_z < synanno.vol_dim_z_scaled else synanno.vol_dim_z_scaled
+        expand_z < synanno.vol_dim_scaled[coordinate_order.index('z')] else synanno.vol_dim_scaled[coordinate_order.index('z')]
 
     # server the coordinates to the front end
     return jsonify({
@@ -157,6 +159,8 @@ def ng_bbox_fp_save()-> Dict[str, object]:
             lower z bound of the instance as JSON to draw_module.js
     '''
 
+    coordinate_order = list(synanno.coordinate_order.keys())
+
     # retrieve manual correction of coordinates
     cz1 = int(request.form['z1'])
     cz2 = int(request.form['z2'])
@@ -164,6 +168,7 @@ def ng_bbox_fp_save()-> Dict[str, object]:
     synanno.cy = int(request.form['my'])
     synanno.cx = int(request.form['mx'])
 
+    # TODO: can this be deleted?
     # log the coordinates center z, x, and y value and the expended z1 and z2 value
     synanno.cus_fp_bbs.append((synanno.cz, synanno.cy, synanno.cx, cz1, cz2))
 
@@ -197,6 +202,9 @@ def ng_bbox_fp_save()-> Dict[str, object]:
     item['Label'] = 'Incorrect'
     item['Annotated'] = 'No'
     item['Error_Description'] = 'False Negatives'
+    item["X_Index"] = coordinate_order.index('x')
+    item["Y_Index"] = coordinate_order.index('y')
+    item["Z_Index"] = coordinate_order.index('z')
 
     item['Middle_Slice'] = int(synanno.cz)
     
@@ -211,11 +219,11 @@ def ng_bbox_fp_save()-> Dict[str, object]:
 
     bb_x1 = int(synanno.cx) - expand_x if int(synanno.cx) - expand_x > 0 else 0
     bb_x2 = int(synanno.cx) + expand_x if int(synanno.cx) + \
-        expand_x < synanno.vol_dim_x_scaled else synanno.vol_dim_x_scaled
+        expand_x < synanno.vol_dim_scaled[coordinate_order.index('x')] else synanno.vol_dim_scaled[coordinate_order.index('x')]
 
     bb_y1 = int(synanno.cy) - expand_y if int(synanno.cy) - expand_y > 0 else 0
     bb_y2 = int(synanno.cy) + expand_y if int(synanno.cy) + \
-        expand_y < synanno.vol_dim_y_scaled else synanno.vol_dim_y_scaled
+        expand_y < synanno.vol_dim_scaled[coordinate_order.index('y')] else synanno.vol_dim_scaled[coordinate_order.index('y')]
     
     item['pre_pt_z'] = None
     item['pre_pt_y'] = None
@@ -230,18 +238,21 @@ def ng_bbox_fp_save()-> Dict[str, object]:
     
     bbox = list(map(int,[cz1, cz2, bb_y1, bb_y2, bb_x1, bb_x2]))
 
+    # save the original bounding box using the provided coordinate order
+    bbox = [bbox[coordinate_order.index(coord)*2 + i] for coord in ['z', 'y', 'x'] for i in range(2)]
+
     # scale the coordinates to the original target size
-    item['Original_Bbox'] = [int(bbox[0]/synanno.scale['z']), int(bbox[1]/synanno.scale['z']), int(bbox[2]/synanno.scale['y']), int(bbox[3]/synanno.scale['y']), int(bbox[4]/synanno.scale['x']), int(bbox[5]/synanno.scale['x'])]
+    item['Original_Bbox'] = [int(bbox[0]/synanno.scale[coordinate_order[0]]), int(bbox[1]/synanno.scale[coordinate_order[0]]), int(bbox[2]/synanno.scale[coordinate_order[1]]), int(bbox[3]/synanno.scale[coordinate_order[1]]), int(bbox[4]/synanno.scale[coordinate_order[2]]), int(bbox[5]/synanno.scale[coordinate_order[2]])]
 
     crop_bbox, img_padding = calculate_crop_pad(bbox , [synanno.vol_dim_z_scaled, synanno.vol_dim_y_scaled, synanno.vol_dim_x_scaled])
     # map the bounding box coordinates to a dictionary
     crop_box_dict = {
-        'z1': crop_bbox[0],
-        'z2': crop_bbox[1],
-        'y1': crop_bbox[2],
-        'y2': crop_bbox[3],
-        'x1': crop_bbox[4],
-        'x2': crop_bbox[5]
+        coordinate_order[0]+'1': crop_bbox[0],
+        coordinate_order[0]+'2': crop_bbox[1],
+        coordinate_order[1]+'1': crop_bbox[2],
+        coordinate_order[1]+'2': crop_bbox[3],
+        coordinate_order[2]+'1': crop_bbox[4],
+        coordinate_order[2]+'2': crop_bbox[5]
     }
 
     # retrieve the order of the coordinates (xyz, xzy, yxz, yzx, zxy, zyx)
@@ -272,24 +283,25 @@ def ng_bbox_fp_save()-> Dict[str, object]:
     # remove the singleton dimension, take care as the z dimension might be singleton
     cropped_img = cropped_img.squeeze(axis=3)
 
-    # given the six cases xyz, xzy, yxz, yzx, zxy, zyx, we have to permute the axes to match the zyx order
-    cropped_img = np.transpose(cropped_img, axes=[cord_order.index('z'), cord_order.index('y'), cord_order.index('x')])
-
     # pad the images and synapse segmentation to fit the crop size (sz)
     cropped_img = np.pad(cropped_img, img_padding, mode='constant', constant_values=148)
 
     # scale the coordinates to the original target size
-    item["Adjusted_Bbox"] = [int(crop_bbox[0]/synanno.scale['z']), int(crop_bbox[1]/synanno.scale['z']), int(crop_bbox[2]/synanno.scale['y']), int(crop_bbox[3]/synanno.scale['y']), int(crop_bbox[4]/synanno.scale['x']), int(crop_bbox[5]/synanno.scale['x'])]
+    item["Adjusted_Bbox"] = item['Original_Bbox'] = [int(crop_bbox[0]/synanno.scale[coordinate_order[0]]), int(crop_bbox[1]/synanno.scale[coordinate_order[0]]), int(crop_bbox[2]/synanno.scale[coordinate_order[1]]), int(crop_bbox[3]/synanno.scale[coordinate_order[1]]), int(crop_bbox[4]/synanno.scale[coordinate_order[2]]), int(crop_bbox[5]/synanno.scale[coordinate_order[2]])]
     
     # scale the padding to the original target size
-    item["Padding"] = [[int(img_padding[0][0]/synanno.scale['z']), int(img_padding[0][1]/synanno.scale['z'])], [int(img_padding[1][0]/synanno.scale['y']), int(img_padding[1][1]/synanno.scale['y'])], [int(img_padding[2][0]/synanno.scale['x']), int(img_padding[2][1]/synanno.scale['x'])]]
+    item["Padding"] = [int(img_padding[0]/synanno.scale[coordinate_order[0]]), int(img_padding[1]/synanno.scale[coordinate_order[0]]), int(img_padding[2]/synanno.scale[coordinate_order[1]]), int(img_padding[3]/synanno.scale[coordinate_order[1]]), int(img_padding[4]/synanno.scale[coordinate_order[2]]), int(img_padding[5]/synanno.scale[coordinate_order[2]])]
+
+    # Determine the slice axis index based on the first entry in coord_order
+    slice_axis = coordinate_order.index('z')
 
     # save volume slices
-    for s in range(cropped_img.shape[0]):
-        img_name = str(item["Adjusted_Bbox"][0]+s)+'.png'
+    for s in range(cropped_img.shape[slice_axis]):
+        img_name = str(item["Adjusted_Bbox"][slice_axis*2] + s)+".png"
 
         # image
-        img_c = Image.fromarray(adjust_datatype(cropped_img[s,:,:])[0])
+        slicing_img = [s if idx == slice_axis else slice(None) for idx in range(3)]
+        img_c = Image.fromarray(adjust_datatype(slicing_img)[0])
         img_c.save(os.path.join(img_all, img_name), 'PNG')
 
     assert set(item.keys()) == set(synanno.df_metadata.columns), f"Difference: {set(item.keys()).symmetric_difference(set(synanno.df_metadata.columns))}"

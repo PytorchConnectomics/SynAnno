@@ -52,6 +52,17 @@
         <input type="radio" class="form-check-input" id='neuron_centric_button' name="view_style" value="neuron" {% if view_style == 'neuron' %} checked {% endif %}>
         Neuron Centric
     </label>
+    <label class="form-label">
+    <select id="coordinates" name="coordinates">
+      <option value="xyz" selected>  XYZ  </option>
+        <option value="xzy">  XZY  </option>
+        <option value="zyx">  ZYX  </option>
+        <option value="zxy">  ZXY  </option>
+        <option value="yxz">  YXZ  </option>
+        <option value="yzx">  YZX  </option>
+      </select>
+      Coordinate Order
+      </label>
     <div class="mb-1"></div>
 
       <div id="neuron-form" {% if view_style == 'view' %} class="hidden-form" {% endif %}>
@@ -79,35 +90,23 @@
       <p><input class="form-control" type="file" id="secrets_file" name="secrets_file"></p>
   </div>
 
-    <label for="formFileMultiple" class="form-label">SynAnno JSON file {% if mode == 'draw'%}-
+    <label  class="form-label">SynAnno JSON file {% if mode == 'draw'%}-
       Required{% endif %}</label>
     <p><input class="form-control {{mode}}" type="file" id="formFile" name="file_json"></p>
 
 
     <div style="display: flex">
       <div>
-      <label for="formFileMultiple" class="form-label">Source Volume Resolution (in nm)</label>
+      <label  class="form-label">Source Volume Resolution (in nm)</label>
       <input class="X-Res" type="number" id="res-source-1" name="res-source-1" placeholder="Default: 4" value=4>
       <input class="Y-Res" type="number" id="res-source-2" name="res-source-2" placeholder="Default: 4" value=4>
       <input class="Z-Res" type="number" id="res-source-3" name="res-source-3" placeholder="Default: 33" value=33>
       </label>
       </div>
-    
-      <div style="padding-left: 5px; padding-top: 2px">
-        <select id="coordinates" name="coordinates">
-          <option value="xyz" selected>  XYZ  </option>
-          <option value="xzy">  XZY  </option>
-          <option value="zyx">  ZYX  </option>
-          <option value="zxy">  ZXY  </option>
-          <option value="yxz">  YXZ  </option>
-          <option value="yzx">  YZX  </option>
-        </select>
-        </label>
-      </div>
     </div>
 
     <div>
-      <label for="formFileMultiple" class="form-label">Target Volume Resolution (in nm)</label>
+      <label  class="form-label">Target Volume Resolution (in nm)</label>
       <input class="X-Res" type="number" id="res-target-1" name="res-target-1" placeholder="Default: 8" value=8>
       <input class="Y-Res" type="number" id="res-target-2" name="res-target-2" placeholder="Default: 8" value=8>
       <input class="Z-Res" type="number" id="res-target-3" name="res-target-3" placeholder="Default: 33" value=33>

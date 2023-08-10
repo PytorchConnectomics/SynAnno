@@ -45,7 +45,7 @@ jobs:
 
     - name: Read VERSION
       id: version
-      run: echo "::set-output name=version::$(cat VERSION.txt)"
+      run: echo "::set-output name=version::$(cat version.txt)"
 
     - name: Build and Push Docker Image
       uses: docker/build-push-action@v2

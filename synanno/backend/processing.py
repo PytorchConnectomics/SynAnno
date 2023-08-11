@@ -451,7 +451,7 @@ def neuron_centric_3d_data_processing(source_url: str, target_url: str, table_na
             vol_dim = tuple([s-1 for s in synanno.target_cv.volume_size]) 
 
     synanno.vol_dim = vol_dim
-    synanno.vol_dim_scaled = (int(a * b) for a, b in zip(vol_dim, synanno.scale.values()))
+    synanno.vol_dim_scaled = tuple(int(a * b) for a, b in zip(vol_dim, synanno.scale.values()))
     
     # read data as dict from path table_name
     synanno.progress_bar_status['status'] = "Retrieving Materialization"

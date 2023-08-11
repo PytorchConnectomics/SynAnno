@@ -317,6 +317,8 @@ def neuro() -> Dict[str, object]:
             Passes the link to the NG instance as json.
     '''
 
+    coordinate_order = list(synanno.coordinate_order.keys())
+
     # unpack the coordinates for the new focus point of the view
     mode = str(request.form['mode'])
     center = {}
@@ -325,9 +327,9 @@ def neuro() -> Dict[str, object]:
         center['y'] = int(int(request.form['cy0']) * synanno.scale['y'])
         center['x'] = int(int(request.form['cx0']) * synanno.scale['x'])
     elif mode == 'draw':
-        center['z'] = int((synanno.vol_dim_z // 2) * synanno.scale['z'])
-        center['y'] = int((synanno.vol_dim_y // 2) * synanno.scale['y'])
-        center['x'] = int((synanno.vol_dim_x // 2) * synanno.scale['x'])
+        center['z'] = int((synanno.vol_dim[coordinate_order.index('z')] // 2) * synanno.scale['z'])
+        center['y'] = int((synanno.vol_dim[coordinate_order.index('y')] // 2) * synanno.scale['y'])
+        center['x'] = int((synanno.vol_dim[coordinate_order.index('x')] // 2) * synanno.scale['x'])
         
     if synanno.ng_version is not None:
         # update the view focus of the running NG instance

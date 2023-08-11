@@ -244,7 +244,7 @@ def ng_bbox_fp_save()-> Dict[str, object]:
     # scale the coordinates to the original target size
     item['Original_Bbox'] = [int(bbox[0]/synanno.scale[coordinate_order[0]]), int(bbox[1]/synanno.scale[coordinate_order[0]]), int(bbox[2]/synanno.scale[coordinate_order[1]]), int(bbox[3]/synanno.scale[coordinate_order[1]]), int(bbox[4]/synanno.scale[coordinate_order[2]]), int(bbox[5]/synanno.scale[coordinate_order[2]])]
 
-    crop_bbox, img_padding = calculate_crop_pad(bbox , [synanno.vol_dim_z_scaled, synanno.vol_dim_y_scaled, synanno.vol_dim_x_scaled])
+    crop_bbox, img_padding = calculate_crop_pad(bbox , synanno.vol_dim_scaled)
     # map the bounding box coordinates to a dictionary
     crop_box_dict = {
         coordinate_order[0]+'1': crop_bbox[0],
@@ -290,7 +290,7 @@ def ng_bbox_fp_save()-> Dict[str, object]:
     item["Adjusted_Bbox"] = item['Original_Bbox'] = [int(crop_bbox[0]/synanno.scale[coordinate_order[0]]), int(crop_bbox[1]/synanno.scale[coordinate_order[0]]), int(crop_bbox[2]/synanno.scale[coordinate_order[1]]), int(crop_bbox[3]/synanno.scale[coordinate_order[1]]), int(crop_bbox[4]/synanno.scale[coordinate_order[2]]), int(crop_bbox[5]/synanno.scale[coordinate_order[2]])]
     
     # scale the padding to the original target size
-    item["Padding"] = [int(img_padding[0]/synanno.scale[coordinate_order[0]]), int(img_padding[1]/synanno.scale[coordinate_order[0]]), int(img_padding[2]/synanno.scale[coordinate_order[1]]), int(img_padding[3]/synanno.scale[coordinate_order[1]]), int(img_padding[4]/synanno.scale[coordinate_order[2]]), int(img_padding[5]/synanno.scale[coordinate_order[2]])]
+    item["Padding"] = [[int(img_padding[0][0]/synanno.scale[coordinate_order[0]]),int(img_padding[0][1]/synanno.scale[coordinate_order[0]])],[int(img_padding[1][0]/synanno.scale[coordinate_order[1]]),int(img_padding[1][1]/synanno.scale[coordinate_order[1]])],[int(img_padding[2][0]/synanno.scale[coordinate_order[2]]),int(img_padding[2][1]/synanno.scale[coordinate_order[2]])]]
 
     # Determine the slice axis index based on the first entry in coord_order
     slice_axis = coordinate_order.index('z')
@@ -301,7 +301,7 @@ def ng_bbox_fp_save()-> Dict[str, object]:
 
         # image
         slicing_img = [s if idx == slice_axis else slice(None) for idx in range(3)]
-        img_c = Image.fromarray(adjust_datatype(slicing_img)[0])
+        img_c = Image.fromarray(adjust_datatype(cropped_img[tuple(slicing_img)])[0])
         img_c.save(os.path.join(img_all, img_name), 'PNG')
 
     assert set(item.keys()) == set(synanno.df_metadata.columns), f"Difference: {set(item.keys()).symmetric_difference(set(synanno.df_metadata.columns))}"
@@ -320,6 +320,8 @@ def ng_bbox_fp_save()-> Dict[str, object]:
 @cross_origin()
 def save_pre_post_coordinates()-> None:
     # retrieve the data from the request
+    # the x and y value from the java script refers to the classical x=horizontal and y=vertical axis
+    # however, this does not necessarily correspond to the x and y axis order of the image
     x = int(round(float(request.form['x']))) 
     y = int(round(float(request.form['y']))) 
     z = int(round(float(request.form['z']))) 

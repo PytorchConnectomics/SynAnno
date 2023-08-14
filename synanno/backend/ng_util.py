@@ -14,14 +14,13 @@ import numpy.typing as npt
 from typing import Union
 
 
-def setup_ng(source: Union[npt.NDArray, str], target: Union[npt.NDArray, str], view_style: str = 'view' ) -> None:
+def setup_ng(source: Union[npt.NDArray, str], target: Union[npt.NDArray, str]) -> None:
     ''' Setup function for the Neuroglancer (ng) that enables the recording and depiction 
         of center markers for newly identified FN instances.
 
         Args:
             source_img: The image volume depicted by the ng
             target_seg: The target volume depicted by the ng
-            view_style: The view style: view | neuron
     '''
 
     # generate a version number
@@ -34,9 +33,9 @@ def setup_ng(source: Union[npt.NDArray, str], target: Union[npt.NDArray, str], v
 
     # specify the NG coordinate space
     coordinate_space = neuroglancer.CoordinateSpace(
-        names= ['z', 'y', 'x'] if view_style == 'view' else [list(synanno.coordinate_order.keys())[0], list(synanno.coordinate_order.keys())[1], list(synanno.coordinate_order.keys())[2]],
+        names= [list(synanno.coordinate_order.keys())[0], list(synanno.coordinate_order.keys())[1], list(synanno.coordinate_order.keys())[2]],
         units=['nm', 'nm', 'nm'],
-        scales = np.array([int(synanno.coordinate_order['z'][0]), int(synanno.coordinate_order['y'][0]), int(synanno.coordinate_order['x'][0])]) if view_style == 'view' else np.array([int(res[0]) for res in synanno.coordinate_order.values()]).astype(int))
+        scales = np.array([int(res[0]) for res in synanno.coordinate_order.values()]).astype(int))
 
     # config viewer: Add image layer, add segmentation mask layer, define position
     with synanno.ng_viewer.txn() as s:
@@ -102,21 +101,12 @@ def setup_ng(source: Union[npt.NDArray, str], target: Union[npt.NDArray, str], v
         # record the current mouse position
         center = s.mouse_voxel_coordinates
 
-        view_style = synanno.view_style
-        if view_style == 'neuron':
-            center_coord = {key: int(value) for key, value in zip(list(synanno.coordinate_order.keys()), center)}
+        center_coord = {key: int(value) for key, value in zip(list(synanno.coordinate_order.keys()), center)}
 
-            # split the position and convert to int
-            synanno.cz = int(center_coord['z'])
-            synanno.cy = int(center_coord['y'])
-            synanno.cx = int(center_coord['x'])
-        elif view_style == 'view':
-            # split the position and convert to int
-            synanno.cz = int(center[0])
-            synanno.cy = int(center[1])
-            synanno.cx = int(center[2])
-        else:
-            raise ValueError('Unknown view style')
+        # split the position and convert to int
+        synanno.cz = int(center_coord['z'])
+        synanno.cy = int(center_coord['y'])
+        synanno.cx = int(center_coord['x'])
 
         # add a yellow dot at the recorded position with in the NG
         with synanno.ng_viewer.txn() as l:

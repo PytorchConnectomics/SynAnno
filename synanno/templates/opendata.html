@@ -40,7 +40,10 @@
     <p><input class="form-control" type="url" id="source_url" name="source_url" placeholder="Cloud Volume Bucket - file://<path_to_your_file>" value='gs://h01-release/data/20210601/4nm_raw'></p>
     <label for="target_url" class="form-label">Target bucket (precomputed: Neuroglancer's native format) - Required</label>
     <p><input class="form-control" type="url" id="target_url" name="target_url" placeholder="Cloud Volume Bucket - file://<path_to_your_file>" value='gs://h01-release/data/20210729/c3/synapses/whole_ei_onlyvol'></p>
+    <label for="materialization_url" class="form-label">Materialization (url/name of the table containing the ID association and bounding box information)</label>
+    <p><input class="form-control" type="text" id="materialization_url" name="materialization_url" placeholder="Materialization - synapses" value='/Users/lando/Code/SynAnno/h01/synapse-export_000000000000.csv'></p>
 
+      
     <label class="form-check-label">
         <input type="radio" class="form-check-input" id='view_centric_button' name="view_style" value="view" {% if view_style == 'view' %} checked {% endif %}>
         View Centric
@@ -49,13 +52,20 @@
         <input type="radio" class="form-check-input" id='neuron_centric_button' name="view_style" value="neuron" {% if view_style == 'neuron' %} checked {% endif %}>
         Neuron Centric
     </label>
-
+    <label class="form-label">
+    <select id="coordinates" name="coordinates">
+      <option value="xyz" selected>  XYZ  </option>
+        <option value="xzy">  XZY  </option>
+        <option value="zyx">  ZYX  </option>
+        <option value="zxy">  ZXY  </option>
+        <option value="yxz">  YXZ  </option>
+        <option value="yzx">  YZX  </option>
+      </select>
+      Coordinate Order
+      </label>
     <div class="mb-1"></div>
 
-
       <div id="neuron-form" {% if view_style == 'view' %} class="hidden-form" {% endif %}>
-        <label for="materialization_url" class="form-label">Materialization (url/name of the table containing the ID association and bounding box information)</label>
-        <p><input class="form-control" type="text" id="materialization_url" name="materialization_url" placeholder="Materialization - synapses" value='/Users/lando/Code/SynAnno/h01/synapse-export_000000000000.csv'></p>
         <label for="pre-post-syn" class="form-label">Pre- and postsynaptic IDs</label>
         <div class="number-container" id='pre-post-syn'>
           <input class="number-dims" type="number" id="preid" name="preid" placeholder="Presynaptic ID">
@@ -66,12 +76,12 @@
       <div id="view-form" {% if view_style == 'neuron' %} class="hidden-form" {% endif %}>
       <label for="coordinate-container-view" class="form-label">Slicing Indices for the Segmentation Volume (will be scalled for the image volume in case of a resolution missmatch)</label>
       <div class="coordinate-container" id='coordinate-container-view'>
-        <input class="coordinate-dims" type="number" id="x1" name="x1" placeholder="X1 - Default: 0" value="257036">
-        <input class="coordinate-dims" type="number" id="x2" name="x2" placeholder="X2 - Default: max(X)" value="258448">
-        <input class="coordinate-dims" type="number" id="y1" name="y1" placeholder="Y1 - Default: 0" value="178039">
-        <input class="coordinate-dims" type="number" id="y2" name="y2" placeholder="Y2 - Default: max(Y)" value="178651">
-        <input class="coordinate-dims" type="number" id="z1" name="z1" placeholder="Z1 - Default: 0" value="1308">
-        <input class="coordinate-dims" type="number" id="z2" name="z2" placeholder="Z2 - Default: max(Z)" value="1392">
+        <input class="coordinate-dims" type="number" id="x1" name="x1" placeholder="X1 - Default: 0" value="199891">
+        <input class="coordinate-dims" type="number" id="x2" name="x2" placeholder="X2 - Default: max(X)" value="437848">
+        <input class="coordinate-dims" type="number" id="y1" name="y1" placeholder="Y1 - Default: 0" value="169018">
+        <input class="coordinate-dims" type="number" id="y2" name="y2" placeholder="Y2 - Default: max(Y)" value="262596">
+        <input class="coordinate-dims" type="number" id="z1" name="z1" placeholder="Z1 - Default: 0" value="1280">
+        <input class="coordinate-dims" type="number" id="z2" name="z2" placeholder="Z2 - Default: max(Z)" value="1536">
       </div>
       </div>
 
@@ -80,35 +90,23 @@
       <p><input class="form-control" type="file" id="secrets_file" name="secrets_file"></p>
   </div>
 
-    <label for="formFileMultiple" class="form-label">SynAnno JSON file {% if mode == 'draw'%}-
+    <label  class="form-label">SynAnno JSON file {% if mode == 'draw'%}-
       Required{% endif %}</label>
     <p><input class="form-control {{mode}}" type="file" id="formFile" name="file_json"></p>
 
 
     <div style="display: flex">
       <div>
-      <label for="formFileMultiple" class="form-label">Source Volume Resolution (in nm)</label>
+      <label  class="form-label">Source Volume Resolution (in nm)</label>
       <input class="X-Res" type="number" id="res-source-1" name="res-source-1" placeholder="Default: 4" value=4>
       <input class="Y-Res" type="number" id="res-source-2" name="res-source-2" placeholder="Default: 4" value=4>
       <input class="Z-Res" type="number" id="res-source-3" name="res-source-3" placeholder="Default: 33" value=33>
       </label>
       </div>
-    
-      <div style="padding-left: 5px; padding-top: 2px">
-        <select id="coordinates" name="coordinates">
-          <option value="xyz" selected>  XYZ  </option>
-          <option value="xzy">  XZY  </option>
-          <option value="zyx">  ZYX  </option>
-          <option value="zxy">  ZXY  </option>
-          <option value="yxz">  YXZ  </option>
-          <option value="yzx">  YZX  </option>
-        </select>
-        </label>
-      </div>
     </div>
 
     <div>
-      <label for="formFileMultiple" class="form-label">Target Volume Resolution (in nm)</label>
+      <label  class="form-label">Target Volume Resolution (in nm)</label>
       <input class="X-Res" type="number" id="res-target-1" name="res-target-1" placeholder="Default: 8" value=8>
       <input class="Y-Res" type="number" id="res-target-2" name="res-target-2" placeholder="Default: 8" value=8>
       <input class="Z-Res" type="number" id="res-target-3" name="res-target-3" placeholder="Default: 33" value=33>
@@ -119,9 +117,9 @@
     <div class="mb-1"></div>
 
     <label for="formGroupExampleInput" class="form-label">Instance crop size (in px)</label>
-    <input type="number" id="cropsize_x" placeholder="256" name="crop_size_x" value=256> 
-    <input type="number" id="cropsize_y" placeholder="256" name="crop_size_y" value=256> 
-    <input type="number" id="cropsize_z" placeholder="16" name="crop_size_z" value=16> 
+    <input type="number" id="cropsize_x" placeholder="256" name="crop_size_c0" value=256> 
+    <input type="number" id="cropsize_y" placeholder="256" name="crop_size_c1" value=256> 
+    <input type="number" id="cropsize_z" placeholder="16" name="crop_size_c2" value=16> 
 
     <p class="mt-4">
       <input id="processData" type="submit" class="btn btn-secondary {{ modecurrent }} disabled" value="Submit">

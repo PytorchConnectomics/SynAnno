@@ -33,19 +33,17 @@ def annotation(page: int = 0) -> Template:
 
         Args:
             page: The current data page that is depicted in the grid view
-            view_style: Identifies the view style: view | neuron
 
         Return:
             The annotation view
     '''
 
-    if synanno.view_style == 'neuron':
-    # check if the data for the current page is already loaded
 
-        # remove the synapse and image slices for the previous and next page
-        ip.free_page()
+    # remove the synapse and image slices for the previous and next page
+    ip.free_page()
 
-        ip.retrieve_instance_metadata(crop_size_x=session['crop_size_x'], crop_size_y=session['crop_size_y'], crop_size_z=session['crop_size_z'], page=page)
+    # load the data for the current page
+    ip.retrieve_instance_metadata(page=page)
 
     # start the timer for the annotation process
     if synanno.proofread_time['start_grid'] is None:
@@ -54,7 +52,7 @@ def annotation(page: int = 0) -> Template:
     # retrieve the data for the current page
     data = synanno.df_metadata.query('Page == @page').sort_values(by=['Image_Index']).to_dict('records')
 
-    return render_template('annotation.html', images=data, page=page, n_pages=session.get('n_pages'), grid_opacity=synanno.grid_opacity, view_style=synanno.view_style)
+    return render_template('annotation.html', images=data, page=page, n_pages=session.get('n_pages'), grid_opacity=synanno.grid_opacity)
 
 
 @app.route('/set_grid_opacity', methods=['POST'])

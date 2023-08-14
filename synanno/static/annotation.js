@@ -40,10 +40,6 @@ $(document).ready(function () {
     $('.image-card-btn').bind('contextmenu', async function (e) {
         e.preventDefault();
 
-        // view style identifier: view centric or instance centric
-        // Currently not in use, could be deleted
-        var view_style = $(this).attr('data_centric')
-
         // instance identifiers
         var data_id = $(this).attr('data_id')
         var page = $(this).attr('page')
@@ -92,7 +88,7 @@ $(document).ready(function () {
         req_ng = $.ajax({
             url: '/neuro',
             type: 'POST',
-            data: { view_style: view_style, cz0: cz0, cy0: cy0, cx0: cx0, mode: 'annotate' }
+            data: {cz0: cz0, cy0: cy0, cx0: cx0, mode: 'annotate' }
         });
 
         req_ng.done(function (data) {

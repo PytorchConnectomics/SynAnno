@@ -72,15 +72,12 @@ $(document).ready(function () {
 
         });
 
-        // view style identifier: view centric or instance centric
-        var view_style = $('.redraw-images').attr('view_style')
-
         // retrieve the updated NG link
         req_ng = $.ajax({
             url: '/neuro',
             type: 'POST',
             // we set mode to 'annotate' as we would like to set the focus on the particular instance
-            data: { view_style: view_style, cz0: cz0, cy0: cy0, cx0: cx0, mode: 'annotate' }
+            data: {cz0: cz0, cy0: cy0, cx0: cx0, mode: 'annotate' }
         });
 
         req_ng.done(function (data) {
@@ -176,12 +173,11 @@ $(document).ready(function () {
 
     
     $('#add_new_instance').click(async function (e) {
-        var view_style = $(this).attr('view_style')
         // open a new Neuroglancer view
         req_ng = $.ajax({
             url: '/neuro',
             type: 'POST',
-            data: { view_style: view_style, cz0: 0, cy0: 0, cx0: 0, mode: 'draw' }
+            data: {cz0: 0, cy0: 0, cx0: 0, mode: 'draw' }
         });
 
         req_ng.done(function (data) {
@@ -210,7 +206,7 @@ $(document).ready(function () {
     $('#review_bbox').click(async function (e) {
         // retrieve the bb information from the backend
         $.ajax({
-            url: '/ng_bbox_fp',
+            url: '/ng_bbox_fn',
             type: 'POST',
             data: { z1: 0, z2: 0, my: 0, mx: 0 }
         }).done(function (data) {
@@ -229,13 +225,13 @@ $(document).ready(function () {
         // update the bb information with the manuel corrections and pass them to the backend
         // trigger the processing/save to the pandas df in the backend
         $.ajax({
-            url: '/ng_bbox_fp_save',
+            url: '/ng_bbox_fn_save',
             type: 'POST',
             data: { z1: $('#d_z1').val(), z2: $('#d_z2').val(), my: $('#m_y').val(), mx: $('#m_x').val() }
         }).done(function () {
 
             // hide modules
-            $('#drawModalFPSave, #drawModalFP').modal('hide');
+            $('#drawModalFNSave, #drawModalFN').modal('hide');
 
             // refresh page
             location.reload();

@@ -79,18 +79,18 @@ $(document).ready(function () {
     // process the flags: [[pager number, image number, flag], ..., [pager number, image number, flag]]
 
     // delete the false positives from the JSON
-    $('#dl_fp_yes').click(async function(){
+    $('#dl_fn_yes').click(async function(){
         // show loading screen 
-        $('#categorizeModalFPSave').modal('hide');
+        $('#categorizeModalFNSave').modal('hide');
         $('#progressModal').modal('show');
 
         submit_data(true)
     });
 
     // keep the false positives in the JSON
-    $('#dl_fp_no').click(async function(){
+    $('#dl_fn_no').click(async function(){
         // show loading screen 
-        $('#categorizeModalFPSave').modal('hide');
+        $('#categorizeModalFNSave').modal('hide');
         $('#progressModal').modal('show');
 
         submit_data(false)
@@ -108,7 +108,7 @@ $(document).ready(function () {
 })
 
 // process the flags: [[pager number, image number, flag], ..., [pager number, image number, flag]]
-function submit_data(delete_fps) {
+function submit_data(delete_fns) {
 
     var promise_error = new Promise ((resolve,reject) =>{
         var flags = []
@@ -152,7 +152,7 @@ function submit_data(delete_fps) {
             type: 'POST',
             contentType: 'application/json',
             dataType: 'json',
-            data: JSON.stringify({ flags: data, delete_fps: delete_fps })
+            data: JSON.stringify({ flags: data, delete_fns: delete_fns })
         });
 
         req.success(function(){

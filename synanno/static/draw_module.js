@@ -206,7 +206,7 @@ $(document).ready(function () {
     $('#review_bbox').click(async function (e) {
         // retrieve the bb information from the backend
         $.ajax({
-            url: '/ng_bbox_fp',
+            url: '/ng_bbox_fn',
             type: 'POST',
             data: { z1: 0, z2: 0, my: 0, mx: 0 }
         }).done(function (data) {
@@ -225,13 +225,13 @@ $(document).ready(function () {
         // update the bb information with the manuel corrections and pass them to the backend
         // trigger the processing/save to the pandas df in the backend
         $.ajax({
-            url: '/ng_bbox_fp_save',
+            url: '/ng_bbox_fn_save',
             type: 'POST',
             data: { z1: $('#d_z1').val(), z2: $('#d_z2').val(), my: $('#m_y').val(), mx: $('#m_x').val() }
         }).done(function () {
 
             // hide modules
-            $('#drawModalFPSave, #drawModalFP').modal('hide');
+            $('#drawModalFNSave, #drawModalFN').modal('hide');
 
             // refresh page
             location.reload();

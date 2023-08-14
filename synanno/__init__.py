@@ -87,11 +87,6 @@ vol_dim_scaled= (0,0,0)
 global source
 source = None
 
-# backlog for the custom bounding boxes of the false negatives
-global cus_fp_bbs
-
-cus_fp_bbs = []
-
 # values for the current false negative's custom bounding box of the false negatives
 global cz
 global cy

@@ -23,9 +23,9 @@ from typing import Dict
 
 
 # global variable defining if instances marked as false positives are directly discarded
-global delete_fps
+global delete_fns
 
-delete_fps = False
+delete_fns = False
 
 @app.route('/categorize')
 def categorize() -> Template:
@@ -63,18 +63,18 @@ def pass_flags() -> Dict[str, object]:
             Confirms the successful update to the frontend
     '''
 
-    # variable specifying if instances marked as FP are discarded, the default is False
-    global delete_fps 
+    # variable specifying if instances marked as FN are discarded, the default is False
+    global delete_fns 
 
     # retrieve the frontend data
     flags = request.get_json()['flags']
-    delete_fps = bool(request.get_json()['delete_fps'])
+    delete_fns = bool(request.get_json()['delete_fns'])
 
     # updated all flags
     for flag in flags:
         page_nr, img_nr, f = dict(flag).values()
         # deleting false positives
-        if f == 'falsePositive' and delete_fps:
+        if f == 'falsePositive' and delete_fns:
             synanno.df_metadata.drop(synanno.df_metadata[(synanno.df_metadata['Page'] == int(page_nr)) & (synanno.df_metadata['Image_Index'] == int(img_nr))].index, inplace=True)
         else:
             synanno.df_metadata.loc[(synanno.df_metadata['Page'] == int(page_nr)) & (synanno.df_metadata['Image_Index'] == int(img_nr)), 'Error_Description'] = f

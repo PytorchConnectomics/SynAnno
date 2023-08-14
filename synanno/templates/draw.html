@@ -22,13 +22,13 @@
                 <h5 class="card-header border-bottom-0 mb-2">False Negative</h5>
                 <div class="card-block border-0 p-1 image-card-btn unsure mt-auto" label="Unsure">
                     <div class="main-image-categorize">
-                        <img class="img_categorize" src="/static/Images/place_holder_fp.png" width="64px" height="64px">
+                        <img class="img_categorize" src="/static/Images/place_holder_fn.png" width="64px" height="64px">
                     </div>
                 </div>
                 <div class="card-block mt-2 mt-auto">
                     <div class="col justify-content-center">
                         <button id="add_new_instance" class="btn btn-primary" type="button"
-                            data-bs-target="#drawModalFP" data-bs-toggle="modal" data-bs-dismiss="modal">Add New
+                            data-bs-target="#drawModalFN" data-bs-toggle="modal" data-bs-dismiss="modal">Add New
                             Instance</button>
                     </div>
                 </div>
@@ -37,8 +37,8 @@
 
             {% for image in images %}
 
-            {% set z1, z2, x1, x2, y1, y2 = image.Adjusted_Bbox %}
-            {% set custom_base_path = 'idx_' ~ image.Image_Index ~  '_slice_' ~ image.Middle_Slice ~ '_cor_' ~z1~ '_' ~z2~ '_' ~x1~ '_' ~x2~ '_' ~y1~ '_' ~y2 ~ '.png' %}
+            {% set c11, c12, c21, c22, c31, c32 = image.Adjusted_Bbox %}
+            {% set custom_base_path = 'idx_' ~ image.Image_Index ~  '_slice_' ~ image.Middle_Slice ~ '_cor_' ~c11~ '_' ~c12~ '_' ~c21~ '_' ~c22~ '_' ~c31~ '_' ~c32 ~ '.png' %}
             {% set custom_mask_name_curve = 'curve_' ~ custom_base_path %}
             {% set custom_mask_name_circle_pre = 'circlePre_' ~ custom_base_path %}
             {% set custom_mask_name_circle_post = 'circlePost_' ~ custom_base_path %}
@@ -110,7 +110,7 @@
 {% include "draw_modal.html" %}
 
 <!-- Modal for adding false positve synapses -->
-{% include "draw_modal_fp.html" %}
+{% include "draw_modal_fn.html" %}
 
 <script src="{{ url_for('static', filename='draw_module.js') }}"></script>
 

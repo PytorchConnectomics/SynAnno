@@ -1,4 +1,4 @@
-from typing import Union, Tuple, Dict
+from typing import Union, Tuple
 
 import os
 import json
@@ -6,10 +6,9 @@ import shutil
 import traceback
 import numpy as np
 from PIL import Image
-from skimage.morphology import remove_small_objects
 from skimage.measure import label as label_cc
 from skimage.transform import resize
-from scipy.ndimage import find_objects, center_of_mass
+from scipy.ndimage import center_of_mass
 
 from .utils import *
 
@@ -161,14 +160,11 @@ def free_page() -> None:
                 print('Failed to delete %s. Reason: %s' % (img_dir_idx, e))
     
 
-def retrieve_instance_metadata(crop_size_x: int = 148, crop_size_y: int = 148, crop_size_z: int = 16, page: int =0, mode: str = 'annotate') -> Union[str, None]:
+def retrieve_instance_metadata(page: int =0, mode: str = 'annotate') -> Union[str, None]:
     ''' Visualize the synapse and EM images in 2D slices for each instance by cropping the bounding box of the instance.
         Processing each instance individually, retrieving them from the cloud volume and saving them to the local disk.
     
     Args:
-        crop_size_x (int): the size of the 2D patch in x direction.
-        crop_size_y (int): the size of the 2D patch in y direction.
-        crop_size_z (int): the size of the 2D patch in z direction.
         page (int): the current page number for which to compute the data.
         
     Returns:
@@ -230,18 +226,18 @@ def retrieve_instance_metadata(crop_size_x: int = 148, crop_size_y: int = 148, c
             item["post_pt_x"] = int(bbox_dict[idx]['post_pt_x'])
             item["post_pt_y"] = int(bbox_dict[idx]['post_pt_y'])
             item["post_pt_z"] = int(bbox_dict[idx]['post_pt_z'])
-            item["crop_size_x"] = crop_size_x
-            item["crop_size_y"] = crop_size_y
-            item["crop_size_z"] = crop_size_z
+            item["crop_size_x"] = session['crop_size_x']
+            item["crop_size_y"] = session['crop_size_y']
+            item["crop_size_z"] = session['crop_size_z']
 
 
             # retrieve the bounding box for the current synapse from the central synapse coordinates
-            z1 = item["cz0"] - crop_size_z // 2
-            z2 = item["cz0"] + crop_size_z // 2
-            y1 = item["cy0"] - crop_size_y // 2
-            y2 = item["cy0"] + crop_size_y // 2
-            x1 = item["cx0"] - crop_size_x // 2
-            x2 = item["cx0"] + crop_size_x // 2
+            z1 = item["cz0"] - session['crop_size_z'] // 2
+            z2 = item["cz0"] + session['crop_size_z'] // 2
+            y1 = item["cy0"] - session['crop_size_y'] // 2
+            y2 = item["cy0"] + session['crop_size_y'] // 2
+            x1 = item["cx0"] - session['crop_size_x'] // 2
+            x2 = item["cx0"] + session['crop_size_x'] // 2
 
             bbox_org  = list(map(int, [z1, z2, y1, y2, x1, x2]))
 
@@ -371,10 +367,6 @@ def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) 
     vis_label = syn2rgb(cropped_seg_pad) # coord_0, coord_1, coord_2, c, e.g., x,y,z,3
 
     # draw a bright circle at the position of the pre and post synapse
-    print(pre_pt_x, pre_pt_y, pre_pt_z)
-    print(post_pt_x, post_pt_y, post_pt_z)
-    print(vis_label.shape)
-    print(coord_order)
     vis_label = draw_cylinder(vis_label, pre_pt_x, pre_pt_y, pre_pt_z, radius=10, color_1=(0, 255, 0), color_2=(200, 255, 200), layout=coord_order)
     vis_label = draw_cylinder(vis_label, post_pt_x, post_pt_y, post_pt_z, radius=10, color_1=(0, 0, 255), color_2=(200, 200, 255), layout=coord_order)
 
@@ -414,7 +406,7 @@ def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) 
         lab_c.save(os.path.join(syn_dir_instance,img_name), "PNG")
 
 
-def neuron_centric_3d_data_processing(source_url: str, target_url: str, table_name: str, preid: int = None, postid: int = None, subvolume: dict = None, bucket_secret_json: json = '~/.cloudvolume/secrets', crop_size_x: int = 148, crop_size_y: int = 148, crop_size_z: int = 16, mode: str = 'annotate', view_style: str = None) -> Union[str, Tuple[np.ndarray, np.ndarray]]:
+def neuron_centric_3d_data_processing(source_url: str, target_url: str, table_name: str, preid: int = None, postid: int = None, subvolume: dict = None, bucket_secret_json: json = '~/.cloudvolume/secrets', mode: str = 'annotate', view_style: str = None) -> Union[str, Tuple[np.ndarray, np.ndarray]]:
     """ Retrieve the bounding boxes and instances indexes from the table and call the render function to render the 3D data as 2D images.
 
     Args:
@@ -505,4 +497,4 @@ def neuron_centric_3d_data_processing(source_url: str, target_url: str, table_na
 
     session['n_pages'] = number_pages
 
-    return retrieve_instance_metadata(crop_size_x=crop_size_x, crop_size_y=crop_size_y, crop_size_z=crop_size_z, page=0, mode=mode)
+    return retrieve_instance_metadata(page=0, mode=mode)

@@ -17,7 +17,7 @@ import synanno.backend.processing as ip
 import json
 
 # setup and configuration of Neuroglancer instances
-import synanno.routes.utils.ng_util as ng_util
+import synanno.backend.ng_util as ng_util
 
 # access and remove files
 import os
@@ -90,10 +90,15 @@ def upload_file() -> Template:
         os.remove(os.path.join(os.path.join(
             app.config['PACKAGE_NAME'], app.config['UPLOAD_FOLDER']), app.config['JSON']))
 
+    # retrieve the coordinate order and resolution from the form and save them in a dict, used by the NG instance and the processing functions
+    synanno.coordinate_order = {c: (request.form.get('res-source-'+str(i+1)), request.form.get('res-target-'+str(i+1))) for i, c in enumerate(list(request.form.get('coordinates')))}
+    
+    coordinate_order = list(synanno.coordinate_order.keys())
+
     # retrieve the crop size from the form and save it to the session
-    session['crop_size_x'] = int(request.form.get('crop_size_x'))
-    session['crop_size_y'] = int(request.form.get('crop_size_y'))
-    session['crop_size_z'] = int(request.form.get('crop_size_z'))
+    session['crop_size_x'] = int(request.form.get('crop_size_c' + str(coordinate_order.index('x'))))
+    session['crop_size_y'] = int(request.form.get('crop_size_c' + str(coordinate_order.index('y'))))
+    session['crop_size_z'] = int(request.form.get('crop_size_c' + str(coordinate_order.index('z'))))
 
     if session['crop_size_x'] == 0 or session['crop_size_y'] == 0 or session['crop_size_z'] == 0:
         flash('The crop sizes have to be larger then zero, the current setting will result in a crash of the backend!', 'error')
@@ -125,17 +130,12 @@ def upload_file() -> Template:
             print(f"Extra columns: {extra_columns}")
             raise ValueError('The provided JSON does not match the expected format!')
 
-    # retrieve the coordinate order and resolution from the form and save them in a dict, used by the NG instance and the processing functions
-    synanno.coordinate_order = {c: (request.form.get('res-source-'+str(i+1)), request.form.get('res-target-'+str(i+1))) for i, c in enumerate(list(request.form.get('coordinates')))}
-    
-    coordinate_order = list(synanno.coordinate_order.keys())
-
     # Convert coordinate resolution values to integers
     synanno.coord_resolution_source = np.array([int(res[0]) for res in synanno.coordinate_order.values()]).astype(int)
     synanno.coord_resolution_target = np.array([int(res[1]) for res in synanno.coordinate_order.values()]).astype(int)
 
     # calculate the scale factor for the source and target cloud volume
-    synanno.scale = {c: v for c,v in zip(list(synanno.coordinate_order.keys()),np.where(synanno.coord_resolution_target/synanno.coord_resolution_source > 0, synanno.coord_resolution_target/synanno.coord_resolution_source, 1))}
+    synanno.scale = {c: v for c,v in zip(coordinate_order,np.where(synanno.coord_resolution_target/synanno.coord_resolution_source > 0, synanno.coord_resolution_target/synanno.coord_resolution_source, 1))}
 
     # retrieve the urls for the source and target cloud volume buckets
     source_url = request.form.get('source_url')
@@ -161,14 +161,14 @@ def upload_file() -> Template:
                 subvolume[coord + '1'] = int(request.form.get(coord + '1')) if request.form.get(coord + '1') else 0
                 subvolume[coord + '2'] = int(request.form.get(coord + '2')) if request.form.get(coord + '2') else -1
 
-            ip.neuron_centric_3d_data_processing(source_url, target_url, materialization_url, subvolume=subvolume, bucket_secret_json=bucket_secret if bucket_secret else '~/.cloudvolume/secrets', crop_size_x=session['crop_size_x'], crop_size_y=session['crop_size_y'], crop_size_z=session['crop_size_z'], mode=draw_or_annotate, view_style=synanno.view_style)
+            ip.neuron_centric_3d_data_processing(source_url, target_url, materialization_url, subvolume=subvolume, bucket_secret_json=bucket_secret if bucket_secret else '~/.cloudvolume/secrets', mode=draw_or_annotate, view_style=synanno.view_style)
         # if the user chose the neuron view_style mode, retrieve a list of all the synapses of the provided neuron ids and then process the data on synapse level 
         elif synanno.view_style == 'neuron':
             # if the user chose the neuron view_style mode retrieve the neuron ids
             preid = int(request.form.get('preid')) if request.form.get('preid') else None
             postid = int(request.form.get('postid')) if request.form.get('postid') else None
 
-            ip.neuron_centric_3d_data_processing(source_url, target_url, materialization_url, preid, postid, bucket_secret_json= bucket_secret if bucket_secret else '~/.cloudvolume/secrets', crop_size_x=session['crop_size_x'], crop_size_y=session['crop_size_y'], crop_size_z=session['crop_size_z'], mode=draw_or_annotate, view_style=synanno.view_style)
+            ip.neuron_centric_3d_data_processing(source_url, target_url, materialization_url, preid, postid, bucket_secret_json= bucket_secret if bucket_secret else '~/.cloudvolume/secrets', mode=draw_or_annotate, view_style=synanno.view_style)
 
     else:
         flash('Please provide at least the paths to valid source and target cloud volume buckets!', 'error')
@@ -287,7 +287,8 @@ def get_instance() -> Dict[str, object]:
                         custom_mask_path_post = path_circle_post
 
         data = json.dumps(data)
-        return jsonify(data=data, custom_mask_path_curve=custom_mask_path_curve, custom_mask_path_pre=custom_mask_path_pre, custom_mask_path_post=custom_mask_path_post)
+        
+        final_json = jsonify(data=data, custom_mask_path_curve=custom_mask_path_curve, custom_mask_path_pre=custom_mask_path_pre, custom_mask_path_post=custom_mask_path_post)
 
     return final_json
 
@@ -334,13 +335,13 @@ def neuro() -> Dict[str, object]:
     if synanno.ng_version is not None:
         # update the view focus of the running NG instance
         with synanno.ng_viewer.txn() as s:
-            s.position = [center[list(synanno.coordinate_order.keys())[0]], center[list(synanno.coordinate_order.keys())[1]], center[list(synanno.coordinate_order.keys())[2]]]
+            s.position = [center[coordinate_order[0]], center[coordinate_order[1]], center[coordinate_order[2]]]
 
     else:
         raise Exception('No NG instance running')
 
     print(
-        f'Neuroglancer instance running at {synanno.ng_viewer}, centered at {str(list(synanno.coordinate_order.keys())[0])},{str(list(synanno.coordinate_order.keys())[1])},{str(list(synanno.coordinate_order.keys())[2])} {center[list(synanno.coordinate_order.keys())[0]], center[list(synanno.coordinate_order.keys())[1]], center[list(synanno.coordinate_order.keys())[2]]}')
+        f'Neuroglancer instance running at {synanno.ng_viewer}, centered at {coordinate_order[0]},{coordinate_order[1]},{coordinate_order[2]}: {center[coordinate_order[0]], center[coordinate_order[1]], center[coordinate_order[2]]}')
 
     final_json = jsonify(
         {'ng_link': 'http://'+app.config['IP']+':9015/v/'+str(synanno.ng_version)+'/'})

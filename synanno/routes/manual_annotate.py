@@ -116,10 +116,10 @@ def save_canvas() -> Dict[str, object]:
     return final_json
 
 
-@app.route('/ng_bbox_fp', methods=['POST'])
+@app.route('/ng_bbox_fn', methods=['POST'])
 @cross_origin()
-def ng_bbox_fp()-> Dict[str, object]:
-    ''' Serves an Ajax request by draw_module.js, passing the coordinates of the center point of a newly marked FP to the front end, 
+def ng_bbox_fn()-> Dict[str, object]:
+    ''' Serves an Ajax request by draw_module.js, passing the coordinates of the center point of a newly marked FN to the front end, 
         enabling the front end to depict the values and the user to manual update/correct them.
 
         Return:
@@ -147,9 +147,9 @@ def ng_bbox_fp()-> Dict[str, object]:
     })
 
 
-@app.route('/ng_bbox_fp_save', methods=['POST'])
+@app.route('/ng_bbox_fn_save', methods=['POST'])
 @cross_origin()
-def ng_bbox_fp_save()-> Dict[str, object]:
+def ng_bbox_fn_save()-> Dict[str, object]:
     ''' Serves an Ajax request by draw_module.js, that passes the manual updated/corrected bb coordinates
         to this backend function. Additionally, the function creates a new item instance and 
         updates the metadata dataframe.
@@ -167,10 +167,6 @@ def ng_bbox_fp_save()-> Dict[str, object]:
     synanno.cz = int(cz1 + ((cz2-cz1) // 2))
     synanno.cy = int(request.form['my'])
     synanno.cx = int(request.form['mx'])
-
-    # TODO: can this be deleted?
-    # log the coordinates center z, x, and y value and the expended z1 and z2 value
-    synanno.cus_fp_bbs.append((synanno.cz, synanno.cy, synanno.cx, cz1, cz2))
 
     ## add the new instance to the the json und update the session data
 
@@ -196,7 +192,7 @@ def ng_bbox_fp_save()-> Dict[str, object]:
     img_folder = create_dir(idx_dir, 'Img')
     img_all = create_dir(img_folder, str(item['Image_Index']))
 
-    item['GT'] = 'None'  # do not save the GT as we do not have masks for the FPs
+    item['GT'] = 'None'  # do not save the GT as we do not have masks for the FNs
     item['EM'] = '/'+'/'.join(img_all.strip('.\\').split('/')[2:])
     
     item['Label'] = 'Incorrect'
@@ -225,6 +221,7 @@ def ng_bbox_fp_save()-> Dict[str, object]:
     bb_y2 = int(synanno.cy) + expand_y if int(synanno.cy) + \
         expand_y < synanno.vol_dim_scaled[coordinate_order.index('y')] else synanno.vol_dim_scaled[coordinate_order.index('y')]
     
+    # we update the pre and post coordinates with None as we do not have them initially for FNs
     item['pre_pt_z'] = None
     item['pre_pt_y'] = None
     item['pre_pt_x'] = None
@@ -236,10 +233,14 @@ def ng_bbox_fp_save()-> Dict[str, object]:
     item['crop_size_y'] = session['crop_size_y']
     item['crop_size_z'] = session['crop_size_z']
     
-    bbox = list(map(int,[cz1, cz2, bb_y1, bb_y2, bb_x1, bb_x2]))
-
     # save the original bounding box using the provided coordinate order
-    bbox = [bbox[coordinate_order.index(coord)*2 + i] for coord in ['z', 'y', 'x'] for i in range(2)]
+    bbox = [None] * 6
+    bbox[coordinate_order.index('z')*2] = int(cz1)
+    bbox[coordinate_order.index('z')*2+1] = int(cz2)
+    bbox[coordinate_order.index('y')*2] = int(bb_y1)
+    bbox[coordinate_order.index('y')*2+1] = int(bb_y2)
+    bbox[coordinate_order.index('x')*2] = int(bb_x1)
+    bbox[coordinate_order.index('x')*2+1] = int(bb_x2)
 
     # scale the coordinates to the original target size
     item['Original_Bbox'] = [int(bbox[0]/synanno.scale[coordinate_order[0]]), int(bbox[1]/synanno.scale[coordinate_order[0]]), int(bbox[2]/synanno.scale[coordinate_order[1]]), int(bbox[3]/synanno.scale[coordinate_order[1]]), int(bbox[4]/synanno.scale[coordinate_order[2]]), int(bbox[5]/synanno.scale[coordinate_order[2]])]
@@ -280,11 +281,15 @@ def ng_bbox_fp_save()-> Dict[str, object]:
     # Retrieve the source and target images from the cloud volume
     cropped_img = synanno.source_cv.download(bound, coord_resolution=coord_resolution, mip=0)
 
+    # save the cropped image
+    Image.fromarray(adjust_datatype(cropped_img.squeeze(axis=3)[:,:,0])[0]).save(os.path.join(img_all, 'X.png'), 'PNG')
+
     # remove the singleton dimension, take care as the z dimension might be singleton
     cropped_img = cropped_img.squeeze(axis=3)
 
     # pad the images and synapse segmentation to fit the crop size (sz)
     cropped_img = np.pad(cropped_img, img_padding, mode='constant', constant_values=148)
+    
 
     # scale the coordinates to the original target size
     item["Adjusted_Bbox"] = item['Original_Bbox'] = [int(crop_bbox[0]/synanno.scale[coordinate_order[0]]), int(crop_bbox[1]/synanno.scale[coordinate_order[0]]), int(crop_bbox[2]/synanno.scale[coordinate_order[1]]), int(crop_bbox[3]/synanno.scale[coordinate_order[1]]), int(crop_bbox[4]/synanno.scale[coordinate_order[2]]), int(crop_bbox[5]/synanno.scale[coordinate_order[2]])]
@@ -322,6 +327,13 @@ def save_pre_post_coordinates()-> None:
     # retrieve the data from the request
     # the x and y value from the java script refers to the classical x=horizontal and y=vertical axis
     # however, this does not necessarily correspond to the x and y axis order of the image
+
+    coordinate_order = list(synanno.coordinate_order.keys())
+
+    x_index = coordinate_order.index('x')
+    y_index = coordinate_order.index('y')
+    z_index = coordinate_order.index('z')
+
     x = int(round(float(request.form['x']))) 
     y = int(round(float(request.form['y']))) 
     z = int(round(float(request.form['z']))) 
@@ -334,9 +346,11 @@ def save_pre_post_coordinates()-> None:
     y = int(y / synanno.scale['y'])
     z = int(z / synanno.scale['z'])
 
-    x = x + synanno.df_metadata.loc[(synanno.df_metadata['Image_Index'] == data_id) & (synanno.df_metadata['Page'] == page), 'Adjusted_Bbox'].values[0][4] - synanno.df_metadata.loc[(synanno.df_metadata['Image_Index'] == data_id) & (synanno.df_metadata['Page'] == page), 'Padding'].values[0][2][0]
-    y = y + synanno.df_metadata.loc[(synanno.df_metadata['Image_Index'] == data_id) & (synanno.df_metadata['Page'] == page), 'Adjusted_Bbox'].values[0][2] - synanno.df_metadata.loc[(synanno.df_metadata['Image_Index'] == data_id) & (synanno.df_metadata['Page'] == page), 'Padding'].values[0][1][0]
-    z = z - synanno.df_metadata.loc[(synanno.df_metadata['Image_Index'] == data_id) & (synanno.df_metadata['Page'] == page), 'Padding'].values[0][0][0]
+    
+
+    x = x + synanno.df_metadata.loc[(synanno.df_metadata['Image_Index'] == data_id) & (synanno.df_metadata['Page'] == page), 'Adjusted_Bbox'].values[0][x_index*2] - synanno.df_metadata.loc[(synanno.df_metadata['Image_Index'] == data_id) & (synanno.df_metadata['Page'] == page), 'Padding'].values[0][x_index][0]
+    y = y + synanno.df_metadata.loc[(synanno.df_metadata['Image_Index'] == data_id) & (synanno.df_metadata['Page'] == page), 'Adjusted_Bbox'].values[0][y_index*2] - synanno.df_metadata.loc[(synanno.df_metadata['Image_Index'] == data_id) & (synanno.df_metadata['Page'] == page), 'Padding'].values[0][y_index][0]
+    z = z - synanno.df_metadata.loc[(synanno.df_metadata['Image_Index'] == data_id) & (synanno.df_metadata['Page'] == page), 'Padding'].values[0][z_index][0]
 
     # if id=='pre' update 'pre_pt_x', 'pre_pt_y', 'post_pt_y' of the instance specific information in the dataframe
     if id == 'pre':

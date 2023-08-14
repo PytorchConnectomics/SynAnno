@@ -2,7 +2,7 @@
 
 {% block help_content %}
 <p class="text-muted">Categorize the faulty labels. Scroll sideways to see all cards.
-    After categorizing all instances, click on "Submit and Finish." You will be prompted with a dialog asking if the Instances marked as False Positive (FP) should be deleted.
+    After categorizing all instances, click on "Submit and Finish." You will be prompted with a dialog asking if the Instances marked as False Positive (FN) should be deleted.
     If you select yes, such instances will be removed entirely from the JSON.</p>
 
 <p class="text-muted">Note: Right-click an instance to enlarge the patch, navigate surrounding slices, and open the
@@ -97,7 +97,7 @@
 
 
      <div class="m-4 p-1">
-            <a type="button" id="submit_button" class="btn btn-primary {{ modenext }}" data-bs-target="#categorizeModalFPSave"
+            <a type="button" id="submit_button" class="btn btn-primary {{ modenext }}" data-bs-target="#categorizeModalFNSave"
             data-bs-toggle="modal">Submit and Finish</a>
     </div>
 
@@ -110,8 +110,8 @@
 <!-- Modal for neuroglancer slice-->
 {% include "annotation_neuro.html" %}
 
-<!-- Modal for FP deletion-->
-{% include "categorize_modal_dl_fp.html" %}
+<!-- Modal for FN deletion-->
+{% include "categorize_modal_dl_fn.html" %}
 
 <!-- Modal for progress bar-->
 {% include "categorize_modal_progress.html" %}

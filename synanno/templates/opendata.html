@@ -42,8 +42,11 @@
     <p><input class="form-control" type="url" id="target_url" name="target_url" placeholder="Cloud Volume Bucket - file://<path_to_your_file>" value='gs://h01-release/data/20210729/c3/synapses/whole_ei_onlyvol'></p>
     <label for="materialization_url" class="form-label">Materialization (url/name of the table containing the ID association and bounding box information)</label>
     <p><input class="form-control" type="text" id="materialization_url" name="materialization_url" placeholder="Materialization - synapses" value='/Users/lando/Code/SynAnno/h01/synapse-export_000000000000.csv'></p>
+    <label for="secrets_file" class="form-label">Secrets (File containing the bucket secrets, defaults to looking in ~/.cloudvolume/secrets)</label>
+    <p><input class="form-control" type="file" id="secrets_file" name="secrets_file"></p>
+    <label  class="form-label">SynAnno JSON file</label>
+    <p><input class="form-control {{mode}}" type="file" id="formFile" name="file_json"></p>
 
-      
     <label class="form-check-label">
         <input type="radio" class="form-check-input" id='view_centric_button' name="view_style" value="view" {% if view_style == 'view' %} checked {% endif %}>
         View Centric
@@ -62,7 +65,10 @@
         <option value="yzx">  YZX  </option>
       </select>
       Coordinate Order
-      </label>
+    </label>
+
+    
+
     <div class="mb-1"></div>
 
       <div id="neuron-form" {% if view_style == 'view' %} class="hidden-form" {% endif %}>
@@ -86,18 +92,12 @@
       </div>
 
       <div class="mb-3"></div>
-      <label for="secrets_file" class="form-label">Secrets (File containing the bucket secrets, defaults to looking in ~/.cloudvolume/secrets)</label>
-      <p><input class="form-control" type="file" id="secrets_file" name="secrets_file"></p>
+
+
   </div>
-
-    <label  class="form-label">SynAnno JSON file {% if mode == 'draw'%}-
-      Required{% endif %}</label>
-    <p><input class="form-control {{mode}}" type="file" id="formFile" name="file_json"></p>
-
-
     <div style="display: flex">
       <div>
-      <label  class="form-label">Source Volume Resolution (in nm)</label>
+      <label  class="form-label" style="margin-right : 2px">Source Volume Resolution (in nm)</label>
       <input class="X-Res" type="number" id="res-source-1" name="res-source-1" placeholder="Default: 4" value=4>
       <input class="Y-Res" type="number" id="res-source-2" name="res-source-2" placeholder="Default: 4" value=4>
       <input class="Z-Res" type="number" id="res-source-3" name="res-source-3" placeholder="Default: 33" value=33>
@@ -106,7 +106,7 @@
     </div>
 
     <div>
-      <label  class="form-label">Target Volume Resolution (in nm)</label>
+      <label  class="form-label" style="margin-right : 8px">Target Volume Resolution  (in nm)</label>
       <input class="X-Res" type="number" id="res-target-1" name="res-target-1" placeholder="Default: 8" value=8>
       <input class="Y-Res" type="number" id="res-target-2" name="res-target-2" placeholder="Default: 8" value=8>
       <input class="Z-Res" type="number" id="res-target-3" name="res-target-3" placeholder="Default: 33" value=33>
@@ -116,7 +116,7 @@
 
     <div class="mb-1"></div>
 
-    <label for="formGroupExampleInput" class="form-label">Instance crop size (in px)</label>
+    <label for="formGroupExampleInput" class="form-label" style="margin-right : 50px">Instance crop size (in pixel)</label>
     <input type="number" id="cropsize_x" placeholder="256" name="crop_size_c0" value=256> 
     <input type="number" id="cropsize_y" placeholder="256" name="crop_size_c1" value=256> 
     <input type="number" id="cropsize_z" placeholder="16" name="crop_size_c2" value=16> 

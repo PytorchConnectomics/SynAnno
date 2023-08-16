@@ -1,110 +1,297 @@
 # SynAnno
 
-SynAnno is a tool for synaptic polarity annotation from electron microscopy (EM) volumes.
+SynAnno is a tool designed for proofreading and correcting synaptic polarity annotation from electron microscopy (EM) volumes - specifically the [H01](https://h01-release.storage.googleapis.com/landing.html) dataset. SynAnno is aimed for integration with Seung Lab's (Princeton) CAVE (Connectome Annotation Versioning Engine). 
 
-## Functionalities 
+- [Key Components and Subjects](#key-components-and-subjects)
+    - [H01](#h01)
+    - [Synaptic Polarity Annotation](#synaptic-polarity-annotation)
+    - [CAVE (Connectome Annotation Versioning Engine)](#cave-connectome-annotation-versioning-engine)
+    - [Neuroglancer Integration](#neuroglancer-integration)
+    - [Cloud Volume](#cloud-volume)
+    - [Mask Layout](#mask-layout)
+    - [Materialization Table](#materialization-table)
+- [Core Functionalities](#core-functionalities)
+- [Setup](#setup)
+    - [Docker](#docker)
+    - [Environment](#environment)
+        - [Setting Up SynAnno with `pyenv` and `pipenv` on macOS](#setting-up-synanno-with-pyenv-and-pipenv-on-macos)
+        - [Start up SynAnno](#start-up-synanno)
+- [Navigating SynAnno](#navigating-synanno)
+    - [Landing Page](#landing-page)
+    - [Open Data](#open-data)
+    - [Annotate](#annotate)
+    - [Categorize](#categorize)
+    - [Export Annotations](#export-annotations)
+    - [Draw](#draw)
+    - [Export Masks](#export-masks)
 
-1. Proofreading annotated data
-    - Viewing data instances and mask
-    - Marking faulty segmentation masks
-    - Describing error in segmentation mask
-2. Correcting Segmentation masks
-    - Deleting False Positives
-    - Redrawing bad matches (under development)
 
-## Requirements
+## Key Components and Subjects 
 
-**Download and unzip SynAnno**
+### H01
 
-Download SynAnno and unzip it into a folder of your choice.
-We assume you have unzipped the folder under `/home/user/SynAnno`.
+Harvard's Lichtman laboratory and Google's Connectomics team released the [H01](https://h01-release.storage.googleapis.com/landing.html) dataset, a 1.4 petabyte view of human brain tissue via nanoscale EM. It covers a volume of ~1mm³, featuring tens of thousands of neurons, millions of neuron fragments, 183 million annotated synapses, and 100 proofread cells.
 
-**Anaconda (https://www.anaconda.com/)**
+### Synaptic Polarity Annotation
 
-Conda is an environment and package manager for python built for data science and machine learning.
-It provides an easy and stable means to set up an environment with all of SynAnno's relevant dependencies.
-To run SynAnno, even the lightweight version MiniConda is sufficient.
+Synaptic polarity refers to the directionality of information flow between two neurons at a synapse, the junction where they communicate. In this context, we classify synapses as pre-synaptic (information senders) or post-synaptic (information receivers). A pre-synaptic neuron sends neurotransmitter signals across the synaptic cleft to the post-synaptic neuron, which receives these signals and processes the information. While the segmentation masks highlight the synaptic clefts between neurons, the pre-/post-synaptic IDs are coordinates placed into the associated neurons, identifying the specific sender and receiver. Identifying these key elements is crucial for creating accurate structural and functional neural maps. SynAnno assists in proofreading, correcting, and identifying these segmentation masks and synaptic IDs.
 
-To download and install MiniConda, go to [here](https://docs.conda.io/en/latest/miniconda.html#latest-miniconda-installer-links) and select the latest version for your Operation System.
-For MacOs, this would be "Miniconda3 MacOSX 64-bit pkg" or "Miniconda3 macOS Apple M1 64-bit pkg," depending on your Mac's chip architecture. Select the "... pkg" version, not the "... bash" version.
-After downloading the package, double-click it and follow the steps described by the install manager.
+### CAVE (Connectome Annotation Versioning Engine)
 
-**Setup the SynAnno environment**
 
-1. Open a terminal
-    - On a Mac, this can be achieved by opening the spotlight (command + space), entering "Terminal," and pressing enter.
 
-2. Navigate to you the SynAnno folder
-    - In a bash terminal, we use `cd` to navigate and `ls` to show the content
-    - Write `cd /home/user/SynAnno` in the terminal and press enter
-    - You can check the content of the folder by writing `ls` and pressing enter
+### Neuroglancer Integration
 
-3. Check the Miniconda installation
-    - To check if you correctly installed Miniconda write `conda --version` into terminal and press enter
-    - The terminal should depict the version of Miniconda.
+SynAnno integrates [Neuroglancer](https://github.com/google/neuroglancer) directly into its interface. Neuroglancer is a powerful tool for 3D visualization of large-scale neuroimaging data. This integration allows users to effortlessly transition to a 3D view from any instance in the proofreading or drawing views. When an instance is selected, the embedded Neuroglancer opens at the exact location, providing an enhanced view of the specific instance. This functionality is particularly helpful during proofreading, enabling users to closely examine complex cases and make more informed decisions. In the drawing view, users can navigate through the dataset with ease, mark false negatives with a single click, and then return to SynAnno to draw segmentation masks, set pre-/post-synaptic coordinate IDs, or more accurately assess and correct erroneous cases when editing existing masks and IDs.
 
-4. Setup the environment
-    - We want to install SynAnno-specific dependencies - Python libraries. To make sure that we avoid conflicts with already installed, or in the future to be installed, dependencies, we logically isolate the SynAnno dependencies by putting them into an environment.
-    - To create the environment, write `conda env create -n synanno -f synanno_env_requirements.yaml` into the terminal and press enter. The flags in the command stand for: `-n`: Name of the environment, `-f`: File from which to install the requirements. Important, the command only works if you are inside `/home/user/SynAnno` since we are referencing the `synanno_env_requirements.yaml` file located in the folder.
-    - To activate the environment, write `conda activate synanno` into the terminal and press enter
+### Cloud Volume
 
-## Start up SynAnno tool
+Leveraging [CloudVolume](https://github.com/seung-lab/cloud-volume), SynAnno efficiently handles vast datasets, such as the H01 1.4 petabyte volume, by employing on-demand, page-wise loading of instance-specific subvolumes. Users can seamlessly access synapses associated with specific pre and/or post-synaptic IDs or within designated subvolumes, allowing for the referencing of an unlimited number of neurons. SynAnno only retains metadata for each page and image data for instances marked as erroneous, optimizing memory usage. This targeted data retention enables quick reloading of problematic instances for further analysis and correction in the categorization and drawing views.
 
-First, create a virtual environment and install relevant dependencies
-```bash
-conda create -n synanno python=3.9
-conda activate synanno
-pip install -r requirements.txt
-```
+### Mask Layout
 
-Then, start SynAnno using this command
+SynAnno's mask layout adheres to the H01 dataset standards, using a monochrome segmentation mask to highlight the synaptic cleft. In the proofreading view, pre-synaptic coordinate IDs are marked by a green dot, and post-synaptic coordinate IDs by a blue dot, with these markers presented in bright colors on their specific slice and in muted shades on related slices for easy reference. In the drawing mode, users have the flexibility to place pre-/post-synaptic ID markers on any slices independently, making it possible to accommodate synapses with varying orientations in the Neuroglancer view. The user can redraw mismatches by setting an adjustable number of spline points. Users can download the corrected segmentation mask directly, while pre-/post-synaptic IDs are stored in a pandas DataFrame, available for download as a JSON file.
+
+### Materialization Table
+
+The Materialization Table functions as a database that links annotations to segmentation IDs within large-scale neuroimaging datasets. It regularly updates based on the bound spatial points of the annotations and the underlying segment IDs, creating a systematic connection between annotations and IDs. This enables efficient querying for specific annotations or IDs, providing essential information for tracking connectivity in the datasets.
+
+In SynAnno, the Materialization Table is simply a reference for determining which instances to load. SynAnno queries the table with the provided pre-/post-synaptic IDs or subvolume coordinates and loads the relevant instances based on the retrieved information. This approach streamlines the loading process, making it efficient and straightforward to access the required data.
+
+## Core Functionalities 
+
+1. **Proofreading Annotated Data**:
+    - View individual data instances, their associated segmentation masks and pre-/post-synaptic coordinate IDs.
+    - Mark segmentation masks and pre-/post-synaptic coordinate IDs that appear to be erroneous and Provide errors descriptions.
+
+2. **Segmentation Mask Corrections**:
+    - Delete false positives.
+    - Add missed FN by browsing and marking them via Neuroglancer.
+    - Redraw mismatches using spline interpolation with intuitive control points.
+    - Reset pre-/post-synaptic coordinate IDs.
+
+3. **Cloud and Dataset Compatibility**:
+    - Full integration of [Neuroglancer's "precomputed" dateformat](https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/README.md).
+    - Neuron-centric data loading: Instance based loading via pre-/post-synaptic IDs.
+    - View-centric data loading: Load all instance with in a given sub-volume range. 
+    - Handle shapes and resolutions mismatches between source and target volumes.
+    - Support for arbitrary coordinate system (e.g., xyz, zyx).
+
+4. **Advanced Instance Management**:
+    - 2D slice-wise navigation through all instances source and target slices.
+    - Instantly view instances in Neuroglancer for 3D analysis.
+
+5. **Efficient Data Handling**:
+    - On-demand loading of instances using [CloudVolume](https://github.com/seung-lab/cloud-volume), suitable for large datasets.
+    - Reduce loading time for multiple instances through multi-threading.
+    - Centralize data management with a unified Pandas dataframe.
+
+6. **Future Features**
+    - Depth-wise auto-segmentation via custom seed segmentation masks (see issue [#70](https://github.com/PytorchConnectomics/SynAnno/issues/70)).
+
+
+## Setup
+
+Download SynAnno and unzip it into a folder of your choice. For the following we assume you've unzipped the folder under `/home/user/SynAnno`. You can either run SynAnno in a Docker container or set up a local environment.
+
+### Docker 
+
+Repository includes a Dockerfile that enables you to build and run the application in a Docker container to isolate it from your local setup. It ensures a consistent environment across different machines, simplifying deployment and avoiding potential configuration issues.
+
+1. **Install Docker**: If you haven't already, [install Docker](https://docs.docker.com/get-docker/) on your machine.
+
+2. **Navigate to the project folder**: Open a terminal and navigate to the folder containing the Dockerfile.
+
+    ```shell
+    cd /home/user/SynAnno
+    ```
+
+3. **Build the Docker image**: Build the Docker image using the provided Dockerfile. 
+
+    ```shell
+    docker build -t synanno .
+    ```
+
+4. **Run the Docker container**: Run the Docker container using the image you just built. 
+
+    ```shell
+    docker run -p 8080:80 synanno
+    ```
+
+    This command maps port 8080 on your local machine to port 80 on the Docker container.
+
+5. **Access the application**: Open a web browser and go to `http://localhost:8080` to access the application running in the Docker container.
+
+6. **Stop the Docker container**: When you're done, you can stop the Docker container by pressing `Ctrl + C` in the terminal where the container is running.
+
+### Environment 
+
+Set up the environment of your choice and install the required packages from either the `requirements.txt` or `Pipfile`. In the following, we quickly outline how to derive a strong setup using `pyenv` and `pipenv` on macOS.
+
+
+#### Setting Up SynAnno with `pyenv` and `pipenv` on macOS
+
+Why Use pyenv and pipenv?
+
+- **Isolation**: Prevent dependency conflicts with isolated virtual environments.
+- **Reproducibility**: Ensure consistent dependency versions with `Pipfile.lock`.
+- **Python Version Management**: Easily switch Python versions per project.
+
+
+
+1. **Install `pyenv`**:
+   ```shell
+   brew install pyenv
+   ```
+
+2. **Add `pyenv` to your shell**:
+   ```shell
+   echo 'eval "$(pyenv init --path)"' >> ~/.zshrc
+   ```
+
+3. **Install Python version with `pyenv`**:
+   ```shell
+   pyenv install 3.9.12
+   ```
+
+4. **Set global Python version**:
+   ```shell
+   pyenv global 3.9.12
+   ```
+
+5. **Install `pipenv`**:
+   ```shell
+   pip install pipenv
+   ```
+
+6. **Navigate to your project folder**:
+   ```shell
+   cd /home/user/SynAnno
+   ```
+
+7. **Initialize `pipenv` environment**:
+   ```shell
+   pipenv --python $(pyenv which python)
+   ```
+
+8. **Activate the environment**:
+   ```shell
+   pipenv shell
+   ```
+
+9. **Install the `Pipfile`**:
+   ```shell
+   pipenv install
+   ```
+
+### Start up SynAnno 
+
+From with in the repository (e.g. `/home/user/SynAnno`) start SynAnno using the following command:
 ``` python
 python run.py
 # the app is accessible at http://127.0.0.1/5000/
 ```
 
+## Navigating SynAnno
 
-## Using SynAnno
+### Landing Page
 
-*On each page, click the question mark in the top right corner should you need help with how to proceed.*
+- URL: http://127.0.0.1:5000/
 
-1. Go to the App's URL (root path `http://127.0.0.1:5000/`) and upload the data 
-    - Select an h5 source and target file, click `Submit`, and when submitted successfully, click `Start Data Proofread.`
-    - If you have already proofread the dataset, you can also upload the annotation JSON. However, this JSON must fit the data perfectly and can not deviate from the predefined format, i.e., it must have been generated by this tool.
+On landing page you can choose between two workflows: "Revise Dataset" and "Proofread Annotation". The former allows you to redraw segmentation masks, assign pre-/post-synaptic IDs, and add missed false negatives. The latter allows you to review existing segmentations and pre-/post-synaptic IDs, mark incorrect instances, and assign error descriptions to those instances. After categorizing all erroneous instances in the "Proofread Annotation" workflow, you can automatically proceed with the "Revise Dataset" workflow.
 
-[![App root page][1]][1]
+Each page has three buttons: "Home", "Question Mark", and "Menu". The first returns you to the landing page. The second provides an explanation of the current view and its functionality. The third provides general information and contact details.
 
-3. After clicking `Start Data Proofread`, you will be redirected to the instance overview (`http://127.0.0.1:5000/set-data/synAnno.json`).
-    - The status of an instance segmentation is indicated by the color surrounding the instance: correct (green), incorrect (red), and uncertain (gray). You can change the status by clicking on an instance. One click marks the instance as wrong (red color), two clicks mark the instance as unsure (gray), three clicks and the data is again marked as right (green). 
-    
+[![Landing Page][1]][1]
 
-    [![App proof read page][2]][2]
+### Open Data
 
-    - Should you be unsure for of an instance's mask, you can right-click the instance to enlarge the patch and navigate surrounding slices. In this view, you can also click `View in NG` to view the instance in the Neuroglancer. 
-    - After evaluating the segmentation masks for all instances on the current page, click the `Next` button at the bottom of the page to evaluate the next set of segmentation masks.
-    - When you are done proofreading all instances, click `Error Processing` at the bottom of the page (this button will show on the last proofreading page).
+- URL: http://127.0.0.1:5000/open_data
+
+This view is identical for both workflows. You'll be prompted to provide a source bucket and target bucket (both in Neuroglancer's precomputed format), a URL to a materialization table, bucket secrets (defaults to ~/.cloudvolume/secrets), and optionally a JSON file containing instance metadata. The JSON file can be used to save and restore sessions or start a "Revise Dataset" workflow with information from a "Proofread Annotation" workflow.
+
+You can load instances by querying the materialization table based on sub-volume constraints in the 'View Centric' approach or based on pre-/post-synaptic coordinates in the 'Neuron Centric' approach. You'll also need to specify the coordinate layout of the referenced precomputed datasets, the source volume resolution (in nm), the target volume resolution (in nm), and instance crop size (in pixels).
+
+After providing the required information, click 'Submit' to prepare the data for the first page or revision. Then, click "Start Data Proofread"/"Start Drawing" to begin proofreading or revision.
+
+[![Open Data][2]][2]
+
+### Annotate
+
+- Workflow: Proofreading
+- URL: http://127.0.0.1:5000/annotation
+
+Clicking `Start Data Proofread` directs you to a grid view of instances. Instance status is indicated by color: correct (green), incorrect (red), unsure (gray). Clicking on an instance changes its status: once for incorrect, twice for unsure, three times for correct.
+
+[![Grid View][3]][3]
+
+To inspect an instance's mask, right-click the instance to enlarge the patch and navigate through slices. 
+
+[![Instance View][4]][4]
+
+Click `View in NG` to view the instance in Neuroglancer.
+
+[![NG View][5]][5]
+
+After evaluating the segmentation masks, click `->` to load and evaluate the page. When done, click `Error Processing` on the last proofreading page.
+
+### Categorize
+
+- Workflow: Proofreading
+- URL: http://127.0.0.1:5000/categorize
+
+Clicking `Error Processing` brings you to the error categorization view. Here, you specify errors for instances marked as `incorrect` or `unsure`. Scroll sideways to see all cards. Right-click to enlarge the patch, navigate through slices, or open Neuroglancer. When done, click `Submit and Finish`.
+
+[![Categorize][6]][6]
+
+If you marked instances as false positives, you'll be asked if they should be discarded.
+
+[![Delete FPS][7]][7]
+
+### Export Annotations
+
+- Workflow: Proofreading
+- URL: http://127.0.0.1:5000/export_annotate
+
+After clicking `Submit and finish`, you can download the JSON file containing instance metadata by clicking `Download JSON`, redraw masks with the `Revise Dataset` workflow by clicking `Redraw Masks`, or start a new process by clicking `Start New Process`.
+
+[![Export Annotations][8]][8]
 
 
+### Draw
 
-[![App proof instance view][3]][3]
+- Revision Workflow
+- http://127.0.0.1:5000/draw
 
-4. Clicking on the `Error Processing` button takes you to the error categorization view (`http://127.0.0.1:5000/categorize`), which lets you specify the error for all instances marked as `wrong` or `unsure`
-    - Scroll sideways to see all cards.
-    - Right-click to enlarge the patch, navigate surrounding slices, and open the Neuroglancer at that instance position.
-    - When done categorizing all instances, click on `Submit and Finish`.
+Clicking `Start Drawing` from the Open Data view, after choosing the Revision Workflow on the Landing Page, or selecting `Redraw Masks` in the Export Annotations view, will take you to the Draw view. In this view, you can create segmentation masks, set pre-/post-synaptic IDs, and add missed false negatives. If you arrived here from the Proofreading Workflow, you'll see instances marked as `incorrect` or `unsure` during previous proofreading, along with their associated error labels assigned during categorization. If you arrived from the Revision Workflow, you'll see all instances associated with the given pre-/post-synaptic IDs or within the specified sub-volume range that have `incorrect` or `unsure` labels in the provided JSON file. If you don't provide the JSON file, you can only add missed false negatives, as the tool assumes an initial label of `correct` for all instances.
 
-[![App proof error processing page][4]][4]
+[![Draw][9]][9]
 
-5. Clicking `Submit and finish` takes you to the final view (`http://127.0.0.1:5000/finalpage`)
-    - Click `Save Results` to download the JSON.
-    - Click `Open new data` to go back to the root page and start proofreading a new dataset.
+Selecting an instance and clicking `Draw Mask` will open a view specific to that instance. In this view, you can scroll through all slices of the instance, draw masks for as many slices as you like, and set the pre- and post-synaptic coordinate ID markers on any chosen slice. Clicking the `Draw Mask` button allows you to create a mask using spline interpolation with intuitive control points. After positioning all control points, click the `Fill` button to generate the mask. You can modify or erase parts of the drawn mask by clicking the `Revise` button, which acts like an eraser. Once satisfied with the mask, click `Save` to save it for that slice. To set the pre- and post-synaptic coordinate ID markers, select the appropriate slice, click the `Pre-Synaptic CRD` or `Post-Synaptic CRD` button, and then click the relevant coordinate location. At any time, you can click `View in NG` to open the instance in Neuroglancer for a better view of marker placement or mask drawing. Upon closing the instance view, you will see the slice and its custom mask displayed in the sideways-scrollable overview for which you drew the custom mask last.
 
-[![App proof finish page][5]][5]
+[![Draw Instance][10]][10]
 
+To add previously missed false negatives, click the `Add New Instance` button to open Neuroglancer. Navigate to the location of the missed false negative, position your cursor at the relevant location, and press the `c` key on your keyboard to set a yellow marker. After marking the location, click the `Review` button to open a module displaying the chosen location's coordinates and the slice depth for the instance's bounding box. Confirm the settings by clicking `Save`, or manually adjust the values before saving. This adds the missed false negative to the list of instances available for segmentation mask drawing.
 
+[![Add FN][11]][11]
 
-  [1]: ./doc/images/root_page.png
-  [2]: ./doc/images/proof_read.png
-  [3]: ./doc/images/instance_view.png
-  [4]: ./doc/images/error_processing.png
-  [5]: ./doc/images/finish_page.png
+After completing the segmentation masks and setting the pre and post-synaptic coordinate ID markers for all instances, click the `Submit and Finish` button to proceed to the final view. 
+
+### Export Masks
+
+In this view, you can download the JSON file containing the instances' metadata by clicking `Download JSON`, or download the segmentation masks as a numpy array or image by clicking `Save Masks`. The instance ID, bounding box, and slice number are encoded in the file names. If you want to start a new process, click `Start New Process` to return to the landing page.
+
+[![Export Masks][12]][12]
+
+  [1]: ./doc/images/landing_page.png
+  [2]: ./doc/images/open_data.png
+  [3]: ./doc/images/grid_view.png
+  [4]: ./doc/images/instance_view.png
+  [5]: ./doc/images/ng_view.png
+  [6]: ./doc/images/categorize_view.png
+  [7]: ./doc/images/delete_fp_view.png
+  [8]: ./doc/images/export_annotate.png
+  [9]: ./doc/images/draw_view.png
+  [10]: ./doc/images/draw_instance_view.png
+  [11]: ./doc/images/add_fn_view.png
+  [12]: ./doc/images/export_masks.png

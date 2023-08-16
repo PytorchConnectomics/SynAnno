@@ -40,10 +40,7 @@ $(document).ready(function () {
     var thickness = 20
 
     // define colors
-    const turquoise = 'rgba(255, 0, 255, 0.7)';
-
-    // set polarity default
-    var color_turquoise = turquoise
+    const pink = 'rgba(255, 0, 255, 0.7)';
 
     // variable for toggling the polarity
 
@@ -340,10 +337,10 @@ $(document).ready(function () {
 
         if (!(pointsQBez.length > 0)) {
             // sample points along splines and draw the mask
-            fill_clip(color_turquoise, thickness, sample = true)
+            fill_clip(pink, thickness, sample = true)
         } else {
             // draw the mask, reuse sampled points
-            fill_clip(color_turquoise, thickness, sample = false)
+            fill_clip(pink, thickness, sample = false)
         }
         // activate all options for manipulating and saving the mask
         $('#canvasButtonSplit').prop('disabled', false);
@@ -531,7 +528,7 @@ $(document).ready(function () {
     }
 
     
-    function fill_clip(color_turquoise, thickness, sample = false) {
+    function fill_clip(pink, thickness, sample = false) {
 
         clear_canvas(ctx_curve, canvas_curve); // clear the canvas
         ctx_curve.beginPath(); // init new path
@@ -589,8 +586,8 @@ $(document).ready(function () {
             ctx_curve.clip(region_1);
     
             // set the color
-            ctx_curve.fillStyle = color_turquoise;
-            ctx_curve.strokeStyle = color_turquoise;
+            ctx_curve.fillStyle = pink;
+            ctx_curve.strokeStyle = pink;
     
             // draw a rectangle over the whole canvas and fill with the color - will only fill the clipping region
             ctx_curve.rect(0, 0, canvas_curve.width, canvas_curve.height);

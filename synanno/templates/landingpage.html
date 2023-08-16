@@ -2,12 +2,11 @@
 
 {% block help_content%}
 <p class="text-muted">
+SynAnno is a tool designed for proofreading and correcting synaptic polarity annotation from electron microscopy (EM) volumes - specifically the H01 dataset.
 
-SynANNO is a tool for proofreading and revising annotations for synaptic clefts. The tool lets you evaluate annotations by marking them as "Correct," "Incorrect," or "Unsure."  Subsequently, you will be able to specify the fault of the label as "False Positive," "Bad Fit," "Polarity Switch," or by assigning a custom tag. The provided information can be downloaded as a comprehensive JSON. Further, the tool enables you to manually correct the masks of the center slice of instance marked as "Incorrect" or "Unsure." Additionally, you will be able to add instances that were so far missed (false negatives) using an embedded Neuroglancer instance. Again you will be able to draw the mask for the center slice of those newly added instances. 
+On this landing page you can choose between two workflows: "Revise Dataset" and "Proofread Annotation". The former allows you to redraw segmentation masks, assign pre-/post-synaptic IDs, and add missed false negatives. The latter allows you to review existing segmentations and pre-/post-synaptic IDs, mark incorrect instances, and assign error descriptions to those instances. After categorizing all erroneous instances in the "Proofread Annotation" workflow, you can automatically proceed with the "Revise Dataset" workflow.
 
-We only require editing the center slice mask as our model will use it as seed segmentation and compute the volumetric segmentation automatically.
-
-In case you already possess the appropriate information in JSON format, you can directly start the mask editing by clicking on "Revise Data" and providing the source and target volume as well as the JSON.
+Each page has three buttons: "Home", "Question Mark", and "Menu". The first returns you to the landing page. The second provides an explanation of the current view and its functionality. The third provides general information and contact details.
 </p>
 {% endblock %}
 

@@ -1,16 +1,14 @@
 {% extends "templatebase.html" %}
 
 {% block help_content %}
-<p class="text-muted">The status of an instance segmentation is indicated by the color surrounding the instance: correct
-    (green), incorrect (red), and unsure (gray).
-    You can change the status by clicking on an instance. One click marks the instance as wrong (red color), two clicks
-    mark the instance as unsure (gray), three clicks and the data is again marked as right (green).
-    Should you be unsure for of an instance's mask, you can right-click the instance to enlarge the patch and navigate
-    surrounding slices. In this view, you can also click "View in NG" to view the instance in the Neuroglancer.
-    After evaluating the segmentation masks for all instances on the current page, click the "Next" button at the bottom
-    to evaluate the next set of segmentation masks.
-    When you are done proof reading all instances, click "Error Processing" at the bottom of the page (this button will
-    show on the last proofreading page).
+<p class="text-muted">
+The annotation view depicts the instances of the current page in a grid view. Instance status is indicated by color: correct (green), incorrect (red), unsure (gray). Clicking on an instance changes its status: once for incorrect, twice for unsure, three times for correct.
+
+To inspect an instance's mask, right-click the instance to enlarge the patch and navigate through slices. 
+
+Click `View in NG` to view the instance in Neuroglancer.
+
+After evaluating the segmentation masks, click `->` to load and evaluate the page. When done, click `Error Processing` on the last proofreading page.
 </p>
 {% endblock %}
 

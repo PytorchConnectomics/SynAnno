@@ -1,13 +1,9 @@
 {% extends "templatebase.html" %}
 
 {% block help_content %}
-<p class="text-muted">Categorize the faulty labels. Scroll sideways to see all cards.
-    After categorizing all instances, click on "Submit and Finish." You will be prompted with a dialog asking if the Instances marked as False Positive (FN) should be deleted.
-    If you select yes, such instances will be removed entirely from the JSON.</p>
-
-<p class="text-muted">Note: Right-click an instance to enlarge the patch, navigate surrounding slices, and open the
-    Neuroglancer at that instance position.</p>
-
+<p class="text-muted">
+The categorization view lets you specify errors for instances marked as `incorrect` or `unsure`. Scroll sideways to see all cards. Right-click to enlarge the patch, navigate through slices, or open Neuroglancer. When done, click `Submit and Finish`. If you marked instances as false positives, you'll be asked if they should be discarded.    
+</p>
 {% endblock %}
 
 {% block content %}

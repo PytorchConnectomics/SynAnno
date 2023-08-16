@@ -2,9 +2,7 @@
 
 {% block help_content %}
 <p class="text-muted">
-    Click "Download Masks" to export the manually drawn segmentation masks.
-    Click "Download JSON" to export a JSON file containing the detail to all instances - including the newly added FNs.
-    Click "Start New Process" to return to the landing page.
+In this view, you can download the JSON file containing the instances' metadata by clicking `Download JSON`, or download the segmentation masks as a numpy array or image by clicking `Save Masks`. The instance ID, bounding box, and slice number are encoded in the file names. If you want to start a new process, click `Start New Process` to return to the landing page.
 </p>
 {% endblock %}
 

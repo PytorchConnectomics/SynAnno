@@ -1,32 +1,32 @@
 # SynAnno
 
-SynAnno is a tool designed for proofreading and correcting synaptic polarity annotation from electron microscopy (EM) volumes - specifically the [H01](https://h01-release.storage.googleapis.com/landing.html) dataset. SynAnno is aimed for integration with Seung Lab's (Princeton) CAVE (Connectome Annotation Versioning Engine). 
+SynAnno is a tool designed for proofreading and correcting synaptic polarity annotation from electron microscopy (EM) volumes - specifically the [H01](https://h01-release.storage.googleapis.com/landing.html) dataset. SynAnno is aimed for integration with Seung Lab's (Princeton) CAVE (Connectome Annotation Versioning Engine).
 
 - [Key Components and Subjects](#key-components-and-subjects)
-    - [H01](#h01)
-    - [Synaptic Polarity Annotation](#synaptic-polarity-annotation)
-    - [CAVE (Connectome Annotation Versioning Engine)](#cave-connectome-annotation-versioning-engine)
-    - [Neuroglancer Integration](#neuroglancer-integration)
-    - [Cloud Volume](#cloud-volume)
-    - [Mask Layout](#mask-layout)
-    - [Materialization Table](#materialization-table)
+  - [H01](#h01)
+  - [Synaptic Polarity Annotation](#synaptic-polarity-annotation)
+  - [CAVE (Connectome Annotation Versioning Engine)](#cave-connectome-annotation-versioning-engine)
+  - [Neuroglancer Integration](#neuroglancer-integration)
+  - [Cloud Volume](#cloud-volume)
+  - [Mask Layout](#mask-layout)
+  - [Materialization Table](#materialization-table)
 - [Core Functionalities](#core-functionalities)
 - [Setup](#setup)
-    - [Docker](#docker)
-    - [Environment](#environment)
-        - [Setting Up SynAnno with `pyenv` and `pipenv` on macOS](#setting-up-synanno-with-pyenv-and-pipenv-on-macos)
-        - [Start up SynAnno](#start-up-synanno)
+  - [Docker](#docker)
+  - [Environment](#environment)
+    - [Setting Up SynAnno with `pyenv` and `pipenv` on macOS](#setting-up-synanno-with-pyenv-and-pipenv-on-macos)
+    - [Start up SynAnno](#start-up-synanno)
 - [Navigating SynAnno](#navigating-synanno)
-    - [Landing Page](#landing-page)
-    - [Open Data](#open-data)
-    - [Annotate](#annotate)
-    - [Categorize](#categorize)
-    - [Export Annotations](#export-annotations)
-    - [Draw](#draw)
-    - [Export Masks](#export-masks)
+  - [Landing Page](#landing-page)
+  - [Open Data](#open-data)
+  - [Annotate](#annotate)
+  - [Categorize](#categorize)
+  - [Export Annotations](#export-annotations)
+  - [Draw](#draw)
+  - [Export Masks](#export-masks)
+- [Contributing](#contributing)
 
-
-## Key Components and Subjects 
+## Key Components and Subjects
 
 ### H01
 
@@ -37,8 +37,6 @@ Harvard's Lichtman laboratory and Google's Connectomics team released the [H01](
 Synaptic polarity refers to the directionality of information flow between two neurons at a synapse, the junction where they communicate. In this context, we classify synapses as pre-synaptic (information senders) or post-synaptic (information receivers). A pre-synaptic neuron sends neurotransmitter signals across the synaptic cleft to the post-synaptic neuron, which receives these signals and processes the information. While the segmentation masks highlight the synaptic clefts between neurons, the pre-/post-synaptic IDs are coordinates placed into the associated neurons, identifying the specific sender and receiver. Identifying these key elements is crucial for creating accurate structural and functional neural maps. SynAnno assists in proofreading, correcting, and identifying these segmentation masks and synaptic IDs.
 
 ### CAVE (Connectome Annotation Versioning Engine)
-
-
 
 ### Neuroglancer Integration
 
@@ -58,43 +56,47 @@ The Materialization Table functions as a database that links annotations to segm
 
 In SynAnno, the Materialization Table is simply a reference for determining which instances to load. SynAnno queries the table with the provided pre-/post-synaptic IDs or subvolume coordinates and loads the relevant instances based on the retrieved information. This approach streamlines the loading process, making it efficient and straightforward to access the required data.
 
-## Core Functionalities 
+## Core Functionalities
 
 1. **Proofreading Annotated Data**:
-    - View individual data instances, their associated segmentation masks and pre-/post-synaptic coordinate IDs.
-    - Mark segmentation masks and pre-/post-synaptic coordinate IDs that appear to be erroneous and Provide errors descriptions.
+
+   - View individual data instances, their associated segmentation masks and pre-/post-synaptic coordinate IDs.
+   - Mark segmentation masks and pre-/post-synaptic coordinate IDs that appear to be erroneous and Provide errors descriptions.
 
 2. **Segmentation Mask Corrections**:
-    - Delete false positives.
-    - Add missed FN by browsing and marking them via Neuroglancer.
-    - Redraw mismatches using spline interpolation with intuitive control points.
-    - Reset pre-/post-synaptic coordinate IDs.
+
+   - Delete false positives.
+   - Add missed FN by browsing and marking them via Neuroglancer.
+   - Redraw mismatches using spline interpolation with intuitive control points.
+   - Reset pre-/post-synaptic coordinate IDs.
 
 3. **Cloud and Dataset Compatibility**:
-    - Full integration of [Neuroglancer's "precomputed" dateformat](https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/README.md).
-    - Neuron-centric data loading: Instance based loading via pre-/post-synaptic IDs.
-    - View-centric data loading: Load all instance with in a given sub-volume range. 
-    - Handle shapes and resolutions mismatches between source and target volumes.
-    - Support for arbitrary coordinate system (e.g., xyz, zyx).
+
+   - Full integration of [Neuroglancer's "precomputed" dateformat](https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/README.md).
+   - Neuron-centric data loading: Instance based loading via pre-/post-synaptic IDs.
+   - View-centric data loading: Load all instance with in a given sub-volume range.
+   - Handle shapes and resolutions mismatches between source and target volumes.
+   - Support for arbitrary coordinate system (e.g., xyz, zyx).
 
 4. **Advanced Instance Management**:
-    - 2D slice-wise navigation through all instances source and target slices.
-    - Instantly view instances in Neuroglancer for 3D analysis.
+
+   - 2D slice-wise navigation through all instances source and target slices.
+   - Instantly view instances in Neuroglancer for 3D analysis.
 
 5. **Efficient Data Handling**:
-    - On-demand loading of instances using [CloudVolume](https://github.com/seung-lab/cloud-volume), suitable for large datasets.
-    - Reduce loading time for multiple instances through multi-threading.
-    - Centralize data management with a unified Pandas dataframe.
+
+   - On-demand loading of instances using [CloudVolume](https://github.com/seung-lab/cloud-volume), suitable for large datasets.
+   - Reduce loading time for multiple instances through multi-threading.
+   - Centralize data management with a unified Pandas dataframe.
 
 6. **Future Features**
-    - Depth-wise auto-segmentation via custom seed segmentation masks (see issue [#70](https://github.com/PytorchConnectomics/SynAnno/issues/70)).
-
+   - Depth-wise auto-segmentation via custom seed segmentation masks (see issue [#70](https://github.com/PytorchConnectomics/SynAnno/issues/70)).
 
 ## Setup
 
 Download SynAnno and unzip it into a folder of your choice. For the following we assume you've unzipped the folder under `/home/user/SynAnno`. You can either run SynAnno in a Docker container or set up a local environment.
 
-### Docker 
+### Docker
 
 Repository includes a Dockerfile that enables you to build and run the application in a Docker container to isolate it from your local setup. It ensures a consistent environment across different machines, simplifying deployment and avoiding potential configuration issues.
 
@@ -102,32 +104,31 @@ Repository includes a Dockerfile that enables you to build and run the applicati
 
 2. **Navigate to the project folder**: Open a terminal and navigate to the folder containing the Dockerfile.
 
-    ```shell
-    cd /home/user/SynAnno
-    ```
+   ```bash
+   cd /home/user/SynAnno
+   ```
 
-3. **Build the Docker image**: Build the Docker image using the provided Dockerfile. 
+3. **Build the Docker image**: Build the Docker image using the provided Dockerfile.
 
-    ```shell
-    docker build -t synanno .
-    ```
+   ```bash
+   docker build -t synanno .
+   ```
 
-4. **Run the Docker container**: Run the Docker container using the image you just built. 
+4. **Run the Docker container**: Run the Docker container using the image you just built.
 
-    ```shell
-    docker run -p 8080:80 synanno
-    ```
+   ```bash
+   docker run -p 8080:80 synanno
+   ```
 
-    This command maps port 8080 on your local machine to port 80 on the Docker container.
+   This command maps port 8080 on your local machine to port 80 on the Docker container.
 
 5. **Access the application**: Open a web browser and go to `http://localhost:8080` to access the application running in the Docker container.
 
 6. **Stop the Docker container**: When you're done, you can stop the Docker container by pressing `Ctrl + C` in the terminal where the container is running.
 
-### Environment 
+### Environment
 
 Set up the environment of your choice and install the required packages from either the `requirements.txt` or `Pipfile`. In the following, we quickly outline how to derive a strong setup using `pyenv` and `pipenv` on macOS.
-
 
 #### Setting Up SynAnno with `pyenv` and `pipenv` on macOS
 
@@ -137,57 +138,64 @@ Why Use pyenv and pipenv?
 - **Reproducibility**: Ensure consistent dependency versions with `Pipfile.lock`.
 - **Python Version Management**: Easily switch Python versions per project.
 
-
-
 1. **Install `pyenv`**:
-   ```shell
+
+   ```bash
    brew install pyenv
    ```
 
 2. **Add `pyenv` to your shell**:
-   ```shell
+
+   ```bash
    echo 'eval "$(pyenv init --path)"' >> ~/.zshrc
    ```
 
 3. **Install Python version with `pyenv`**:
-   ```shell
+
+   ```bash
    pyenv install 3.9.12
    ```
 
 4. **Set global Python version**:
-   ```shell
+
+   ```bash
    pyenv global 3.9.12
    ```
 
 5. **Install `pipenv`**:
-   ```shell
+
+   ```bash
    pip install pipenv
    ```
 
 6. **Navigate to your project folder**:
-   ```shell
+
+   ```bash
    cd /home/user/SynAnno
    ```
 
 7. **Initialize `pipenv` environment**:
-   ```shell
+
+   ```bash
    pipenv --python $(pyenv which python)
    ```
 
 8. **Activate the environment**:
-   ```shell
+
+   ```bash
    pipenv shell
    ```
 
 9. **Install the `Pipfile`**:
-   ```shell
+   ```bash
    pipenv install
    ```
 
-### Start up SynAnno 
+### Start up SynAnno
 
 From with in the repository (e.g. `/home/user/SynAnno`) start SynAnno using the following command:
-``` python
+
+```python
 python run.py
 # the app is accessible at http://127.0.0.1/5000/
 ```
@@ -225,7 +233,7 @@ Clicking `Start Data Proofread` directs you to a grid view of instances. Instanc
 
 [![Grid View][3]][3]
 
-To inspect an instance's mask, right-click the instance to enlarge the patch and navigate through slices. 
+To inspect an instance's mask, right-click the instance to enlarge the patch and navigate through slices.
 
 [![Instance View][4]][4]
 
@@ -257,7 +265,6 @@ After clicking `Submit and finish`, you can download the JSON file containing in
 
 [![Export Annotations][8]][8]
 
-
 ### Draw
 
 - Revision Workflow
@@ -275,7 +282,7 @@ To add previously missed false negatives, click the `Add New Instance` button to
 
 [![Add FN][11]][11]
 
-After completing the segmentation masks and setting the pre and post-synaptic coordinate ID markers for all instances, click the `Submit and Finish` button to proceed to the final view. 
+After completing the segmentation masks and setting the pre and post-synaptic coordinate ID markers for all instances, click the `Submit and Finish` button to proceed to the final view.
 
 ### Export Masks
 
@@ -283,15 +290,33 @@ In this view, you can download the JSON file containing the instances' metadata 
 
 [![Export Masks][12]][12]
 
-  [1]: ./doc/images/landing_page.png
-  [2]: ./doc/images/open_data.png
-  [3]: ./doc/images/grid_view.png
-  [4]: ./doc/images/instance_view.png
-  [5]: ./doc/images/ng_view.png
-  [6]: ./doc/images/categorize_view.png
-  [7]: ./doc/images/delete_fp_view.png
-  [8]: ./doc/images/export_annotate.png
-  [9]: ./doc/images/draw_view.png
-  [10]: ./doc/images/draw_instance_view.png
-  [11]: ./doc/images/add_fn_view.png
-  [12]: ./doc/images/export_masks.png
+## Contributing
+
+Pre-submission we ask you to only create issues for bugs, feature requests, or questions about the code. After submission, we strongly encourage any kind of contribution, including bug fixes, additional features, and documentation improvements. If you're unsure about whether a contribution is appropriate, feel free to open an issue and ask.
+
+For members of the VSC and the Seung Lab, please setup pre-commit hooks to ensure that your code adheres to our coding style. This will prevent you from committing code that doesn't follow our style guidelines and subsejcent failing PRs. To set up pre-commit hooks, run the following command in the root of the `SynAnno` repository.
+
+```bash
+pre-commit install
+```
+
+You can manually run pre-commit on all the files in your repository by running:
+
+```bash
+pre-commit run --all-files
+```
+
+Now, whenever you try to commit changes to your repository, re-commit will automatically run all hooks. If any problems are found, the commit will be prevented until you fix them.
+
+[1]: ./doc/images/landing_page.png
+[2]: ./doc/images/open_data.png
+[3]: ./doc/images/grid_view.png
+[4]: ./doc/images/instance_view.png
+[5]: ./doc/images/ng_view.png
+[6]: ./doc/images/categorize_view.png
+[7]: ./doc/images/delete_fp_view.png
+[8]: ./doc/images/export_annotate.png
+[9]: ./doc/images/draw_view.png
+[10]: ./doc/images/draw_instance_view.png
+[11]: ./doc/images/add_fn_view.png
+[12]: ./doc/images/export_masks.png

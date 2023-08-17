@@ -37,7 +37,7 @@ Harvard's Lichtman laboratory and Google's Connectomics team released the [H01](
 Synaptic polarity refers to the directionality of information flow between two neurons at a synapse, the junction where they communicate. In this context, we classify synapses as pre-synaptic (information senders) or post-synaptic (information receivers). A pre-synaptic neuron sends neurotransmitter signals across the synaptic cleft to the post-synaptic neuron, which receives these signals and processes the information. While the segmentation masks highlight the synaptic clefts between neurons, the pre-/post-synaptic IDs are coordinates placed into the associated neurons, identifying the specific sender and receiver. Identifying these key elements is crucial for creating accurate structural and functional neural maps. SynAnno assists in proofreading, correcting, and identifying these segmentation masks and synaptic IDs.
 
 ### CAVE (Connectome Annotation Versioning Engine)
-[CAVE](https://www.biorxiv.org/content/10.1101/2023.07.26.550598v1) is a computational infrastructure to host petabyte connectomes for distributed proofreading and dynamic spatial annotation. Soon, we will provide support to use SynAnno together with CAVE-hosted datasets. 
+[CAVE](https://www.biorxiv.org/content/10.1101/2023.07.26.550598v1) is a computational infrastructure to host petabyte connectomes for distributed proofreading and dynamic spatial annotation. Soon, we will provide support to use SynAnno together with CAVE-hosted datasets.
 
 
 ### Neuroglancer Integration

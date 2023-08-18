@@ -1,4 +1,3 @@
-
 # import the package app
 from synanno import app
 
@@ -9,7 +8,7 @@ from flask import render_template
 from jinja2 import Template
 
 
-@app.route('/')
+@app.route("/")
 def landing() -> Template:
     # render the template of the landing page
-    return render_template('landingpage.html')
+    return render_template("landingpage.html")

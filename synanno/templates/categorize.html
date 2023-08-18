@@ -1,108 +1,140 @@
-{% extends "templatebase.html" %}
+{% extends "templatebase.html" %} {% block help_content %}
+<p class="text-muted">
+  The categorization view lets you specify errors for instances marked as
+  `incorrect` or `unsure`. Scroll sideways to see all cards. Right-click to
+  enlarge the patch, navigate through slices, or open Neuroglancer. When done,
+  click `Submit and Finish`. If you marked instances as false positives, you'll
+  be asked if they should be discarded.
+</p>
+{% endblock %} {% block content %}
 
-{% block help_content %}
-<p class="text-muted">Categorize the faulty labels. Scroll sideways to see all cards.
-    After categorizing all instances, click on "Submit and Finish." You will be prompted with a dialog asking if the Instances marked as False Positive (FN) should be deleted.
-    If you select yes, such instances will be removed entirely from the JSON.</p>
+<div class="container-fluid content-row mt-5">
+  <div class="container-fluid py-2">
+    <div class="d-flex flex-row flex-nowrap overflow-auto">
+      {% for image in images %}
 
-<p class="text-muted">Note: Right-click an instance to enlarge the patch, navigate surrounding slices, and open the
-    Neuroglancer at that instance position.</p>
-
-{% endblock %}
-
-{% block content %}
-
-
-<div class="container-fluid content-row mt-5 ">
-
-    <div class="container-fluid py-2">
-        
-        <div class="d-flex flex-row flex-nowrap overflow-auto">
-            {% for image in images %}
-
-            <div class="card card-body card-body-proof-read border rounded" style="border-width:4px !important;"
-                id="id_error_{{image.Page}}_{{image.Image_Index}}">
-                
-                <div class="card-block border-0 p-1 image-card-btn {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}"
-                    page="{{image.Page}}" data_id="{{ image.Image_Index }}"
-                    label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}">
-                    
-                    <div class="main-image-categorize">
-                        <img id="imgEM-GT-{{image.Image_Index}}" class="img_categorize"
-                            src="{{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}}" width="64px" height="64px"
-                            style="opacity: 0.5; ">
-                        <img id="imgGT-{{image.Image_Index}}" class="img_categorize"
-                            src="{{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}}" width="64px" height="64px">
-                    </div>
-
-                </div>
-                <div class="card-block">
-
-                    <div class="form">
-                        
-                        <div class="form-check m-2">
-                            <input class="form-check-input {% if image.Error_Description == 'falsePositive' %}checked{% endif %}" 
-                                type="radio" name="select_{{image.Page}}_{{image.Image_Index}}"
-                                id="falsePositive_{{image.Page}}_{{image.Image_Index}}" value="option1">
-                            <label class="form-check-label" for="falsePositive_{{image.Page}}_{{image.Image_Index}}"></label>
-                            False Positive
-                        </div>
-                        
-                        <div class="form-check m-2">
-                            <input
-                                class="form-check-input {% if image.Error_Description == 'badFit' %}checked{% endif %}"
-                                type="radio" name="select_{{image.Page}}_{{image.Image_Index}}"
-                                id="badFit_{{image.Page}}_{{image.Image_Index}}" value="option2">
-                            <label class="form-check-label" for="badFit_{{image.Page}}_{{image.Image_Index}}"></label>
-                            Bad Fit
-                        </div>
-                        
-                        <div class="form-check m-2">
-                            <input
-                                class="form-check-input {% if image.Error_Description == 'polaritySwitch' %}checked{% endif %}"
-                                type="radio" name="select_{{image.Page}}_{{image.Image_Index}}"
-                                id="polaritySwitch_{{image.Page}}_{{image.Image_Index}}" value="option3">
-                            <label class="form-check-label" for="polaritySwitch_{{image.Page}}_{{image.Image_Index}}"></label>
-                            Polarity Switch
-                        </div>
-                        
-                        <div class="input-group {% if (image.Error_Description != 'polaritySwitch') and (image.Error_Description != 'falsePositive') and (image.Error_Description != 'badFit') and (image.Error_Description != 'None')  %}checked{% endif %}"
-                            id="customFlag_{{image.Page}}_{{image.Image_Index}}">
-                            
-                            <div class="input-group-text">
-                                <input type="radio" name="select_{{image.Page}}_{{image.Image_Index}}"
-                                    id="customFlagButton_{{image.Page}}_{{image.Image_Index}}"
-                                    aria-label="Radio button for following text input">
-                            </div>
-
-                            <input type="text" class="form-control disabled"
-                                id="customFlagInput_{{image.Page}}_{{image.Image_Index}}"
-                                aria-label="Text input with radio button" placeholder="Custom Flag" disabled>
-                        </div>
-
-                    </div>
-
-                </div>
-
+      <div
+        class="card card-body card-body-proof-read border rounded"
+        style="border-width: 4px !important"
+        id="id_error_{{image.Page}}_{{image.Image_Index}}"
+      >
+        <div
+          class="card-block border-0 p-1 image-card-btn {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}"
+          page="{{image.Page}}"
+          data_id="{{ image.Image_Index }}"
+          label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}"
+        >
+          <div class="main-image-categorize">
+            <img
+              id="imgEM-GT-{{image.Image_Index}}"
+              class="img_categorize"
+              src="{{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}}"
+              width="64px"
+              height="64px"
+              style="opacity: 0.5"
+            />
+            <img
+              id="imgGT-{{image.Image_Index}}"
+              class="img_categorize"
+              src="{{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}}"
+              width="64px"
+              height="64px"
+            />
+          </div>
+        </div>
+        <div class="card-block">
+          <div class="form">
+            <div class="form-check m-2">
+              <input
+                class="form-check-input {% if image.Error_Description == 'falsePositive' %}checked{% endif %}"
+                type="radio"
+                name="select_{{image.Page}}_{{image.Image_Index}}"
+                id="falsePositive_{{image.Page}}_{{image.Image_Index}}"
+                value="option1"
+              />
+              <label
+                class="form-check-label"
+                for="falsePositive_{{image.Page}}_{{image.Image_Index}}"
+              ></label>
+              False Positive
             </div>
 
-            {% endfor %}
+            <div class="form-check m-2">
+              <input
+                class="form-check-input {% if image.Error_Description == 'badFit' %}checked{% endif %}"
+                type="radio"
+                name="select_{{image.Page}}_{{image.Image_Index}}"
+                id="badFit_{{image.Page}}_{{image.Image_Index}}"
+                value="option2"
+              />
+              <label
+                class="form-check-label"
+                for="badFit_{{image.Page}}_{{image.Image_Index}}"
+              ></label>
+              Bad Fit
+            </div>
 
+            <div class="form-check m-2">
+              <input
+                class="form-check-input {% if image.Error_Description == 'polaritySwitch' %}checked{% endif %}"
+                type="radio"
+                name="select_{{image.Page}}_{{image.Image_Index}}"
+                id="polaritySwitch_{{image.Page}}_{{image.Image_Index}}"
+                value="option3"
+              />
+              <label
+                class="form-check-label"
+                for="polaritySwitch_{{image.Page}}_{{image.Image_Index}}"
+              ></label>
+              Polarity Switch
+            </div>
+
+            <div
+              class="input-group {% if (image.Error_Description != 'polaritySwitch') and (image.Error_Description != 'falsePositive') and (image.Error_Description != 'badFit') and (image.Error_Description != 'None') %}checked{% endif %}"
+              id="customFlag_{{image.Page}}_{{image.Image_Index}}"
+            >
+              <div class="input-group-text">
+                <input
+                  type="radio"
+                  name="select_{{image.Page}}_{{image.Image_Index}}"
+                  id="customFlagButton_{{image.Page}}_{{image.Image_Index}}"
+                  aria-label="Radio button for following text input"
+                />
+              </div>
+
+              <input
+                type="text"
+                class="form-control disabled"
+                id="customFlagInput_{{image.Page}}_{{image.Image_Index}}"
+                aria-label="Text input with radio button"
+                placeholder="Custom Flag"
+                disabled
+              />
+            </div>
+          </div>
         </div>
+      </div>
 
+      {% endfor %}
     </div>
+  </div>
 
-    <!-- Show in case no data was detected -->
-    <div class="p-5 mb-2 bg-secondary text-white text-center d-none">No instances were marked as faulty!</div>
+  <!-- Show in case no data was detected -->
+  <div class="p-5 mb-2 bg-secondary text-white text-center d-none">
+    No instances were marked as faulty!
+  </div>
 
-
-     <div class="m-4 p-1">
-            <a type="button" id="submit_button" class="btn btn-primary {{ modenext }}" data-bs-target="#categorizeModalFNSave"
-            data-bs-toggle="modal">Submit and Finish</a>
-    </div>
-
+  <div class="m-4 p-1">
+    <a
+      type="button"
+      id="submit_button"
+      class="btn btn-primary {{ modenext }}"
+      data-bs-target="#categorizeModalFNSave"
+      data-bs-toggle="modal"
+      >Submit and Finish</a
+    >
+  </div>
 </div>
-
 
 <!-- Modal for synapse slice-->
 {% include "annotation_single.html" %}

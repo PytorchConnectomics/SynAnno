@@ -8,6 +8,7 @@ import numpy as np
 
 import concurrent.futures
 
+
 class NpEncoder(json.JSONEncoder):
     """Encoder for numpy data types.
 
@@ -19,6 +20,7 @@ class NpEncoder(json.JSONEncoder):
 
     Inspired by: https://stackoverflow.com/questions/50916422/python-typeerror-object-of-type-int64-is-not-json-serializable
     """
+
     def default(self, obj):
         if isinstance(obj, np.integer):
             return int(obj)
@@ -27,7 +29,8 @@ class NpEncoder(json.JSONEncoder):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         return super(NpEncoder, self).default(obj)
-    
+
+
 def adjust_image_range(image):
     """Adjust the range of the given image to 0-255.
 
@@ -44,25 +47,27 @@ def adjust_image_range(image):
         # image is in 0-1 range, scale to 0-255 and then convert to np.uint8
         return (image * 255).astype(np.uint8)
 
+
 def adjust_datatype(data):
     """Adjust the datatype of the given data to the smallest possible NG compatible datatype.
-    
+
     Args:
         data (np.ndarray): Data to be adjusted.
-        
+
     Returns:
         np.ndarray: Adjusted data.
         str: Datatype of the adjusted data.
     """
     max_val = np.max(data)
     if max_val <= np.iinfo(np.uint8).max:
-        return data.astype(np.uint8), 'uint8'
+        return data.astype(np.uint8), "uint8"
     elif max_val <= np.iinfo(np.uint16).max:
-        return data.astype(np.uint16), 'uint16'
+        return data.astype(np.uint16), "uint16"
     elif max_val <= np.iinfo(np.uint32).max:
-        return data.astype(np.uint32), 'uint32'
+        return data.astype(np.uint32), "uint32"
     else:
-        return data.astype(np.uint64), 'uint64'
+        return data.astype(np.uint64), "uint64"
+
 
 def mkdir(folder_name):
     """Create a folder if it does not exist.
@@ -72,6 +77,7 @@ def mkdir(folder_name):
     """
     if not os.path.exists(folder_name):
         os.mkdir(folder_name)
+
 
 def get_sub_dict_within_range(dictionary: Dict, start_key: int, end_key: int) -> Dict:
     """Get a sub-dictionary of the given dictionary within the given key range.
@@ -84,9 +90,19 @@ def get_sub_dict_within_range(dictionary: Dict, start_key: int, end_key: int) ->
     Returns:
         Dict: Sub-dictionary within the given key range.
     """
-    return {key: value for key, value in dictionary.items() if start_key <= int(key) <= end_key}
+    return {
+        key: value
+        for key, value in dictionary.items()
+        if start_key <= int(key) <= end_key
+    }
 
-def submit_with_retry(executor: concurrent.futures.Executor, func: Callable[[dict, str, str], None], *args, retries: int = 3) -> object:
+
+def submit_with_retry(
+    executor: concurrent.futures.Executor,
+    func: Callable[[dict, str, str], None],
+    *args,
+    retries: int = 3,
+) -> object:
     """Submit a task to the given executor and retry if it fails.
 
     Args:
@@ -96,7 +112,7 @@ def submit_with_retry(executor: concurrent.futures.Executor, func: Callable[[dic
 
     Raises:
         exc: Exception thrown by the function.
-    
+
     Returns:
         object: Result of the function.
     """
@@ -111,7 +127,16 @@ def submit_with_retry(executor: concurrent.futures.Executor, func: Callable[[dic
     return None
 
 
-def draw_cylinder(image: np.ndarray, center_x: int, center_y: int, center_z: int, radius: int, color_1: Tuple[int, int, int], color_2: Tuple[int, int, int], layout: str) -> np.ndarray:
+def draw_cylinder(
+    image: np.ndarray,
+    center_x: int,
+    center_y: int,
+    center_z: int,
+    radius: int,
+    color_1: Tuple[int, int, int],
+    color_2: Tuple[int, int, int],
+    layout: str,
+) -> np.ndarray:
     """
     Function to draw a cylinder in a 4D numpy array. The color of the cylinder changes based on the distance from the center_z.
 
@@ -130,9 +155,9 @@ def draw_cylinder(image: np.ndarray, center_x: int, center_y: int, center_z: int
     """
 
     # Find the index for each coordinate in the image shape based on the provided layout
-    z_index = layout.index('z')
-    y_index = layout.index('y')
-    x_index = layout.index('x')
+    z_index = layout.index("z")
+    y_index = layout.index("y")
+    x_index = layout.index("x")
 
     # Get the lengths along each axis
     z_len = image.shape[z_index]
@@ -140,10 +165,10 @@ def draw_cylinder(image: np.ndarray, center_x: int, center_y: int, center_z: int
     x_len = image.shape[x_index]
 
     # Create coordinate grid
-    Y, X = np.meshgrid(np.arange(y_len), np.arange(x_len), indexing='ij')
+    Y, X = np.meshgrid(np.arange(y_len), np.arange(x_len), indexing="ij")
 
     # Create 3D mask for the cylinder
-    mask_cylinder = (X - center_x) ** 2 + (Y - center_y) ** 2 <= radius ** 2
+    mask_cylinder = (X - center_x) ** 2 + (Y - center_y) ** 2 <= radius**2
 
     # Use a list of slices to index the array dynamically
     slice_list = [slice(None)] * 4
@@ -151,12 +176,16 @@ def draw_cylinder(image: np.ndarray, center_x: int, center_y: int, center_z: int
     for i in range(z_len):
         slice_list[z_index] = i
         if i != center_z:
-            slice_list[y_index], slice_list[x_index] = np.where(mask_cylinder), np.where(mask_cylinder)[1]
+            slice_list[y_index], slice_list[x_index] = (
+                np.where(mask_cylinder),
+                np.where(mask_cylinder)[1],
+            )
             image[tuple(slice_list)] = color_2
         else:
-            slice_list[y_index], slice_list[x_index] = np.where(mask_cylinder), np.where(mask_cylinder)[1]
+            slice_list[y_index], slice_list[x_index] = (
+                np.where(mask_cylinder),
+                np.where(mask_cylinder)[1],
+            )
             image[tuple(slice_list)] = color_1
 
     return image
-
-

@@ -19,6 +19,7 @@ scikit-image = ">=0.21.0"
 scipy = ">=1.11.0"
 tifffile = ">=2023.4.12"
 pytest = "*"
+pre-commit = "*"
 
 [dev-packages]
 

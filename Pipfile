@@ -18,6 +18,7 @@ pandas = ">=2.0.3"
 scikit-image = ">=0.21.0"
 scipy = ">=1.11.0"
 tifffile = ">=2023.4.12"
+pytest = "*"
 
 [dev-packages]
 

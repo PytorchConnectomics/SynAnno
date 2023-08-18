@@ -37,23 +37,22 @@ def categorize() -> Template:
     """
 
     # stop the annotation timer
-    if synanno.proofread_time["finish_grid"] is None:
-        if synanno.proofread_time["start_grid"] is None:
-            synanno.proofread_time[
+    if app.proofread_time["finish_grid"] is None:
+        if app.proofread_time["start_grid"] is None:
+            app.proofread_time[
                 "difference_grid"
             ] = "Non linear execution of the grid process - time invalid"
         else:
-            synanno.proofread_time["finish_grid"] = datetime.datetime.now()
-            synanno.proofread_time["difference_grid"] = (
-                synanno.proofread_time["finish_grid"]
-                - synanno.proofread_time["start_grid"]
+            app.proofread_time["finish_grid"] = datetime.datetime.now()
+            app.proofread_time["difference_grid"] = (
+                app.proofread_time["finish_grid"] - app.proofread_time["start_grid"]
             )
     # start the categorization timer
-    if synanno.proofread_time["start_categorize"] is None:
-        synanno.proofread_time["start_categorize"] = datetime.datetime.now()
+    if app.proofread_time["start_categorize"] is None:
+        app.proofread_time["start_categorize"] = datetime.datetime.now()
 
-    output_dict = synanno.df_metadata[
-        synanno.df_metadata["Label"].isin(["Incorrect", "Unsure"])
+    output_dict = app.df_metadata[
+        app.df_metadata["Label"].isin(["Incorrect", "Unsure"])
     ].to_dict("records")
 
     # retrieve the data for the current page
@@ -82,26 +81,26 @@ def pass_flags() -> Dict[str, object]:
         page_nr, img_nr, f = dict(flag).values()
         # deleting false positives
         if f == "falsePositive" and delete_fns:
-            synanno.df_metadata.drop(
-                synanno.df_metadata[
-                    (synanno.df_metadata["Page"] == int(page_nr))
-                    & (synanno.df_metadata["Image_Index"] == int(img_nr))
+            app.df_metadata.drop(
+                app.df_metadata[
+                    (app.df_metadata["Page"] == int(page_nr))
+                    & (app.df_metadata["Image_Index"] == int(img_nr))
                 ].index,
                 inplace=True,
             )
         else:
-            synanno.df_metadata.loc[
-                (synanno.df_metadata["Page"] == int(page_nr))
-                & (synanno.df_metadata["Image_Index"] == int(img_nr)),
+            app.df_metadata.loc[
+                (app.df_metadata["Page"] == int(page_nr))
+                & (app.df_metadata["Image_Index"] == int(img_nr)),
                 "Error_Description",
             ] = f
 
     # stop the time for the proofreading process
-    if synanno.proofread_time["finish_categorize"] is None:
-        synanno.proofread_time["finish_categorize"] = datetime.datetime.now()
-        synanno.proofread_time["difference_categorize"] = (
-            synanno.proofread_time["finish_categorize"]
-            - synanno.proofread_time["start_categorize"]
+    if app.proofread_time["finish_categorize"] is None:
+        app.proofread_time["finish_categorize"] = datetime.datetime.now()
+        app.proofread_time["difference_categorize"] = (
+            app.proofread_time["finish_categorize"]
+            - app.proofread_time["start_categorize"]
         )
 
     # returning a JSON formatted response to trigger the ajax success logic
@@ -116,9 +115,8 @@ def custom_flag() -> Dict[str, object]:
     # used by frontend to retrieve custom error messages from the JSON
     page = request.get_json()["page"]
     img_id = request.get_json()["img_id"]
-    data = synanno.df_metadata.loc(
-        (synanno.df_metadata["Page"] == page)
-        & (synanno.df_metadata["Image_Index"] == img_id),
+    data = app.df_metadata.loc(
+        (app.df_metadata["Page"] == page) & (app.df_metadata["Image_Index"] == img_id),
         "Error_Description",
     ).to_dict("records")[0]
     data = json.dumps(data)

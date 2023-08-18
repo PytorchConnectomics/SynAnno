@@ -1,6 +1,3 @@
-# import global configs
-import synanno
-
 # import the package app
 from synanno import app
 
@@ -75,11 +72,9 @@ def export_data(data_type) -> Union[Template, app.response_class]:
         # TODO: What to do with the timing data?
         # write the metadata to a json file
         final_file = dict()
-        final_file["Proofread Time"] = synanno.proofread_time
+        final_file["Proofread Time"] = app.proofread_time
 
-        json.dump(
-            synanno.df_metadata.to_dict("records"), f, indent=4, default=json_serial
-        )
+        json.dump(app.df_metadata.to_dict("records"), f, indent=4, default=json_serial)
 
         # provide sufficient time for the json update
         time.sleep(0.1 * session.get("n_pages"))
@@ -132,10 +127,10 @@ def reset() -> Template:
     """
 
     # reset progress bar
-    synanno.progress_bar_status = {"status": "Loading Source File", "percent": 0}
+    app.progress_bar_status = {"status": "Loading Source File", "percent": 0}
 
     # reset time
-    synanno.proofread_time = dict.fromkeys(synanno.proofread_time, None)
+    app.proofread_time = dict.fromkeys(app.proofread_time, None)
 
     # pop all the session content.
     for key in list(session.keys()):
@@ -186,7 +181,7 @@ def reset() -> Template:
             print("Failed to delete %s. Reason: %s" % (mask_folder, e))
 
     # set the metadataframe back to null
-    synanno.df_metadata.drop(synanno.df_metadata.index, inplace=True)
+    app.df_metadata.drop(app.df_metadata.index, inplace=True)
 
     return render_template("landingpage.html")
 

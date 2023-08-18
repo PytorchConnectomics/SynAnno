@@ -7,6 +7,16 @@ repos:
       - id: check-yaml
       - id: check-json
 
+  -   repo: local
+      hooks:
+      -   id: pytest
+          name: Run pytest tests
+          entry: pytest
+          language: system
+          types: [python]
+          pass_filenames: false
+          always_run: true
+
   - repo: https://github.com/Lucas-C/pre-commit-hooks-nodejs
     rev: v1.1.2
     hooks:

@@ -296,7 +296,7 @@ In this view, you can download the JSON file containing the instances' metadata 
 
 Pre-submission, we ask you to only create issues for bugs, feature requests, or questions about the code. After submission, we strongly encourage any kind of contribution, including bug fixes, additional features, and documentation improvements. If you're unsure about whether a contribution is appropriate, feel free to open an issue and ask.
 
-For members of the VSC and the Seung Lab, please set up pre-commit hooks to ensure that your code adheres to our coding style. This will prevent you from committing code that doesn't follow our style guidelines and subsequent failing PRs. To set up pre-commit hooks, run the following command in the root of the `SynAnno` repository.
+For members of the VSC, please set up pre-commit hooks to ensure that your code adheres to our coding style. This will prevent you from committing code that doesn't follow our style guidelines and subsequent failing PRs. To set up pre-commit hooks, run the following command in the root of the `SynAnno` repository.
 
 ```bash
 pre-commit install

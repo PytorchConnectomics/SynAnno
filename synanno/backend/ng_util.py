@@ -2,7 +2,6 @@ import neuroglancer
 from random import randint
 
 # import the package app
-import synanno
 from synanno import app
 
 # for type hinting
@@ -24,29 +23,29 @@ def setup_ng(source: Union[npt.NDArray, str], target: Union[npt.NDArray, str]) -
     """
 
     # generate a version number
-    synanno.ng_version = str(randint(0, 32e2))
+    app.ng_version = str(randint(0, 32e2))
 
     # setup a Tornado web server and create viewer instance
     neuroglancer.set_server_bind_address(
         bind_address=app.config["NG_IP"], bind_port=app.config["NG_PORT"]
     )
-    synanno.ng_viewer = neuroglancer.Viewer(token=synanno.ng_version)
+    app.ng_viewer = neuroglancer.Viewer(token=app.ng_version)
 
     # specify the NG coordinate space
     coordinate_space = neuroglancer.CoordinateSpace(
         names=[
-            list(synanno.coordinate_order.keys())[0],
-            list(synanno.coordinate_order.keys())[1],
-            list(synanno.coordinate_order.keys())[2],
+            list(app.coordinate_order.keys())[0],
+            list(app.coordinate_order.keys())[1],
+            list(app.coordinate_order.keys())[2],
         ],
         units=["nm", "nm", "nm"],
-        scales=np.array(
-            [int(res[0]) for res in synanno.coordinate_order.values()]
-        ).astype(int),
+        scales=np.array([int(res[0]) for res in app.coordinate_order.values()]).astype(
+            int
+        ),
     )
 
     # config viewer: Add image layer, add segmentation mask layer, define position
-    with synanno.ng_viewer.txn() as s:
+    with app.ng_viewer.txn() as s:
         if isinstance(source, np.ndarray):
             source = neuroglancer.LocalVolume(
                 data=source,
@@ -125,27 +124,27 @@ def setup_ng(source: Union[npt.NDArray, str], target: Union[npt.NDArray, str]) -
 
         center_coord = {
             key: int(value)
-            for key, value in zip(list(synanno.coordinate_order.keys()), center)
+            for key, value in zip(list(app.coordinate_order.keys()), center)
         }
 
         # split the position and convert to int
-        synanno.cz = int(center_coord["z"])
-        synanno.cy = int(center_coord["y"])
-        synanno.cx = int(center_coord["x"])
+        app.cz = int(center_coord["z"])
+        app.cy = int(center_coord["y"])
+        app.cx = int(center_coord["x"])
 
         # add a yellow dot at the recorded position with in the NG
-        with synanno.ng_viewer.txn() as l:
+        with app.ng_viewer.txn() as l:
             pt = neuroglancer.PointAnnotation(
                 point=[int(center[0]), int(center[1]), int(center[2])], id=f"point{1}"
             )
             l.layers["center_dot"].annotations.append(pt)
 
     # add the function as action
-    synanno.ng_viewer.actions.add("center", center_annotation)
-    with synanno.ng_viewer.config_state.txn() as s:
+    app.ng_viewer.actions.add("center", center_annotation)
+    with app.ng_viewer.config_state.txn() as s:
         # set the trigger for the action to the key 'c'
         s.input_event_bindings.viewer["keyc"] = "center"
 
     print(
-        f"Starting a Neuroglancer instance at {synanno.ng_viewer}, centered at x,y,x {0,0,0}"
+        f"Starting a Neuroglancer instance at {app.ng_viewer}, centered at x,y,x {0,0,0}"
     )

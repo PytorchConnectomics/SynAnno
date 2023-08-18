@@ -91,7 +91,7 @@ def upload_file() -> Template:
     session["n_pages"] = 0
 
     # retrieve the view_style mode from the form, either view or neuron
-    synanno.view_style = request.form.get("view_style")
+    app.view_style = request.form.get("view_style")
 
     # Check if files folder exists, if not create it
     if not os.path.exists(
@@ -121,7 +121,7 @@ def upload_file() -> Template:
         )
 
     # retrieve the coordinate order and resolution from the form and save them in a dict, used by the NG instance and the processing functions
-    synanno.coordinate_order = {
+    app.coordinate_order = {
         c: (
             request.form.get("res-source-" + str(i + 1)),
             request.form.get("res-target-" + str(i + 1)),
@@ -129,7 +129,7 @@ def upload_file() -> Template:
         for i, c in enumerate(list(request.form.get("coordinates")))
     }
 
-    coordinate_order = list(synanno.coordinate_order.keys())
+    coordinate_order = list(app.coordinate_order.keys())
 
     # retrieve the crop size from the form and save it to the session
     session["crop_size_x"] = int(
@@ -160,19 +160,19 @@ def upload_file() -> Template:
 
     # if a json was provided write its data to the metadata dataframe
     if file_json.filename:
-        # retrieve the columns from synanno.df_metadata
-        expected_columns = set(synanno.df_metadata.columns)
+        # retrieve the columns from app.df_metadata
+        expected_columns = set(app.df_metadata.columns)
 
-        synanno.df_metadata = pd.read_json(file_json, orient="records")
+        app.df_metadata = pd.read_json(file_json, orient="records")
 
-        # retrieve the columns from synanno.df_metadata
-        actual_columns = set(synanno.df_metadata.columns)
+        # retrieve the columns from app.df_metadata
+        actual_columns = set(app.df_metadata.columns)
 
         # Check if the expected columns match the actual ones
         if expected_columns == actual_columns:
             print("All columns are present.")
             # sort the dataframe by page and image_index
-            synanno.df_metadata.sort_values(["Page", "Image_Index"], inplace=True)
+            app.df_metadata.sort_values(["Page", "Image_Index"], inplace=True)
         else:
             missing_columns = expected_columns - actual_columns
             extra_columns = actual_columns - expected_columns
@@ -181,21 +181,21 @@ def upload_file() -> Template:
             raise ValueError("The provided JSON does not match the expected format!")
 
     # Convert coordinate resolution values to integers
-    synanno.coord_resolution_source = np.array(
-        [int(res[0]) for res in synanno.coordinate_order.values()]
+    app.coord_resolution_source = np.array(
+        [int(res[0]) for res in app.coordinate_order.values()]
     ).astype(int)
-    synanno.coord_resolution_target = np.array(
-        [int(res[1]) for res in synanno.coordinate_order.values()]
+    app.coord_resolution_target = np.array(
+        [int(res[1]) for res in app.coordinate_order.values()]
     ).astype(int)
 
     # calculate the scale factor for the source and target cloud volume
-    synanno.scale = {
+    app.scale = {
         c: v
         for c, v in zip(
             coordinate_order,
             np.where(
-                synanno.coord_resolution_target / synanno.coord_resolution_source > 0,
-                synanno.coord_resolution_target / synanno.coord_resolution_source,
+                app.coord_resolution_target / app.coord_resolution_source > 0,
+                app.coord_resolution_target / app.coord_resolution_source,
                 1,
             ),
         )
@@ -218,7 +218,7 @@ def upload_file() -> Template:
         materialization_url = request.form.get("materialization_url")
 
         # if the user chose the view view_style mode load the bbox specific subvolume and then process the data like in the local case
-        if synanno.view_style == "view":
+        if app.view_style == "view":
             subvolume = {}
             for coord in coordinate_order:
                 subvolume[coord + "1"] = (
@@ -241,10 +241,10 @@ def upload_file() -> Template:
                 if bucket_secret
                 else "~/.cloudvolume/secrets",
                 mode=draw_or_annotate,
-                view_style=synanno.view_style,
+                view_style=app.view_style,
             )
         # if the user chose the neuron view_style mode, retrieve a list of all the synapses of the provided neuron ids and then process the data on synapse level
-        elif synanno.view_style == "neuron":
+        elif app.view_style == "neuron":
             # if the user chose the neuron view_style mode retrieve the neuron ids
             preid = (
                 int(request.form.get("preid")) if request.form.get("preid") else None
@@ -263,7 +263,7 @@ def upload_file() -> Template:
                 if bucket_secret
                 else "~/.cloudvolume/secrets",
                 mode=draw_or_annotate,
-                view_style=synanno.view_style,
+                view_style=app.view_style,
             )
 
     else:
@@ -276,7 +276,7 @@ def upload_file() -> Template:
         )
 
     # if the NG version number is None setup a new NG viewer
-    if synanno.ng_version is None:
+    if app.ng_version is None:
         ng_util.setup_ng(
             source="precomputed://" + source_url, target="precomputed://" + target_url
         )
@@ -286,7 +286,7 @@ def upload_file() -> Template:
         "opendata.html",
         modecurrent="disabled",
         modeform="formFileDisabled",
-        view_style=synanno.view_style,
+        view_style=app.view_style,
         mode=draw_or_annotate,
     )
 
@@ -308,16 +308,14 @@ def set_data(task: str = "annotate") -> Template:
 
     if task == "draw":
         # retrieve the the data from the metadata dataframe as a list of dicts
-        data = synanno.df_metadata.query('Label != "Correct"').sort_values(
-            by="Image_Index"
-        )
+        data = app.df_metadata.query('Label != "Correct"').sort_values(by="Image_Index")
         data = data.to_dict("records")
         return render_template("draw.html", images=data)
     # setup the session
     else:
         page = 0
         data = (
-            synanno.df_metadata.query("Page == @page")
+            app.df_metadata.query("Page == @page")
             .sort_values(by="Image_Index")
             .to_dict("records")
         )
@@ -327,7 +325,7 @@ def set_data(task: str = "annotate") -> Template:
             images=data,
             page=page,
             n_pages=session.get("n_pages"),
-            grid_opacity=synanno.grid_opacity,
+            grid_opacity=app.grid_opacity,
         )
 
 
@@ -340,7 +338,7 @@ def get_instance() -> Dict[str, object]:
         The instance specific data
     """
 
-    coordinate_order = list(synanno.coordinate_order.keys())
+    coordinate_order = list(app.coordinate_order.keys())
 
     # retrieve the page and instance index
     mode = str(request.form["mode"])
@@ -358,9 +356,9 @@ def get_instance() -> Dict[str, object]:
         slices_len = len(
             os.listdir(
                 "./synanno"
-                + synanno.df_metadata.loc[
-                    (synanno.df_metadata["Page"] == page)
-                    & (synanno.df_metadata["Image_Index"] == index),
+                + app.df_metadata.loc[
+                    (app.df_metadata["Page"] == page)
+                    & (app.df_metadata["Image_Index"] == index),
                     "EM",
                 ].item()
                 + "/"
@@ -368,17 +366,17 @@ def get_instance() -> Dict[str, object]:
         )
         # retrieve the middle slice
         middle_slice = int(
-            synanno.df_metadata.loc[
-                (synanno.df_metadata["Page"] == page)
-                & (synanno.df_metadata["Image_Index"] == index),
+            app.df_metadata.loc[
+                (app.df_metadata["Page"] == page)
+                & (app.df_metadata["Image_Index"] == index),
                 "Middle_Slice",
             ].item()
         )
 
         # retrieve the instance specific data
-        data = synanno.df_metadata.query(
-            "Page == @page & Image_Index == @index"
-        ).to_dict("records")[0]
+        data = app.df_metadata.query("Page == @page & Image_Index == @index").to_dict(
+            "records"
+        )[0]
 
         # retrieve the first slice of the instance
         range_min = data["Adjusted_Bbox"][coordinate_order.index("z") * 2]
@@ -440,9 +438,9 @@ def get_instance() -> Dict[str, object]:
 
     # when changing the depicted slice with in the modal view
     elif load == "single":
-        data = synanno.df_metadata.query(
-            "Page == @page & Image_Index == @index"
-        ).to_dict("records")[0]
+        data = app.df_metadata.query("Page == @page & Image_Index == @index").to_dict(
+            "records"
+        )[0]
 
         if mode == "draw":
             base_mask_path = str(request.form["base_mask_path"])
@@ -512,8 +510,8 @@ def progress() -> Dict[str, object]:
     """
     return jsonify(
         {
-            "status": synanno.progress_bar_status["status"],
-            "progress": synanno.progress_bar_status["percent"],
+            "status": app.progress_bar_status["status"],
+            "progress": app.progress_bar_status["percent"],
         }
     )
 
@@ -528,29 +526,29 @@ def neuro() -> Dict[str, object]:
         Passes the link to the NG instance as json.
     """
 
-    coordinate_order = list(synanno.coordinate_order.keys())
+    coordinate_order = list(app.coordinate_order.keys())
 
     # unpack the coordinates for the new focus point of the view
     mode = str(request.form["mode"])
     center = {}
     if mode == "annotate":
-        center["z"] = int(int(request.form["cz0"]) * synanno.scale["z"])
-        center["y"] = int(int(request.form["cy0"]) * synanno.scale["y"])
-        center["x"] = int(int(request.form["cx0"]) * synanno.scale["x"])
+        center["z"] = int(int(request.form["cz0"]) * app.scale["z"])
+        center["y"] = int(int(request.form["cy0"]) * app.scale["y"])
+        center["x"] = int(int(request.form["cx0"]) * app.scale["x"])
     elif mode == "draw":
         center["z"] = int(
-            (synanno.vol_dim[coordinate_order.index("z")] // 2) * synanno.scale["z"]
+            (app.vol_dim[coordinate_order.index("z")] // 2) * app.scale["z"]
         )
         center["y"] = int(
-            (synanno.vol_dim[coordinate_order.index("y")] // 2) * synanno.scale["y"]
+            (app.vol_dim[coordinate_order.index("y")] // 2) * app.scale["y"]
         )
         center["x"] = int(
-            (synanno.vol_dim[coordinate_order.index("x")] // 2) * synanno.scale["x"]
+            (app.vol_dim[coordinate_order.index("x")] // 2) * app.scale["x"]
         )
 
-    if synanno.ng_version is not None:
+    if app.ng_version is not None:
         # update the view focus of the running NG instance
-        with synanno.ng_viewer.txn() as s:
+        with app.ng_viewer.txn() as s:
             s.position = [
                 center[coordinate_order[0]],
                 center[coordinate_order[1]],
@@ -561,7 +559,7 @@ def neuro() -> Dict[str, object]:
         raise Exception("No NG instance running")
 
     print(
-        f"Neuroglancer instance running at {synanno.ng_viewer}, centered at {coordinate_order[0]},{coordinate_order[1]},{coordinate_order[2]}: {center[coordinate_order[0]], center[coordinate_order[1]], center[coordinate_order[2]]}"
+        f"Neuroglancer instance running at {app.ng_viewer}, centered at {coordinate_order[0]},{coordinate_order[1]},{coordinate_order[2]}: {center[coordinate_order[0]], center[coordinate_order[1]], center[coordinate_order[2]]}"
     )
 
     final_json = jsonify(
@@ -569,7 +567,7 @@ def neuro() -> Dict[str, object]:
             "ng_link": "http://"
             + app.config["IP"]
             + ":9015/v/"
-            + str(synanno.ng_version)
+            + str(app.ng_version)
             + "/"
         }
     )
@@ -580,7 +578,7 @@ def neuro() -> Dict[str, object]:
 def save_file(
     file: MultiDict,
     filename: str,
-    path: str = os.path.join(app.config["PACKAGE_NAME"], app.config["UPLOAD_FOLDER"]),
+    path: str = None,
 ) -> str:
     """Saves the provided file at the specified location.
 
@@ -596,6 +594,12 @@ def save_file(
 
     # defines the downstream task, set by the open-data view | 'draw', 'annotate'
     global draw_or_annotate
+
+    path = (
+        os.path.join(app.config["PACKAGE_NAME"], app.config["UPLOAD_FOLDER"])
+        if not path
+        else path
+    )
 
     file_ext = os.path.splitext(filename)[1]
     if file_ext not in app.config["UPLOAD_EXTENSIONS"]:

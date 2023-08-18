@@ -45,12 +45,12 @@ def annotation(page: int = 0) -> Template:
     ip.retrieve_instance_metadata(page=page)
 
     # start the timer for the annotation process
-    if synanno.proofread_time["start_grid"] is None:
-        synanno.proofread_time["start_grid"] = datetime.datetime.now()
+    if app.proofread_time["start_grid"] is None:
+        app.proofread_time["start_grid"] = datetime.datetime.now()
 
     # retrieve the data for the current page
     data = (
-        synanno.df_metadata.query("Page == @page")
+        app.df_metadata.query("Page == @page")
         .sort_values(by=["Image_Index"])
         .to_dict("records")
     )
@@ -60,7 +60,7 @@ def annotation(page: int = 0) -> Template:
         images=data,
         page=page,
         n_pages=session.get("n_pages"),
-        grid_opacity=synanno.grid_opacity,
+        grid_opacity=app.grid_opacity,
     )
 
 
@@ -73,7 +73,7 @@ def set_grid_opacity() -> Dict[str, object]:
         Passes a success confirmation to the frontend
     """
     # retrieve the current opacity value, only keep first decimal
-    synanno.grid_opacity = int(float(request.form["grid_opacity"]) * 10) / 10
+    app.grid_opacity = int(float(request.form["grid_opacity"]) * 10) / 10
     # returning a JSON formatted response to trigger the ajax success logic
     return json.dumps({"success": True}), 200, {"ContentType": "application/json"}
 
@@ -94,21 +94,21 @@ def update_card() -> Dict[str, object]:
 
     # update the session data with the new label
     if label == "Incorrect":
-        synanno.df_metadata.loc[
-            (synanno.df_metadata["Page"] == page)
-            & (synanno.df_metadata["Image_Index"] == index),
+        app.df_metadata.loc[
+            (app.df_metadata["Page"] == page)
+            & (app.df_metadata["Image_Index"] == index),
             "Label",
         ] = "Unsure"
     elif label == "Unsure":
-        synanno.df_metadata.loc[
-            (synanno.df_metadata["Page"] == page)
-            & (synanno.df_metadata["Image_Index"] == index),
+        app.df_metadata.loc[
+            (app.df_metadata["Page"] == page)
+            & (app.df_metadata["Image_Index"] == index),
             "Label",
         ] = "Correct"
     elif label == "Correct":
-        synanno.df_metadata.loc[
-            (synanno.df_metadata["Page"] == page)
-            & (synanno.df_metadata["Image_Index"] == index),
+        app.df_metadata.loc[
+            (app.df_metadata["Page"] == page)
+            & (app.df_metadata["Image_Index"] == index),
             "Label",
         ] = "Incorrect"
 

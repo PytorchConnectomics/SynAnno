@@ -472,6 +472,44 @@ def save_pre_post_coordinates() -> None:
             & (app.df_metadata["Page"] == page),
             "pre_pt_z",
         ] = z
+
+        # get the segmentation folder
+        seg_folder = app.df_metadata.loc[
+            (app.df_metadata["Image_Index"] == data_id)
+            & (app.df_metadata["Page"] == page),
+            "GT",
+        ].values[0]
+
+        # get the instance middle slice
+        middle_slice = app.df_metadata.loc[
+            (app.df_metadata["Image_Index"] == data_id)
+            & (app.df_metadata["Page"] == page),
+            "Middle_Slice",
+        ].values[0]
+
+        # load the slice of the segmentation
+        seg_slice = Image.open(
+            os.path.join(
+                app.root_path, seg_folder.lstrip("/"), str(middle_slice) + ".png"
+            )
+        )
+
+        # set any pixels with value app.pre_id_color_main to pre_id_color_sub
+        seg_slice = np.array(seg_slice)
+
+        # Create a boolean mask where the RGB values of seg_slice match app.pre_id_color_main
+        mask = np.all(seg_slice[:, :, :3] == app.pre_id_color_main, axis=-1)
+
+        # Where the mask is True, set the RGB values to app.pre_id_color_sub
+        seg_slice[mask, :3] = app.pre_id_color_sub
+
+        # save the updated segmentation
+        Image.fromarray(seg_slice).save(
+            os.path.join(
+                app.root_path, seg_folder.lstrip("/"), str(middle_slice) + ".png"
+            )
+        )
+
     elif id == "post":
         app.df_metadata.loc[
             (app.df_metadata["Image_Index"] == data_id)
@@ -488,6 +526,43 @@ def save_pre_post_coordinates() -> None:
             & (app.df_metadata["Page"] == page),
             "post_pt_z",
         ] = z
+
+        # get the segmentation folder
+        seg_folder = app.df_metadata.loc[
+            (app.df_metadata["Image_Index"] == data_id)
+            & (app.df_metadata["Page"] == page),
+            "GT",
+        ].values[0]
+
+        # get the instance middle slice
+        middle_slice = app.df_metadata.loc[
+            (app.df_metadata["Image_Index"] == data_id)
+            & (app.df_metadata["Page"] == page),
+            "Middle_Slice",
+        ].values[0]
+
+        # load the slice of the segmentation
+        seg_slice = Image.open(
+            os.path.join(
+                app.root_path, seg_folder.lstrip("/"), str(middle_slice) + ".png"
+            )
+        )
+
+        # set any pixels with value app.post_id_color_main to post_id_color_sub
+        seg_slice = np.array(seg_slice)
+
+        # Create a boolean mask where the RGB values of seg_slice match app.pre_id_color_main
+        mask = np.all(seg_slice[:, :, :3] == app.post_id_color_main, axis=-1)
+
+        # Where the mask is True, set the RGB values to app.pre_id_color_sub
+        seg_slice[mask, :3] = app.post_id_color_sub
+
+        # save the updated segmentation
+        Image.fromarray(seg_slice).save(
+            os.path.join(
+                app.root_path, seg_folder.lstrip("/"), str(middle_slice) + ".png"
+            )
+        )
     else:
         raise ValueError("id must be pre or post")
 

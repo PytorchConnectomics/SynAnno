@@ -76,6 +76,11 @@ def configure_app():
     app.df_metadata = pd.DataFrame(columns=app.columns)
     app.materialization = {}
 
+    app.pre_id_color_main = (0, 255, 0)
+    app.pre_id_color_sub = (200, 255, 200)
+    app.post_id_color_main = (0, 0, 255)
+    app.post_id_color_sub = (200, 200, 255)
+
     return app
 
 

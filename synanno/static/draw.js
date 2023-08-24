@@ -362,7 +362,7 @@ $(document).ready(function () {
     }).done(function (data) {
       data_json = JSON.parse(data.data);
 
-      // only update the circle_pre and circle_post slice number matches that of the latest drawn curve
+      // in case that the pre or post id was updated only update the image if their slice number matches that of the latest drawn curve
       if (
         canvas_type == "curve" ||
         ((canvas_type == "circlePre" || canvas_type == "circlePost") &&
@@ -407,10 +407,16 @@ $(document).ready(function () {
             $(em_target_image).attr("src", this.src);
           });
 
+
         last_slice = viewed_instance_slice; // update the last slice for which a mask was drawn
 
         // save the coordinates of the pre and post synaptic CRD
         if (canvas_type == "circlePre" || canvas_type == "circlePost") {
+
+          // force the browser to reload the em_source_image in case the user drew only new id coordinates
+          $(em_source_image).attr("src", $(em_source_image).attr("src") + "?" + Date.now());
+
+
           // send the coordinates to the backend
           id = canvas_type == "circlePre" ? "pre" : "post";
           $.ajax({

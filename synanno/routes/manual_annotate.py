@@ -506,8 +506,11 @@ def save_pre_post_coordinates() -> None:
             # set any pixels with value app.pre_id_color_main to pre_id_color_sub
             seg_slice = np.array(seg_slice)
 
-            # Create a boolean mask where the RGB values of seg_slice match app.pre_id_color_main
-            mask = np.all(seg_slice[:, :, :3] == app.pre_id_color_main, axis=-1)
+            # Create a boolean mask where the RGB values of seg_slice match app.pre_id_color_main and sub
+            mask_main = np.all(seg_slice[:, :, :3] == app.pre_id_color_main, axis=-1)
+            mask_sub = np.all(seg_slice[:, :, :3] == app.pre_id_color_sub, axis=-1)
+
+            mask = mask_main | mask_sub
 
             # Where the mask is True, set the RGB values to app.pre_id_color_sub
             seg_slice[mask] = (128, 128, 128, 0.5)
@@ -570,7 +573,10 @@ def save_pre_post_coordinates() -> None:
             seg_slice = np.array(seg_slice)
 
             # Create a boolean mask where the RGB values of seg_slice match app.post_id_color_main
-            mask = np.all(seg_slice[:, :, :3] == app.post_id_color_main, axis=-1)
+            mask_main = np.all(seg_slice[:, :, :3] == app.post_id_color_main, axis=-1)
+            mask_sub = np.all(seg_slice[:, :, :3] == app.post_id_color_sub, axis=-1)
+
+            mask = mask_main | mask_sub
 
             # Where the mask is True, set the RGB values to app.post_id_color_sub
             seg_slice[mask] = (128, 128, 128, 0.5)

@@ -402,21 +402,15 @@ $(document).ready(function () {
         // we load the image and add cache breaker in case the mask gets drawn multiple times
         // with out the cache breaker the mask will be updated in the backend, however, the old image will be depicted
         $(new Image())
-          .attr("src", image_path + "?" + Date.now())
-          .load(function () {
-            $(em_target_image).attr("src", this.src);
-          });
-
+        .attr("src", image_path + "?" + Date.now())
+        .load(function () {
+          $(em_target_image).attr("src", this.src);
+        });
 
         last_slice = viewed_instance_slice; // update the last slice for which a mask was drawn
 
         // save the coordinates of the pre and post synaptic CRD
         if (canvas_type == "circlePre" || canvas_type == "circlePost") {
-
-          // force the browser to reload the em_source_image in case the user drew only new id coordinates
-          $(em_source_image).attr("src", $(em_source_image).attr("src") + "?" + Date.now());
-
-
           // send the coordinates to the backend
           id = canvas_type == "circlePre" ? "pre" : "post";
           $.ajax({
@@ -432,10 +426,15 @@ $(document).ready(function () {
               id: id,
             },
           }).done(function (data) {
-            // check success of the request
-            if (data.success) {
-              console.log("Successfully saved " + id + " coordinates");
+            // reload the depicted default middle slice mask incase the we updated the pre or post coordinates
+            // and blurred out the initial pre or post coordinates
+            if (data.middle_slice == viewed_instance_slice) {
+              img_target_curve = "#img-target-curve-" + page + "-" + data_id
+              // reload the current src of em_target_image
+              var current_src = $(img_target_curve).attr("src").trim();
+              $(img_target_curve).attr("src", current_src + "?" + Date.now());
             }
+
           });
         }
 

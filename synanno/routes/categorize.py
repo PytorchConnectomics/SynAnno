@@ -22,9 +22,9 @@ from typing import Dict
 
 
 # global variable defining if instances marked as false positives are directly discarded
-global delete_fns
+global delete_fps
 
-delete_fns = False
+delete_fps = False
 
 
 @app.route("/categorize")
@@ -69,18 +69,18 @@ def pass_flags() -> Dict[str, object]:
         Confirms the successful update to the frontend
     """
 
-    # variable specifying if instances marked as FN are discarded, the default is False
-    global delete_fns
+    # variable specifying if instances marked as FP are discarded, the default is False
+    global delete_fps
 
     # retrieve the frontend data
     flags = request.get_json()["flags"]
-    delete_fns = bool(request.get_json()["delete_fns"])
+    delete_fps = bool(request.get_json()["delete_fps"])
 
     # updated all flags
     for flag in flags:
         page_nr, img_nr, f = dict(flag).values()
         # deleting false positives
-        if f == "falsePositive" and delete_fns:
+        if f == "falsePositive" and delete_fps:
             app.df_metadata.drop(
                 app.df_metadata[
                     (app.df_metadata["Page"] == int(page_nr))

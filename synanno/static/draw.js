@@ -11,9 +11,6 @@ $(document).ready(function () {
   var canvas_circle_post = $("canvas.circleCanvasPost")[0];
   var ctx_circle_post = canvas_circle_post.getContext("2d");
 
-  // set red as default color; used for the control points
-  ctx_curve.fillStyle = "#FF0000";
-
   // initialize mouse position to zero
   var mousePosition = {
     x: 0,
@@ -58,8 +55,9 @@ $(document).ready(function () {
   var x_syn_crd = null;
   var y_syn_crd = null;
 
-  // last slice for which a mask got drawn
-  var last_slice = null;
+  // the currently view image in the grid view
+  var pre_slice = null
+  var post_slice = null
 
   // make sure that the modal is reset every time it get closed
   $(".modal").on("hidden.bs.modal", function () {
@@ -97,9 +95,6 @@ $(document).ready(function () {
 
     ctx_curve.restore(); // restore default settings
 
-    // reset red as default color; used for the control points
-    ctx_curve.fillStyle = "#FF0000";
-
     clear_canvas(ctx_curve, canvas_curve); // clear previous output
     clear_canvas(ctx_circle_pre, canvas_circle_pre); // clear previous output
     clear_canvas(ctx_circle_post, canvas_circle_post); // clear previous output
@@ -108,6 +103,9 @@ $(document).ready(function () {
     pointsQBez = []; // reset the pointsQBez list
     split_mask = false; // deactivate mask splitting
     draw_mask = true; // activate mask drawing
+
+    pre_slice = null
+    post_slice = null
 
     // initialize mouse position to zero
     mousePosition = {
@@ -341,114 +339,129 @@ $(document).ready(function () {
   });
 
   async function save_canvas(canvas, canvas_type) {
-    var dataURL = canvas.toDataURL(); // retrieve the image from the canvas as a base64 encoding
 
-    // the viewed instance slice value is set when scrolling through the individual slices of an instance
-    var viewed_instance_slice = $("#rangeSlices").data("viewed_instance_slice");
+    const dataURL = canvas.toDataURL();
+    const viewed_instance_slice = $("#rangeSlices").data("viewed_instance_slice");
 
-    // send the base64 encoded image to the backend
-    await $.ajax({
-      type: "POST",
-      url: "/save_canvas",
-      type: "POST",
-      data: {
-        imageBase64: dataURL,
-        data_id: data_id,
-        page: page,
-        viewed_instance_slice: viewed_instance_slice,
-        canvas_type: canvas_type,
-      },
-      // update the depicted mask with the newly drawn mask
-    }).done(function (data) {
-      data_json = JSON.parse(data.data);
+    try {
+      const response = await $.ajax({
+        type: "POST",
+        url: "/save_canvas",
+        data: {
+          imageBase64: dataURL,
+          data_id: data_id,
+          page: page,
+          viewed_instance_slice: viewed_instance_slice,
+          canvas_type: canvas_type,
+        },
+      });
 
-      // in case that the pre or post id was updated only update the image if their slice number matches that of the latest drawn curve
-      if (
-        canvas_type == "curve" ||
-        ((canvas_type == "circlePre" || canvas_type == "circlePost") &&
-          last_slice == viewed_instance_slice) ||
-        last_slice == null
-      ) {
-        // handle to source image of the instance module
-        var em_source_image = "#img-source-" + page + "-" + data_id;
+      const data_json = JSON.parse(response.data);
 
-        // handle to ground truth image of the instance module
-        var em_target_image =
-          "#img-target-" + canvas_type + "-" + page + "-" + data_id;
+      // paths to the source and target DOM object
+      const base = "-" + page + "-" + data_id;
+      const canvas_target_image = `#img-target-${canvas_type}${base}`;
 
-        // create path to image
-        var coordinates = data_json.Adjusted_Bbox.join("_");
-        var img_index = data_json.Image_Index;
-        img_name =
-          canvas_type +
-          "_" +
-          "idx_" +
-          img_index +
-          "_slice_" +
-          viewed_instance_slice +
-          "_cor_" +
-          coordinates +
-          ".png";
-        image_path = base_mask_path + img_name;
+      // path to the canvas/target image
+      const coordinates = data_json.Adjusted_Bbox.join("_");
+      const img_index = data_json.Image_Index;
+      const img_name = `${canvas_type}_idx_${img_index}_slice_${viewed_instance_slice}_cor_${coordinates}.png`;
+      const image_path = `${base_mask_path}${img_name}`;
 
-        // update the in the tile view depicted source image
-        var base_path = $(em_source_image).data("image_base_path");
-        $(em_source_image).attr(
-          "src",
-          base_path + "/" + viewed_instance_slice + ".png",
-        );
+      if (canvas_type === 'curve') {
+        console.log(viewed_instance_slice)
+        console.log(parseInt(data_json.Middle_Slice, 10))
+        if (viewed_instance_slice === parseInt(data_json.Middle_Slice, 10)) {
+          // update the curve image
+          $(new Image())
+            .attr("src", `${image_path}?${Date.now()}`)
+            .load(function () {
+              $(canvas_target_image).attr("src", this.src);
+            });
 
-        // update the in the tile view depicted target image
-        // we load the image and add cache breaker in case the mask gets drawn multiple times
-        // with out the cache breaker the mask will be updated in the backend, however, the old image will be depicted
-        $(new Image())
-        .attr("src", image_path + "?" + Date.now())
-        .load(function () {
-          $(em_target_image).attr("src", this.src);
+          // show the curve image
+          $(canvas_target_image).removeClass('d-none')
+        }
+        if (pre_slice === parseInt(data_json.Middle_Slice, 10)) {
+          $(`#img-target-circlePre${base}`).removeClass('d-none')
+        }
+        if (post_slice === parseInt(data_json.Middle_Slice, 10)) {
+          $(`#img-target-circlePost${base}`).removeClass('d-none')
+        }
+
+        // reenable the buttons for the pre and post id
+        $("#canvasButtonPreCRD, #canvasButtonPostCRD").prop("disabled", false);
+      }
+
+      if (canvas_type === "circlePre" || canvas_type === "circlePost") {
+        const id = canvas_type === "circlePre" ? "pre" : "post";
+
+        const coordinateResponse = await $.ajax({
+          type: "POST",
+          url: "/save_pre_post_coordinates",
+          data: {
+            x: x_syn_crd,
+            y: y_syn_crd,
+            z: viewed_instance_slice,
+            data_id: data_id,
+            page: page,
+            id: id,
+          },
         });
 
-        last_slice = viewed_instance_slice; // update the last slice for which a mask was drawn
-
-        // save the coordinates of the pre and post synaptic CRD
-        if (canvas_type == "circlePre" || canvas_type == "circlePost") {
-          // send the coordinates to the backend
-          id = canvas_type == "circlePre" ? "pre" : "post";
-          $.ajax({
-            type: "POST",
-            url: "/save_pre_post_coordinates",
-            type: "POST",
-            data: {
-              x: x_syn_crd,
-              y: y_syn_crd,
-              z: viewed_instance_slice,
-              data_id: data_id,
-              page: page,
-              id: id,
-            },
-          }).done(function (data) {
-            // reload the depicted default middle slice mask incase the we updated the pre or post coordinates
-            // and blurred out the initial pre or post coordinates
-            if (data.middle_slice == viewed_instance_slice) {
-              img_target_curve = "#img-target-curve-" + page + "-" + data_id
-              // reload the current src of em_target_image
-              var current_src = $(img_target_curve).attr("src").trim();
-              $(img_target_curve).attr("src", current_src + "?" + Date.now());
-            }
-
-          });
+        if (canvas_type === 'circlePre') {
+          // set pre_slice to current slice
+          pre_slice = viewed_instance_slice
+          // update the pre_image
+          $(new Image())
+            .attr("src", `${image_path}?${Date.now()}`)
+            .load(function () {
+              $(canvas_target_image).attr("src", this.src);
+            });
+          if (pre_slice === parseInt(data_json.Middle_Slice, 10)) {
+            $(`#img-target-circlePre${base}`).removeClass('d-none')
+          } else {
+            $(`#img-target-circlePre${base}`).addClass('d-none')
+          }
         }
 
-        if (canvas_type == "circlePre" || canvas_type == "circlePost") {
-          // remove d-none class from em_target_image
-          $(em_target_image).removeClass("d-none");
-        } else if (canvas_type == "curve") {
-          // remove d-none from the pre and post button
-          $("#canvasButtonPreCRD").prop("disabled", false);
-          $("#canvasButtonPostCRD").prop("disabled", false);
+        if (canvas_type === 'circlePost') {
+          // set post_slice to current slice
+          post_slice = viewed_instance_slice
+          // update the post_image
+          $(new Image())
+            .attr("src", `${image_path}?${Date.now()}`)
+            .load(function () {
+              $(canvas_target_image).attr("src", this.src);
+            });
+          if (post_slice === parseInt(data_json.Middle_Slice, 10)) {
+            $(`#img-target-circlePost${base}`).removeClass('d-none')
+          } else {
+            $(`#img-target-circlePost${base}`).addClass('d-none')
+          }
         }
+
+        // check if the src link of the curve image starts with the key word 'curve'
+        const curve_src = $(`#img-target-curve${base}`).attr('src')
+        const curve_src_file = curve_src.split('/').pop().split('?')[0]
+        const original = curve_src_file.startsWith('curve')
+        // hide the original mask
+        if (!original) {
+          // reload the canvas image as we removed the pre-id from it
+          const canvas_src = $(`#img-target-curve${base}`).attr("src").trim();
+          $(`#img-target-curve${base}`).attr("src", canvas_src + "?" + Date.now());
+          if (post_slice === parseInt(data_json.Middle_Slice, 10) || pre_slice === parseInt(data_json.Middle_Slice, 10)) {
+            $(`#img-target-curve${base}`).addClass('d-none')
+          }
+
+        }
+
       }
-    });
+    } catch (error) {
+      console.error('An error occurred:', error);
+    }
   }
+
 
   $("canvas.circleCanvasPre").on("click", function (e) {
     if (pre_CRD) {
@@ -530,15 +543,18 @@ $(document).ready(function () {
 
       // draw the line segments in case that the points list contains more then two points
       if (points.length > 2) {
-        draw_quad_line(points);
+        draw_quad_line(points, lineWidth = 3);
         // activate the fill button should the length of point be greater 2
         $("#canvasButtonFill").prop("disabled", false);
       }
       // if the list only contains two points draw straight light
       else if (points.length > 1) {
+        ctx_curve.lineWidth = 3
         ctx_curve.moveTo(points[0].x, points[0].y);
-        ctx_curve.fillRect(points[0].x, points[0].y, 2, 2); // mark start point with red rectangle
-        ctx_curve.fillRect(points[1].x, points[1].y, 2, 2); // mark end point with red rectangle
+        ctx_curve.fillStyle = 'red';
+        ctx_curve.fillRect(points[0].x, points[0].y, 4, 4); // mark start point with red rectangle
+        ctx_curve.fillRect(points[1].x, points[1].y, 4, 4); // mark end point with red rectangle
+        ctx_curve.fillStyle = 'black';
         ctx_curve.lineTo(points[0].x, points[0].y);
         ctx_curve.lineTo(points[1].x, points[1].y);
         ctx_curve.stroke();
@@ -663,18 +679,25 @@ $(document).ready(function () {
   }
 
   // create a closed path between the mask path and the wall
-  function draw_quad_line(points, lineWidth = 1, draw_points = true) {
+  function draw_quad_line(points, lineWidth = 3, draw_points = true) {
     ctx_curve.beginPath();
+
+    // Set line color to black
+    ctx_curve.strokeStyle = 'black';
     ctx_curve.lineWidth = lineWidth;
+
     ctx_curve.moveTo(points[0].x, points[0].y);
 
     if (draw_points) {
-      ctx_curve.fillRect(points[0].x, points[0].y, 2, 2);
+      // Set point color to red
+      ctx_curve.fillStyle = 'red';
+
+      ctx_curve.fillRect(points[0].x, points[0].y, 4, 4);
       if (points.length < 4) {
-        ctx_curve.fillRect(points[0].x, points[0].y, 2, 2);
-        ctx_curve.fillRect(points[1].x, points[1].y, 2, 2);
+        ctx_curve.fillRect(points[0].x, points[0].y, 4, 4);
+        ctx_curve.fillRect(points[1].x, points[1].y, 4, 4);
       } else {
-        ctx_curve.fillRect(points[0].x, points[0].y, 2, 2);
+        ctx_curve.fillRect(points[0].x, points[0].y, 4, 4);
       }
     }
 
@@ -683,19 +706,21 @@ $(document).ready(function () {
       var yend = (points[i].y + points[i + 1].y) / 2;
       ctx_curve.quadraticCurveTo(points[i].x, points[i].y, xend, yend);
       if (draw_points) {
-        ctx_curve.fillRect(points[i].x, points[i].y, 2, 2);
-        ctx_curve.fillRect(points[i + 1].x, points[i + 1].y, 2, 2);
+        ctx_curve.fillRect(points[i].x, points[i].y, 4, 4);
+        ctx_curve.fillRect(points[i + 1].x, points[i + 1].y, 4, 4);
       }
     }
+
     // curve through the last two points
     ctx_curve.quadraticCurveTo(
       points[i].x,
       points[i].y,
       points[i + 1].x,
-      points[i + 1].y,
+      points[i + 1].y
     );
+
     if (draw_points) {
-      ctx_curve.fillRect(points[i + 1].x, points[i + 1].y, 2, 2);
+      ctx_curve.fillRect(points[i + 1].x, points[i + 1].y, 4, 4);
     }
 
     ctx_curve.stroke();

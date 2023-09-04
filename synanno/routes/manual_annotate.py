@@ -487,7 +487,7 @@ def save_pre_post_coordinates() -> None:
             "Middle_Slice",
         ].values[0]
 
-        # set the color of the pre instance in the middle slice of the segmentation to gray
+        # set the color of the pre coordinate instance in the middle slice of the segmentation to (128, 128, 128, 0.5)
         # we only have to check the middle slice since it is the only slice of the original masks,
         # that ever gets depicted in the draw view
         # if the instance is not a false negative and the middle slice mask exists
@@ -590,8 +590,4 @@ def save_pre_post_coordinates() -> None:
     else:
         raise ValueError("id must be pre or post")
 
-    return jsonify(
-        {
-            "middle_slice": str(middle_slice),
-        }
-    )
+    return json.dumps({"success": True}), 200, {"ContentType": "application/json"}

@@ -133,8 +133,8 @@ def draw_cylinder(
     center_y: int,
     center_z: int,
     radius: int,
-    color_1: Tuple[int, int, int],
-    color_2: Tuple[int, int, int],
+    color_main: Tuple[int, int, int],
+    color_sub: Tuple[int, int, int],
     layout: str,
 ) -> np.ndarray:
     """
@@ -146,8 +146,8 @@ def draw_cylinder(
     center_y (int): Y-coordinate of the cylinder center.
     center_z (int): Z-coordinate of the cylinder center.
     radius (int): Radius of the cylinder.
-    color_1 (Tuple[int, int, int]): RGB color of the circle in the center_z layer.
-    color_2 (Tuple[int, int, int]): RGB color of the circles in the other layers.
+    color_main (Tuple[int, int, int]): RGB color of the circle in the center_z layer.
+    color_sub (Tuple[int, int, int]): RGB color of the circles in the other layers.
     layout (str): The layout of the axes, for example, "zyxc".
 
     Returns:
@@ -180,12 +180,12 @@ def draw_cylinder(
                 np.where(mask_cylinder),
                 np.where(mask_cylinder)[1],
             )
-            image[tuple(slice_list)] = color_2
+            image[tuple(slice_list)] = color_sub
         else:
             slice_list[y_index], slice_list[x_index] = (
                 np.where(mask_cylinder),
                 np.where(mask_cylinder)[1],
             )
-            image[tuple(slice_list)] = color_1
+            image[tuple(slice_list)] = color_main
 
     return image

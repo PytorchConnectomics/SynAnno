@@ -90,10 +90,30 @@ $(document).ready(function () {
 
   // process the flags: [[pager number, image number, flag], ..., [pager number, image number, flag]]
 
+  // check if one of the flags was set to false positive on click of the submit button
+  $("#submit_button").click(function () {
+    var fp_set = false;
+    $('[id^="id_error_"]').each(function (index) {
+      console.log(index);
+      // show the categorizeModalFPSave modal if true
+      if ($('[id^="falsePositive_"]', $(this)).is(":checked")) {
+        fp_set = true;
+        $("#categorizeModalFPSave").modal("show");
+      }
+    });
+
+    if (!fp_set) {
+      // else show loading screen and process the data
+      $("#progressModal").modal("show");
+      submit_data(false);
+    }
+
+  });
+
   // delete the false positives from the JSON
   $("#dl_fn_yes").click(async function () {
     // show loading screen
-    $("#categorizeModalFNSave").modal("hide");
+    $("#categorizeModalFPSave").modal("hide");
     $("#progressModal").modal("show");
 
     submit_data(true);
@@ -102,7 +122,7 @@ $(document).ready(function () {
   // keep the false positives in the JSON
   $("#dl_fn_no").click(async function () {
     // show loading screen
-    $("#categorizeModalFNSave").modal("hide");
+    $("#categorizeModalFPSave").modal("hide");
     $("#progressModal").modal("show");
 
     submit_data(false);
@@ -117,7 +137,7 @@ $(document).ready(function () {
 });
 
 // process the flags: [[pager number, image number, flag], ..., [pager number, image number, flag]]
-function submit_data(delete_fns) {
+function submit_data(delete_fps) {
   var promise_error = new Promise((resolve, reject) => {
     var flags = [];
     var nr_elements = $('[id^="id_error_"]').length;
@@ -161,7 +181,7 @@ function submit_data(delete_fns) {
       type: "POST",
       contentType: "application/json",
       dataType: "json",
-      data: JSON.stringify({ flags: data, delete_fns: delete_fns }),
+      data: JSON.stringify({ flags: data, delete_fps: delete_fps }),
     });
 
     req.success(function () {

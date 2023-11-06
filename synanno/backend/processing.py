@@ -459,8 +459,8 @@ def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) 
         pre_pt_y,
         pre_pt_z,
         radius=10,
-        color_1=(0, 255, 0),
-        color_2=(200, 255, 200),
+        color_main=app.pre_id_color_main,
+        color_sub=app.pre_id_color_sub,
         layout=coord_order,
     )
     vis_label = draw_cylinder(
@@ -469,8 +469,8 @@ def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) 
         post_pt_y,
         post_pt_z,
         radius=10,
-        color_1=(0, 0, 255),
-        color_2=(200, 200, 255),
+        color_main=app.post_id_color_main,
+        color_sub=app.post_id_color_sub,
         layout=coord_order,
     )
 

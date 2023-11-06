@@ -391,6 +391,9 @@ $(document).ready(function () {
 
         // reenable the buttons for the pre and post id
         $("#canvasButtonPreCRD, #canvasButtonPostCRD").prop("disabled", false);
+
+        // disable the save, fill and revise button
+        $("#canvasButtonSave, #canvasButtonFill, #canvasButtonSplit").prop("disabled", true);
       }
 
       if (canvas_type === "circlePre" || canvas_type === "circlePost") {

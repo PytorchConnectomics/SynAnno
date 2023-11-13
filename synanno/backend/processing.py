@@ -12,8 +12,6 @@ from scipy.ndimage import center_of_mass
 
 from .utils import *
 
-
-import synanno  # import global configs
 from synanno import app  # import the package app
 
 from cloudvolume import CloudVolume, Bbox

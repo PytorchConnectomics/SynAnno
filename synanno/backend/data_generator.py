@@ -249,7 +249,7 @@ def download_subvolumes(
         )
         gt_subvol_pad = np.pad(gt_subvol, padding, mode="constant", constant_values=0)
 
-        if LOCAL_EXECUTION:
+        if not LOCAL_EXECUTION:
             source_blob_name = f"source/source_{materialization[key]['index']}.npy"
             target_blob_name = f"gt/target_{materialization[key]['index']}.npy"
 
@@ -276,7 +276,7 @@ def generate_training_data(
         instance_keys (list): List of instance keys.
         local_dir (str): Local directory to store the subvolumes.
     """
-    if not LOCAL_EXECUTION:
+    if LOCAL_EXECUTION:
         gt_dir = os.path.join(local_dir, "gt")
         target_dir = os.path.join(local_dir, "target")
 
@@ -284,7 +284,7 @@ def generate_training_data(
             os.makedirs(target_dir, exist_ok=True)
 
     for key in instance_keys:
-        if LOCAL_EXECUTION:
+        if not LOCAL_EXECUTION:
             gt_subvol = download_from_bucket(
                 f"gt/target_{materialization[key]['index']}.npy"
             )
@@ -298,7 +298,7 @@ def generate_training_data(
         augmented_subvol = augment_target_volume(
             gt_subvol, seed_layers, coordinate_order
         )
-        if LOCAL_EXECUTION:
+        if not LOCAL_EXECUTION:
             augmented_blob_name = (
                 f"target/augmented_target_{materialization[key]['index']}.npy"
             )

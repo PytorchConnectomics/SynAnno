@@ -1,4 +1,4 @@
-from synanno.backend.data_generator_gcp import (
+from synanno.backend.data_generator import (
     select_random_instances,
     connect_to_cloudvolumes,
     download_subvolumes,

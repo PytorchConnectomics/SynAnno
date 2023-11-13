@@ -8,6 +8,37 @@ from typing import Tuple, List, Dict, Set
 import matplotlib.pyplot as plt
 from skimage.transform import resize
 from synanno.backend.processing import process_syn
+from google.cloud import storage
+
+# defaults to running on GCP
+LOCAL_EXECUTION = False
+
+
+def upload_to_bucket(blob_name, data, bucket_name="synanno"):
+    """Uploads numpy array data to the bucket."""
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+
+    # Use BytesIO as an in-memory binary stream
+    with io.BytesIO() as data_stream:
+        np.save(data_stream, data)
+        data_stream.seek(0)
+        blob.upload_from_file(data_stream, content_type="application/octet-stream")
+
+
+def download_from_bucket(blob_name, bucket_name="synanno"):
+    """Downloads numpy array data from the bucket."""
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+
+    # Download as bytes and convert to numpy array
+    np_data_bytes = blob.download_as_bytes()
+    data_stream = io.BytesIO(np_data_bytes)
+    data_stream.seek(0)
+    data = np.load(data_stream, allow_pickle=True)
+    return data
 
 
 def select_random_instances(n, table_name):
@@ -160,14 +191,15 @@ def download_subvolumes(
         local_dir (str): Local directory to store the subvolumes.
         materialization (dict): Dictionary containing the instance data.
     """
-    source_dir = os.path.join(local_dir, "source")
-    gt_dir = os.path.join(local_dir, "gt")
+    if LOCAL_EXECUTION:
+        source_dir = os.path.join(local_dir, "source")
+        gt_dir = os.path.join(local_dir, "gt")
 
-    # create dirs if they do not exist
-    if not os.path.exists(source_dir):
-        os.makedirs(source_dir, exist_ok=True)
-    if not os.path.exists(gt_dir):
-        os.makedirs(gt_dir, exist_ok=True)
+        # create dirs if they do not exist
+        if not os.path.exists(source_dir):
+            os.makedirs(source_dir, exist_ok=True)
+        if not os.path.exists(gt_dir):
+            os.makedirs(gt_dir, exist_ok=True)
 
     for key in instance_keys:
         instance_data = materialization[key]
@@ -217,14 +249,21 @@ def download_subvolumes(
         )
         gt_subvol_pad = np.pad(gt_subvol, padding, mode="constant", constant_values=0)
 
-        np.save(
-            os.path.join(source_dir, f"source_{materialization[key]['index']}.npy"),
-            source_subvol_pad,
-        )
-        np.save(
-            os.path.join(gt_dir, f"target_{materialization[key]['index']}.npy"),
-            gt_subvol_pad,
-        )
+        if LOCAL_EXECUTION:
+            source_blob_name = f"source/source_{materialization[key]['index']}.npy"
+            target_blob_name = f"gt/target_{materialization[key]['index']}.npy"
+
+            upload_to_bucket(source_blob_name, source_subvol_pad)
+            upload_to_bucket(target_blob_name, gt_subvol_pad)
+        else:
+            np.save(
+                os.path.join(source_dir, f"source_{materialization[key]['index']}.npy"),
+                source_subvol_pad,
+            )
+            np.save(
+                os.path.join(gt_dir, f"target_{materialization[key]['index']}.npy"),
+                gt_subvol_pad,
+            )
 
 
 def generate_training_data(
@@ -237,27 +276,40 @@ def generate_training_data(
         instance_keys (list): List of instance keys.
         local_dir (str): Local directory to store the subvolumes.
     """
-    gt_dir = os.path.join(local_dir, "gt")
-    target_dir = os.path.join(local_dir, "target")
+    if not LOCAL_EXECUTION:
+        gt_dir = os.path.join(local_dir, "gt")
+        target_dir = os.path.join(local_dir, "target")
 
-    if not os.path.exists(target_dir):
-        os.makedirs(target_dir, exist_ok=True)
+        if not os.path.exists(target_dir):
+            os.makedirs(target_dir, exist_ok=True)
 
     for key in instance_keys:
-        gt_subvol_path = os.path.join(
-            gt_dir, f"target_{materialization[key]['index']}.npy"
-        )
-        gt_subvol = np.load(gt_subvol_path)
+        if LOCAL_EXECUTION:
+            gt_subvol = download_from_bucket(
+                f"gt/target_{materialization[key]['index']}.npy"
+            )
+        else:
+            gt_subvol_path = os.path.join(
+                gt_dir, f"target_{materialization[key]['index']}.npy"
+            )
+            gt_subvol = np.load(gt_subvol_path)
+
         seed_layers = get_seed_layers(crop_size_z)
         augmented_subvol = augment_target_volume(
             gt_subvol, seed_layers, coordinate_order
         )
-        np.save(
-            os.path.join(
-                target_dir, f"augmented_target_{materialization[key]['index']}.npy"
-            ),
-            augmented_subvol,
-        )
+        if LOCAL_EXECUTION:
+            augmented_blob_name = (
+                f"target/augmented_target_{materialization[key]['index']}.npy"
+            )
+            upload_to_bucket(augmented_blob_name, augmented_subvol)
+        else:
+            np.save(
+                os.path.join(
+                    target_dir, f"augmented_target_{materialization[key]['index']}.npy"
+                ),
+                augmented_subvol,
+            )
 
 
 def get_bbox_from_instance_data(

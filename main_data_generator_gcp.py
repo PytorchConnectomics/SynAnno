@@ -7,7 +7,7 @@ from synanno.backend.data_generator_gcp import (
 )
 
 if __name__ == "__main__":
-    n_instances = 1000  # Replace with desired number of instances
+    n_instances = 200  # Replace with desired number of instances
     bucket_secret = "/home/leander_lauenburg/SynAnno/secrets/google-cloud.json"
     materialization = (
         "/home/leander_lauenburg/SynAnno/h01/synapse-export_000000000000.csv"

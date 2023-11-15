@@ -1,3 +1,9 @@
+import sys
+import os
+
+repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+sys.path.insert(0, repo_root)
+
 from synanno.backend.data_generator import (
     select_random_instances,
     connect_to_cloudvolumes,
@@ -5,6 +11,7 @@ from synanno.backend.data_generator import (
     generate_training_data,
     cloudvolume_metadata,
 )
+
 
 if __name__ == "__main__":
     n_instances = 200  # Replace with desired number of instances

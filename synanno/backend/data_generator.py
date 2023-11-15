@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from skimage.transform import resize
 from synanno.backend.processing import process_syn
 from google.cloud import storage
+import io
 
 # defaults to running on GCP
 LOCAL_EXECUTION = False

@@ -194,13 +194,13 @@ def download_subvolumes(
     """
     if LOCAL_EXECUTION:
         source_dir = os.path.join(local_dir, "source")
-        gt_dir = os.path.join(local_dir, "gt")
+        target_dir = os.path.join(local_dir, "target")
 
         # create dirs if they do not exist
         if not os.path.exists(source_dir):
             os.makedirs(source_dir, exist_ok=True)
-        if not os.path.exists(gt_dir):
-            os.makedirs(gt_dir, exist_ok=True)
+        if not os.path.exists(target_dir):
+            os.makedirs(target_dir, exist_ok=True)
 
     for key in instance_keys:
         instance_data = materialization[key]
@@ -209,6 +209,7 @@ def download_subvolumes(
             coordinate_order,
             crop_sizes,
             volume_dimensions,
+            pad_z=pad_z,
         )
         gt_subvol = target_cv.download(bbox, mip=0)
 
@@ -250,67 +251,62 @@ def download_subvolumes(
         )
         gt_subvol_pad = np.pad(gt_subvol, padding, mode="constant", constant_values=0)
 
+        # the training data (source) is the channel vise concatenation of the raw image data
+        # and the augmented synapse segmentation. Meaning that for a bounding box of size (128, 128, 16)
+        # the training data will have the shape (128, 128, 16, 2)
+
+        gt_subvol_pad_augmented = generate_training_data(
+            gt_subvol_pad, coordinate_order, crop_size_z=crop_sizes["crop_size_z"]
+        )
+
+        source_subvol_pad = np.expand_dims(source_subvol_pad, axis=3)
+        gt_subvol_pad_augmented = np.expand_dims(gt_subvol_pad_augmented, axis=3)
+
+        source_subvol_pad = np.concatenate(
+            (source_subvol_pad, gt_subvol_pad_augmented), axis=3
+        )
+
+        # the target data (gt) is the channel vise concatenation of the raw image data
+        # and the non-augmented full segmentation. Again resulting in data with shape (128, 128, 16, 2)
+
+        gt_subvol_pad = np.expand_dims(gt_subvol_pad, axis=3)
+        target_subvol_pad = np.concatenate((source_subvol_pad, gt_subvol_pad), axis=3)
+
         if not LOCAL_EXECUTION:
             source_blob_name = f"source/source_{materialization[key]['index']}.npy"
             target_blob_name = f"gt/target_{materialization[key]['index']}.npy"
 
             upload_to_bucket(source_blob_name, source_subvol_pad)
-            upload_to_bucket(target_blob_name, gt_subvol_pad)
+            upload_to_bucket(target_blob_name, target_subvol_pad)
         else:
             np.save(
                 os.path.join(source_dir, f"source_{materialization[key]['index']}.npy"),
                 source_subvol_pad,
             )
             np.save(
-                os.path.join(gt_dir, f"target_{materialization[key]['index']}.npy"),
-                gt_subvol_pad,
+                os.path.join(target_dir, f"target_{materialization[key]['index']}.npy"),
+                target_subvol_pad,
             )
 
 
 def generate_training_data(
-    instance_keys, materialization, local_dir, coordinate_order, crop_size_z=128
+    gt_subvol: np.ndarray, coordinate_order: List[str], crop_size_z: int = 16
 ):
     """
     Generate training data from the downloaded subvolumes.
 
     Args:
+        gt_subvol (np.ndarray): The ground truth subvolume.
         instance_keys (list): List of instance keys.
         local_dir (str): Local directory to store the subvolumes.
+
+    Returns:
+        np.ndarray: The augmented subvolume.
     """
-    if LOCAL_EXECUTION:
-        gt_dir = os.path.join(local_dir, "gt")
-        target_dir = os.path.join(local_dir, "target")
+    seed_layers = get_seed_layers(crop_size_z)
+    augmented_subvol = augment_target_volume(gt_subvol, seed_layers, coordinate_order)
 
-        if not os.path.exists(target_dir):
-            os.makedirs(target_dir, exist_ok=True)
-
-    for key in instance_keys:
-        if not LOCAL_EXECUTION:
-            gt_subvol = download_from_bucket(
-                f"gt/target_{materialization[key]['index']}.npy"
-            )
-        else:
-            gt_subvol_path = os.path.join(
-                gt_dir, f"target_{materialization[key]['index']}.npy"
-            )
-            gt_subvol = np.load(gt_subvol_path)
-
-        seed_layers = get_seed_layers(crop_size_z)
-        augmented_subvol = augment_target_volume(
-            gt_subvol, seed_layers, coordinate_order
-        )
-        if not LOCAL_EXECUTION:
-            augmented_blob_name = (
-                f"target/augmented_target_{materialization[key]['index']}.npy"
-            )
-            upload_to_bucket(augmented_blob_name, augmented_subvol)
-        else:
-            np.save(
-                os.path.join(
-                    target_dir, f"augmented_target_{materialization[key]['index']}.npy"
-                ),
-                augmented_subvol,
-            )
+    return augmented_subvol
 
 
 def get_bbox_from_instance_data(
@@ -471,24 +467,28 @@ def calculate_crop_pad(
     return bbox, pad
 
 
-def visualize_data(file):
+def visualize_data(file: str, slice: int = 8):
     # Load the data from the .npy file
     data = np.load(file)
-    data = ((data - np.min(data)) / (np.max(data) - np.min(data))) * 255
-    print(data.shape)
-    print(np.max(data), np.min(data))
 
-    # Check the dimension of the data
-    if data.ndim == 1:
-        # For 1D data, you can plot it directly
-        plt.plot(data)
-    elif data.ndim == 2:
-        # For 2D data, you can use imshow for visualization
-        plt.imshow(data, cmap="gray")  # or any other colormap
-    elif data.ndim > 2:
-        # For multi-dimensional data, you might want to visualize specific slices
-        slice_to_visualize = data[:, :, 0]  # example for 3D data
-        plt.imshow(slice_to_visualize, cmap="gray")
+    # split array by channel in to raw and synapse segmentation
+    raw = data[:, :, :, 0]
+    syn = data[:, :, :, 1]
 
-    # Show the plot
+    # Normalize the data to [0, 255]
+    raw = ((raw - np.min(raw)) / (np.max(raw) - np.min(raw))) * 255
+    syn = ((syn - np.min(syn)) / (np.max(syn) - np.min(syn))) * 255
+
+    # check if the selected slice contains a seed layer
+    nonzero_slices = np.where(np.sum(syn, axis=(0, 1)) > 0)[0]
+    if slice not in nonzero_slices:
+        print(
+            f"Selected slice {slice} does not contain a seed layer. Please select a slice from {nonzero_slices}."
+        )
+        return
+
+    # plot the raw data and the synapse segmentation side by side
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    ax1.imshow(raw[:, :, slice], cmap="gray")
+    ax2.imshow(syn[:, :, slice], cmap="gray")
     plt.show()

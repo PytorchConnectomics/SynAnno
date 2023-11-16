@@ -50,11 +50,3 @@ if __name__ == "__main__":
         {c: v for c, v in zip(["x", "y", "z"], vol_dim)},
         scale,
     )
-
-    generate_training_data(
-        random_instance_keys,
-        bbox_dict,
-        local_dir,
-        coordinate_order=["x", "y", "z"],
-        crop_size_z=16,
-    )

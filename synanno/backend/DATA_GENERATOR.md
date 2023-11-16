@@ -26,21 +26,23 @@ This tool seamlessly integrates with Google Cloud Platform (GCP) for data storag
 
 ### Outputted Data
 
+
 The data generator script produces the following data:
 
 - **Target Subvolumes**: These are downloaded from the target volume using instance coordinates from the materialization table and stored locally.
-- **Augmented Target Subvolumes**: Target subvolumes are augmented by zeroing most slices while preserving one or more seed segmentation layers. The number of slices retained is based on a probability model that prefers central slices.
-- **Scaled Source Subvolumes**: Subvolumes from the source volume are downloaded and scaled to match the dimensions of the source volume, based on instance coordinates in the materialization table.
+- **Augmented Target Subvolumes**: Target subvolumes are augmented by zeroing most slices while preserving one or more seed segmentation layers, using a random sampling approach. The number of slices retained is based on a probability model that prefers central slices.
+- **Scaled Source Subvolumes**: Subvolumes from the source volume are downloaded and scaled to match the dimensions of the target volume, based on instance coordinates in the materialization table. The scaling accounts for resolution differences between the source and target volumes.
 - **Metadata**: Includes essential information about volume dimensions, scaling factors, and other relevant analytical details.
+- **Training Data**: The training data is created by channel-wise concatenation of the raw image data and the augmented synapse segmentation. This results in a 4D array where the last dimension represents the raw and augmented data.
 
 ## Structure and Inner Workings
 
 ### Data Generator Module (`data_generator.py`)
 
-1. **Cloud Interaction Functions**: Manages the upload and download of numpy array data to and from GCP buckets.
-2. **Data Processing Functions**: Involves selecting random data instances, connecting to cloud volumes, downloading subvolumes, and generating training data.
-3. **Utility Functions**: Provides capabilities such as constructing bounding boxes, applying padding, and augmenting target volumes.
-4. **Visualization Utility**: Aids in the quick assessment and verification of data through various visualization methods.
+1. **Cloud Interaction Functions**: Manages the upload and download of numpy array data to and from GCP buckets, with a focus on handling numpy data efficiently in memory.
+2. **Data Processing Functions**: Involves selecting random data instances, connecting to cloud volumes, downloading subvolumes, and generating training data with new functionalities such as augmented target volume generation and scaling based on volume resolutions.
+3. **Utility Functions**: Provides capabilities such as constructing bounding boxes, applying padding, and augmenting target volumes. New functions for calculating crop and pad parameters have been added.
+4. **Visualization Utility**: Aids in the quick assessment and verification of data through various visualization methods, including the ability to visualize specific slices with both raw and synapse segmentation data.
 
 ### Main Execution Script (`main_data_generator_gcp.py`)
 

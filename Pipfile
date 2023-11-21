@@ -22,6 +22,7 @@ pytest = "*"
 pre-commit = "*"
 matplotlib = "*"
 jupyter = "*"
+torch = "*"
 
 [dev-packages]
 ipykernel = "*"

@@ -4,14 +4,7 @@ import os
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.insert(0, repo_root)
 
-from synanno.backend.data_generator import (
-    select_random_instances,
-    connect_to_cloudvolumes,
-    download_subvolumes,
-    generate_training_data,
-    cloudvolume_metadata,
-)
-
+from synanno.backend.data_generator import SynANNODataset
 
 if __name__ == "__main__":
     n_instances = 200  # Replace with desired number of instances
@@ -22,31 +15,13 @@ if __name__ == "__main__":
     source_url = "gs://h01-release/data/20210601/4nm_raw"
     target_url = "gs://h01-release/data/20210729/c3/synapses/whole_ei_onlyvol"
     local_dir = "gs://synanno/data"
+    crop_sizes = {"crop_size_x": 128, "crop_size_y": 128, "crop_size_z": 16}
 
-    random_instance_keys, bbox_dict = select_random_instances(
-        n_instances, materialization
-    )
-    source_cv, target_cv = connect_to_cloudvolumes(
-        source_url, target_url, bucket_secret
-    )
-
-    print(source_cv.info)
-    print(target_cv.info)
-
-    vol_dim, vol_dim_scaled, scale = cloudvolume_metadata(
-        source_cv, target_cv, ["x", "y", "z"], ["4", "4", "33"], ["8", "8", "33"]
-    )
-
-    print(vol_dim, vol_dim_scaled, scale)
-
-    download_subvolumes(
-        random_instance_keys,
-        source_cv,
-        target_cv,
-        local_dir,
-        bbox_dict,
-        ["x", "y", "z"],
-        {"crop_size_x": 128, "crop_size_y": 128, "crop_size_z": 16},
-        {c: v for c, v in zip(["x", "y", "z"], vol_dim)},
-        scale,
+    dataset = SynANNODataset(
+        materialization_table_path=materialization,
+        source_url=source_url,
+        target_url=target_url,
+        bucket_secret_json_path=bucket_secret,
+        local_dir=local_dir,
+        crop_sizes=crop_sizes,
     )

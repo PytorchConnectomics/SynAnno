@@ -29,11 +29,12 @@ This tool seamlessly integrates with Google Cloud Platform (GCP) for data storag
 
 The data generator script produces the following data:
 
-- **Target Subvolumes**: These are downloaded from the target volume using instance coordinates from the materialization table and stored locally.
-- **Augmented Target Subvolumes**: Target subvolumes are augmented by zeroing most slices while preserving one or more seed segmentation layers, using a random sampling approach. The number of slices retained is based on a probability model that prefers central slices.
-- **Scaled Source Subvolumes**: Subvolumes from the source volume are downloaded and scaled to match the dimensions of the target volume, based on instance coordinates in the materialization table. The scaling accounts for resolution differences between the source and target volumes.
-- **Metadata**: Includes essential information about volume dimensions, scaling factors, and other relevant analytical details.
-- **Training Data**: The training data is created by channel-wise concatenation of the raw image data and the augmented synapse segmentation. This results in a 4D array where the last dimension represents the raw and augmented data.
+- **Target Subvolumes** (Ground Truth, not saved): These are downloaded from the target volume using instance coordinates from the materialization table and stored locally.
+- **Augmented Target Subvolumes** (Seed Segmentation, not saved): Target subvolumes are augmented by zeroing most slices while preserving one or more seed segmentation layers. The number of slices retained is based on a probability model that prefers central slices.
+- **Scaled Source Subvolumes** (Training Raw Source Data, not saved): Subvolumes from the source volume are downloaded and scaled to match the dimensions of the source volume, based on instance coordinates in the materialization table.
+- **Source Training Data** (Concatenation of Raw Source and Seed Segmentation Data, saved): The training data is created by channel-wise concatenation of the raw image data and the augmented synapse segmentation. This results in a 4D array where the last dimension represents the raw and augmented data.
+- **Target Training Data** (Concatenation of Raw Source and Ground Truth Data, saved): The target training data is created by channel-wise concatenation of the raw image data and the synapse segmentation. This results in a 4D array where the last dimension represents the raw and segmentation data.
+Metadata: Includes essential information about volume dimensions, scaling factors, and other relevant analytical details.
 
 ## Structure and Inner Workings
 

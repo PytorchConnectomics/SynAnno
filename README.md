@@ -128,9 +128,9 @@ Repository includes a Dockerfile that enables you to build and run the applicati
 
 6. **Stop the Docker container**: When you're done, you can stop the Docker container by pressing `Ctrl + C` in the terminal where the container is running.
 
-### Environment
+### Install on Local Machine
 
-Set up the environment of your choice and install the required packages from either the `requirements.txt` or `Pipfile`. In the following, we quickly outline how to derive a strong setup using `pyenv` and `pipenv` on macOS.
+To set up SynAnno on your local machine, start by creating a fresh environment and installing the required packages from `requirements.txt` or `Pipfile`. The guide below provides an optimal setup using `pyenv` and `pipenv` on macOS to manage a specific Python version and isolated environment.
 
 #### Setting Up SynAnno with `pyenv` and `pipenv` on macOS
 

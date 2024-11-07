@@ -543,10 +543,18 @@ def neuron_centric_3d_data_processing(
     # load the cloud volumes
     app.progress_bar_status["status"] = "Loading Cloud Volumes"
     app.source_cv = CloudVolume(
-        source_url, secrets=bucket_secret_json, fill_missing=True, parallel=True
+        source_url,
+        secrets=bucket_secret_json,
+        fill_missing=True,
+        parallel=True,
+        use_https=True,
     )
     app.target_cv = CloudVolume(
-        target_url, secrets=bucket_secret_json, fill_missing=True, parallel=True
+        target_url,
+        secrets=bucket_secret_json,
+        fill_missing=True,
+        parallel=True,
+        use_https=True,
     )
 
     # assert that both volumes have the same dimensions

@@ -190,7 +190,7 @@ Why Use pyenv and pipenv?
 
 9. **Install the `Pipfile`**:
    ```bash
-   pipenv install
+   pipenv install -e .
    ```
 
 ### Start up SynAnno

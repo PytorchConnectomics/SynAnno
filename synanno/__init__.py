@@ -1,34 +1,62 @@
 import os
+from flask import Flask
 from flask_session import Session
 from flask_cors import CORS
-from flask import Flask
 import pandas as pd
 
 app = Flask(__name__)
 
 
-def configure_app():
+def create_app():
+    """Factory function to create and configure the Flask app."""
+
+    # Configure Flask app
+    configure_app(app)
+
+    # Register views to avoid circular imports
+    register_routes(app)
+
+    # Set up context processor
+    setup_context_processors(app)
+
+    return app
+
+
+def configure_app(app):
+    """Configure the Flask app with required settings."""
+    # Enable CORS
     CORS(app)
+    app.config["DEBUG_APP"] = bool(os.getenv("DEBUG_APP", "True") == "True")
     app.config["CORS_HEADERS"] = "Content-Type"
 
-    app.secret_key = os.urandom(32)
-    app.config["SESSION_PERMANENT"] = False
+    # Secret key and session settings
+    app.secret_key = os.getenv("SECRET_KEY", os.urandom(32))
+    app.config["SESSION_PERMANENT"] = bool(os.getenv("DEBUG_APP", "False") == "True")
     app.config["SESSION_TYPE"] = "filesystem"
     app.config["SESSION_FILE_DIR"] = "/tmp/flask_session"
 
+    # Initialize session
     Session(app)
 
-    app.config["PACKAGE_NAME"] = "synanno/"
-    app.config["UPLOAD_FOLDER"] = "files/"
-    app.config["STATIC_FOLDER"] = "static/"
-    app.config["CLOUD_VOLUME_BUCKETS"] = ["gs:", "s3:", "file:"]
-    app.config["JSON"] = "synAnno.json"
-    app.config["IP"] = "127.0.0.1"
-    app.config["PORT"] = "5000"
-    app.config["NG_IP"] = "localhost"
-    app.config["NG_PORT"] = "9015"
+    # Application-specific configurations
+    app.config.update(
+        PACKAGE_NAME="synanno/",
+        STATIC_FOLDER="static/",
+        UPLOAD_FOLDER="files/",
+        CLOUD_VOLUME_BUCKETS=["gs:", "s3:", "file:"],
+        JSON="synAnno.json",
+        IP=os.getenv("APP_IP", "0.0.0.0"),
+        PORT=int(os.getenv("APP_PORT", 80)),
+        NG_IP="localhost",
+        NG_PORT="9015",
+    )
 
-    # initialize global variables
+    # Initialize global variables
+    initialize_global_variables(app)
+
+
+def initialize_global_variables(app):
+    """Set up the global variables for the app."""
     app.progress_bar_status = {"status": "Loading Source File", "percent": 0}
     app.proofread_time = {
         "start_grid": None,
@@ -81,20 +109,24 @@ def configure_app():
     app.post_id_color_main = (0, 0, 255)
     app.post_id_color_sub = (200, 200, 255)
 
-    return app
+
+def register_routes(app):
+    """Register routes to avoid circular imports."""
+    from synanno.routes import (
+        annotation,
+        finish,
+        opendata,
+        categorize,
+        landingpage,
+        manual_annotate,
+    )
+
+    # No explicit registration if using Flask blueprints in `routes`
 
 
-# Load all views - avoid cycle load
-from synanno.routes import (
-    annotation,
-    finish,
-    opendata,
-    categorize,
-    landingpage,
-    manual_annotate,
-)
+def setup_context_processors(app):
+    """Set up context processors for the app."""
 
-
-@app.context_processor
-def handle_context() -> dict:
-    return dict(os=os)
+    @app.context_processor
+    def handle_context():
+        return dict(os=os)

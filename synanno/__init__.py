@@ -1,20 +1,21 @@
-import os
 from flask import Flask
 from flask_session import Session
 from flask_cors import CORS
 import pandas as pd
-
-app = Flask(__name__)
+import os
 
 
 def create_app():
     """Factory function to create and configure the Flask app."""
 
+    app = Flask(__name__)
+
     # Configure Flask app
     configure_app(app)
 
-    # Register views to avoid circular imports
-    register_routes(app)
+    # Register routes with app context properly handled
+    with app.app_context():
+        register_routes(app)
 
     # Set up context processor
     setup_context_processors(app)
@@ -111,17 +112,21 @@ def initialize_global_variables(app):
 
 
 def register_routes(app):
-    """Register routes to avoid circular imports."""
-    from synanno.routes import (
-        annotation,
-        finish,
-        opendata,
-        categorize,
-        landingpage,
-        manual_annotate,
-    )
+    """Register routes to avoid circular imports and ensure proper Blueprint registration."""
+    from synanno.routes.annotation import blueprint as annotation_blueprint
+    from synanno.routes.finish import blueprint as finish_blueprint
+    from synanno.routes.opendata import blueprint as opendata_blueprint
+    from synanno.routes.categorize import blueprint as categorize_blueprint
+    from synanno.routes.landingpage import blueprint as landingpage_blueprint
+    from synanno.routes.manual_annotate import blueprint as manual_annotate_blueprint
 
-    # No explicit registration if using Flask blueprints in `routes`
+    # Register the Blueprints with the app object.
+    app.register_blueprint(annotation_blueprint)
+    app.register_blueprint(finish_blueprint)
+    app.register_blueprint(opendata_blueprint)
+    app.register_blueprint(categorize_blueprint)
+    app.register_blueprint(landingpage_blueprint)
+    app.register_blueprint(manual_annotate_blueprint)
 
 
 def setup_context_processors(app):

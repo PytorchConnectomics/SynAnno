@@ -1,6 +1,3 @@
-# import the package app
-from synanno import app
-
 # flask util functions
 from flask import render_template, request, jsonify, session
 
@@ -40,6 +37,13 @@ import pandas as pd
 from synanno.backend.utils import adjust_datatype
 
 import glob
+
+from flask import Blueprint
+from flask import current_app as app
+
+
+# define a Blueprint for manual_annotate routes
+blueprint = Blueprint("manual_annotate", __name__)
 
 
 @app.route("/draw")

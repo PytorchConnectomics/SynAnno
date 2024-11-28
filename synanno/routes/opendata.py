@@ -1,9 +1,6 @@
 # import global configs
 import synanno
 
-# import the package app
-from synanno import app
-
 # flask util functions
 from flask import render_template, flash, request, jsonify, session, flash
 
@@ -31,14 +28,20 @@ import pandas as pd
 
 import numpy as np
 
+from flask import Blueprint
+from flask import current_app as app
+
+
+# define a Blueprint for opendata routes
+blueprint = Blueprint("open_data", __name__)
 
 # global variables
 global draw_or_annotate  # defines the downstream task; either draw or annotate - default to annotate
 draw_or_annotate = "annotate"
 
 
-@app.route("/open_data", defaults={"task": "annotate"})
-@app.route("/open_data/<string:task>", methods=["GET"])
+@blueprint.route("/open_data", defaults={"task": "annotate"})
+@blueprint.route("/open_data/<string:task>", methods=["GET"], endpoint="open_data_task")
 def open_data(task: str) -> Template:
     """Renders the open-data view that lets the user specify the source, target, and json file.
 
@@ -71,7 +74,7 @@ def open_data(task: str) -> Template:
     )
 
 
-@app.route("/upload", methods=["GET", "POST"])
+@blueprint.route("/upload", methods=["GET", "POST"])
 def upload_file() -> Template:
     """Upload the source, target, and json file specified by the user.
     Rerender the open-data view, enabling the user to start the annotation or draw process.
@@ -291,8 +294,8 @@ def upload_file() -> Template:
     )
 
 
-@app.route("/set-data/<string:task>", methods=["GET"])
-@app.route("/set-data")
+@blueprint.route("/set-data/<string:task>", methods=["GET"], endpoint="set_data_task")
+@blueprint.route("/set-data")
 def set_data(task: str = "annotate") -> Template:
     """Used by the annotation and the draw view to set up the session.
     Annotation view: Setup the session, calculate the grid view, render the annotation view
@@ -329,7 +332,7 @@ def set_data(task: str = "annotate") -> Template:
         )
 
 
-@app.route("/get_instance", methods=["POST"])
+@blueprint.route("/get_instance", methods=["POST"])
 @cross_origin()
 def get_instance() -> Dict[str, object]:
     """Serves one of two Ajax calls from annotation.js, passing instance specific information
@@ -499,7 +502,7 @@ def get_instance() -> Dict[str, object]:
     return final_json
 
 
-@app.route("/progress", methods=["POST"])
+@blueprint.route("/progress", methods=["POST"])
 @cross_origin()
 def progress() -> Dict[str, object]:
     """Serves an Ajax request from progressbar.js passing information about the loading
@@ -516,7 +519,7 @@ def progress() -> Dict[str, object]:
     )
 
 
-@app.route("/neuro", methods=["POST"])
+@blueprint.route("/neuro", methods=["POST"])
 @cross_origin()
 def neuro() -> Dict[str, object]:
     """Serves an Ajax request from annotation.js or draw_module.js, shifting the view focus with

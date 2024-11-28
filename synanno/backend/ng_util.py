@@ -2,7 +2,7 @@ import neuroglancer
 from random import randint
 
 # import the package app
-from synanno import app
+from flask import current_app as app  # import the package app
 
 # for type hinting
 import numpy as np

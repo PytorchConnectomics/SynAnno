@@ -1,6 +1,3 @@
-# import the package app
-from synanno import app
-
 # flask util functions
 from flask import render_template, session, send_file, flash
 
@@ -22,8 +19,14 @@ import datetime
 
 import time
 
+from flask import Blueprint
+from flask import current_app as app
 
-@app.route("/export_annotate")
+# define a Blueprint for finish routes
+blueprint = Blueprint("finish", __name__)
+
+
+@blueprint.route("/export_annotate")
 def export_annotate() -> Template:
     """Renders final view of the annotation process that lets the user download the JSON.
 
@@ -36,7 +39,7 @@ def export_annotate() -> Template:
     return render_template("export_annotate.html", disable_snp="disabled")
 
 
-@app.route("/export_draw")
+@blueprint.route("/export_draw")
 def export_draw() -> Template:
     """Renders final view of the draw process that lets the user download the custom masks.
 
@@ -49,7 +52,7 @@ def export_draw() -> Template:
     return render_template("export_draw.html", disable_snp="disabled")
 
 
-@app.route("/export_data/<string:data_type>", methods=["GET"])
+@blueprint.route("/export_data/<string:data_type>", methods=["GET"])
 def export_data(data_type) -> Union[Template, app.response_class]:
     """Download the JSON or the custom masks.
 
@@ -117,7 +120,7 @@ def export_data(data_type) -> Union[Template, app.response_class]:
             return render_template("export_draw.html", disable_snp=" ")
 
 
-@app.route("/reset")
+@blueprint.route("/reset")
 def reset() -> Template:
     """Resets all process by pooping all the session content, resting the process bar, resting the timer,
     deleting deleting the JSON, the images, masks and zip folder.

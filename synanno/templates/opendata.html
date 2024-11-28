@@ -35,7 +35,7 @@
   <form
     method="POST"
     for="{{ modeform }}"
-    action="{{ url_for('upload_file') }}"
+    action="{{ url_for('open_data.upload_file') }}"
     enctype="multipart/form-data"
   >
     <div class="mb-1"></div>
@@ -351,7 +351,7 @@
       <a
         type="button"
         class="btn btn-primary {{ modenext }}"
-        href="{{ url_for('set_data', task=mode) }}"
+        href="{{ url_for('open_data.set_data_task', task=mode) }}"
       >
         {% if mode == 'draw'%} Start Drawing {% elif mode == 'annotate'%}Start
         Data Proofread{% endif %}
@@ -362,14 +362,14 @@
         type="button"
         id="resetButton"
         class="btn btn-outline-danger d-{{ modereset or 'none'}}"
-        href="{{ url_for('reset') }}"
+        href="{{ url_for('finish.reset') }}"
         >Reset Backend</a
       >
       <a
         type="button"
         id="continueButton"
         class="btn btn-outline-warning d-{{ modereset or 'none'}}"
-        href="{{ url_for('set_data', task=mode) }}"
+        href="{{ url_for('open_data.set_data_task', task=mode) }}"
         >Continue Previous Task</a
       >
     </p>

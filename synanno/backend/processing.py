@@ -12,16 +12,26 @@ from scipy.ndimage import center_of_mass
 
 from .utils import *
 
-
-import synanno  # import global configs
-from synanno import app  # import the package app
-
 from cloudvolume import CloudVolume, Bbox
 import pandas as pd
 
 from flask import session
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+from flask import Blueprint
+
+from flask import current_app
+
+
+# define a Blueprint for manual_annotate routes
+blueprint = Blueprint("manual_annotate", __name__)
+
+
+def run_with_app_context(func, *args, **kwargs):
+    """Helper function to run a task within the app context."""
+    with current_app.app_context():  # Ensure app context is available
+        return func(*args, **kwargs)
 
 
 def process_syn(gt: np.ndarray) -> np.ndarray:
@@ -108,7 +118,7 @@ def calculate_crop_pad(
     pad = [[c11 - c11o, c12o - c12], [c21 - c21o, c22o - c22], [c31 - c31o, c32o - c32]]
 
     if not pad_z:
-        pad[list(app.coordinate_order.keys()).index("z")] = [0, 0]
+        pad[list(current_app.coordinate_order.keys()).index("z")] = [0, 0]
 
     return [c11, c12, c21, c22, c31, c32], pad
 
@@ -148,14 +158,17 @@ def free_page() -> None:
 
     # create the handles to the directories
     base_folder = os.path.join(
-        os.path.join(app.config["PACKAGE_NAME"], app.config["STATIC_FOLDER"]), "Images"
+        os.path.join(
+            current_app.config["PACKAGE_NAME"], current_app.config["STATIC_FOLDER"]
+        ),
+        "Images",
     )
     syn_dir, img_dir = os.path.join(base_folder, "Syn"), os.path.join(
         base_folder, "Img"
     )
 
     # retrieve the image index for all instances that are not labeled as "Correct"
-    key_list = app.df_metadata.query('Label == "Correct"')[
+    key_list = current_app.df_metadata.query('Label == "Correct"')[
         "Image_Index"
     ].values.tolist()
 
@@ -194,18 +207,18 @@ def retrieve_instance_metadata(
     global materialization
 
     # retrieve the order of the coordinates (xyz, xzy, yxz, yzx, zxy, zyx)
-    coordinate_order = list(app.coordinate_order.keys())
+    coordinate_order = list(current_app.coordinate_order.keys())
 
     # set the progress bar to zero
     if page != 0:
-        app.progress_bar_status["percent"] = 0
-        app.progress_bar_status["status"] = f"Loading page {str(page)}."
+        current_app.progress_bar_status["percent"] = 0
+        current_app.progress_bar_status["status"] = f"Loading page {str(page)}."
 
     # create the directories for saving the source and target images
     idx_dir = create_dir("./synanno/static/", "Images")
     syn_dir, img_dir = create_dir(idx_dir, "Syn"), create_dir(idx_dir, "Img")
 
-    if app.df_metadata.query("Page == @page").empty:
+    if current_app.df_metadata.query("Page == @page").empty:
         # retrieve the meta data for the synapses associated with the current page
         bbox_dict = get_sub_dict_within_range(
             materialization,
@@ -218,7 +231,7 @@ def retrieve_instance_metadata(
 
         ### iterate over the synapses. save the middle slices and before/after ones for navigation. ###
         for i, idx in enumerate(bbox_dict.keys()):
-            app.progress_bar_status[
+            current_app.progress_bar_status[
                 "status"
             ] = f"Inst.{str(idx)}: Calculate bounding box."
 
@@ -274,7 +287,7 @@ def retrieve_instance_metadata(
 
             # retrieve the actual crop coordinates and possible padding based on the max dimensions of the whole cloud volume
             crop_bbox, img_padding = calculate_crop_pad(
-                item["Original_Bbox"], app.vol_dim
+                item["Original_Bbox"], current_app.vol_dim
             )
 
             item["Adjusted_Bbox"], item["Padding"] = crop_bbox, img_padding
@@ -282,47 +295,51 @@ def retrieve_instance_metadata(
         # write the instance list to the dataframe
         df_list = pd.DataFrame(instance_list)
         # concatenate the metadata and the df_list dataframe
-        app.df_metadata = pd.concat([app.df_metadata, df_list], ignore_index=True)
+        current_app.df_metadata = pd.concat(
+            [current_app.df_metadata, df_list], ignore_index=True
+        )
 
     # retrieve the page's metadata from the dataframe
     if mode == "annotate":
-        page_metadata = app.df_metadata.query("Page == @page")
+        page_metadata = current_app.df_metadata.query("Page == @page")
     elif mode == "draw":
-        page_metadata = app.df_metadata.query('Label != "Correct"')
+        page_metadata = current_app.df_metadata.query('Label != "Correct"')
 
     # sort the metadata by the image index
     page_metadata = page_metadata.sort_values(by="Image_Index").to_dict(
         "records"
     )  # convert dataframe to list of dicts
 
-    with concurrent.futures.ThreadPoolExecutor(
-        max_workers=8
-    ) as executor:  # adjust max_workers as needed
-        futures = [
-            executor.submit(
-                _process_instance,
-                item,
-                create_dir(img_dir, str(item["Image_Index"])),
-                create_dir(syn_dir, str(item["Image_Index"])),
-            )
-            for i, item in enumerate(page_metadata)
-        ]
+    with current_app.app_context():  # Ensure the app context is available here as well
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=8
+        ) as executor:  # adjust max_workers as needed
+            futures = [
+                executor.submit(
+                    run_with_app_context,
+                    _process_instance,
+                    item,
+                    create_dir(img_dir, str(item["Image_Index"])),
+                    create_dir(syn_dir, str(item["Image_Index"])),
+                )
+                for i, item in enumerate(page_metadata)
+            ]
 
-        app.progress_bar_status["status"] = f"Pre-process sub-volume."
-        app.progress_bar_status["percent"] = int(60)
-        for future in concurrent.futures.as_completed(futures):
-            try:
-                _ = future.result()
-            except Exception as exc:
-                print("An exception occurred: %s" % exc)
-                print("Retry to process the instance.")
+            current_app.progress_bar_status["status"] = f"Pre-process sub-volume."
+            current_app.progress_bar_status["percent"] = int(60)
+            for future in concurrent.futures.as_completed(futures):
                 try:
-                    future.result(timeout=15)
+                    _ = future.result()
                 except Exception as exc:
-                    print("The exception persists: %s" % exc)
-                    traceback.print_exc()
+                    print("An exception occurred: %s" % exc)
+                    print("Retry to process the instance.")
+                    try:
+                        future.result(timeout=15)
+                    except Exception as exc:
+                        print("The exception persists: %s" % exc)
+                        traceback.print_exc()
 
-    app.progress_bar_status["percent"] = int(100)
+        current_app.progress_bar_status["percent"] = int(100)
 
 
 def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) -> None:
@@ -339,7 +356,7 @@ def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) 
     img_padding = item["Padding"]
 
     # retrieve the coordinate order of the cloud volume | xyz, xzy, yxz, yzx, zxy, zyx
-    coord_order = list(app.coordinate_order.keys())
+    coord_order = list(current_app.coordinate_order.keys())
 
     # map the bounding box coordinates to a dictionary using the provided coordinate order
     crop_box_dict = {
@@ -359,20 +376,20 @@ def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) 
 
     # scale the bounding box to the resolution of the source cloud volume
     bound_source = Bbox(
-        (bound_target.minpt * list(app.scale.values())).astype(int),
-        (bound_target.maxpt * list(app.scale.values())).astype(int),
+        (bound_target.minpt * list(current_app.scale.values())).astype(int),
+        (bound_target.maxpt * list(current_app.scale.values())).astype(int),
     )
 
     # retrieve the source and target images from the cloud volume
-    cropped_img = app.source_cv.download(
+    cropped_img = current_app.source_cv.download(
         bound_source,
-        coord_resolution=app.coord_resolution_source,
+        coord_resolution=current_app.coord_resolution_source,
         mip=0,
         parallel=True,
     )
-    cropped_gt = app.target_cv.download(
+    cropped_gt = current_app.target_cv.download(
         bound_target,
-        coord_resolution=app.coord_resolution_target,
+        coord_resolution=current_app.coord_resolution_target,
         mip=0,
         parallel=True,
     )
@@ -440,13 +457,13 @@ def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) 
     )
 
     # scale the the points to the resolution of the source cloud volume
-    pre_pt_x = int(pre_pt_x * app.scale["x"])
-    pre_pt_y = int(pre_pt_y * app.scale["y"])
-    pre_pt_z = int(pre_pt_z * app.scale["z"])
+    pre_pt_x = int(pre_pt_x * current_app.scale["x"])
+    pre_pt_y = int(pre_pt_y * current_app.scale["y"])
+    pre_pt_z = int(pre_pt_z * current_app.scale["z"])
 
-    post_pt_x = int(post_pt_x * app.scale["x"])
-    post_pt_y = int(post_pt_y * app.scale["y"])
-    post_pt_z = int(post_pt_z * app.scale["z"])
+    post_pt_x = int(post_pt_x * current_app.scale["x"])
+    post_pt_y = int(post_pt_y * current_app.scale["y"])
+    post_pt_z = int(post_pt_z * current_app.scale["z"])
 
     # create an RGB mask of the synapse from the single channel binary mask
     # colors all non zero values turquoise
@@ -459,8 +476,8 @@ def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) 
         pre_pt_y,
         pre_pt_z,
         radius=10,
-        color_main=app.pre_id_color_main,
-        color_sub=app.pre_id_color_sub,
+        color_main=current_app.pre_id_color_main,
+        color_sub=current_app.pre_id_color_sub,
         layout=coord_order,
     )
     vis_label = draw_cylinder(
@@ -469,8 +486,8 @@ def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) 
         post_pt_y,
         post_pt_z,
         radius=10,
-        color_main=app.post_id_color_main,
-        color_sub=app.post_id_color_sub,
+        color_main=current_app.post_id_color_main,
+        color_sub=current_app.post_id_color_sub,
         layout=coord_order,
     )
 
@@ -538,18 +555,18 @@ def neuron_centric_3d_data_processing(
     global materialization
 
     # retrieve the order of the coordinates (xyz, xzy, yxz, yzx, zxy, zyx)
-    coordinate_order = list(app.coordinate_order.keys())
+    coordinate_order = list(current_app.coordinate_order.keys())
 
     # load the cloud volumes
-    app.progress_bar_status["status"] = "Loading Cloud Volumes"
-    app.source_cv = CloudVolume(
+    current_app.progress_bar_status["status"] = "Loading Cloud Volumes"
+    current_app.source_cv = CloudVolume(
         source_url,
         secrets=bucket_secret_json,
         fill_missing=True,
         parallel=True,
         use_https=True,
     )
-    app.target_cv = CloudVolume(
+    current_app.target_cv = CloudVolume(
         target_url,
         secrets=bucket_secret_json,
         fill_missing=True,
@@ -558,25 +575,31 @@ def neuron_centric_3d_data_processing(
     )
 
     # assert that both volumes have the same dimensions
-    if list(app.source_cv.volume_size) == list(app.target_cv.volume_size):
-        vol_dim = tuple([s - 1 for s in app.source_cv.volume_size])
+    if list(current_app.source_cv.volume_size) == list(
+        current_app.target_cv.volume_size
+    ):
+        vol_dim = tuple([s - 1 for s in current_app.source_cv.volume_size])
     else:
         # print a warning if the dimensions do not match, stating that we use the smaller size of the two volumes
         print(
-            f"The dimensions of the source ({app.source_cv.volume_size}) and target ({app.target_cv.volume_size}) volumes do not match. We use the smaller size of the two volumes."
+            f"The dimensions of the source ({current_app.source_cv.volume_size}) and target ({current_app.target_cv.volume_size}) volumes do not match. We use the smaller size of the two volumes."
         )
 
         # test which size is smaller
-        if np.prod(app.source_cv.volume_size) < np.prod(app.target_cv.volume_size):
-            vol_dim = tuple([s - 1 for s in app.source_cv.volume_size])
+        if np.prod(current_app.source_cv.volume_size) < np.prod(
+            current_app.target_cv.volume_size
+        ):
+            vol_dim = tuple([s - 1 for s in current_app.source_cv.volume_size])
         else:
-            vol_dim = tuple([s - 1 for s in app.target_cv.volume_size])
+            vol_dim = tuple([s - 1 for s in current_app.target_cv.volume_size])
 
-    app.vol_dim = vol_dim
-    app.vol_dim_scaled = tuple(int(a * b) for a, b in zip(vol_dim, app.scale.values()))
+    current_app.vol_dim = vol_dim
+    current_app.vol_dim_scaled = tuple(
+        int(a * b) for a, b in zip(vol_dim, current_app.scale.values())
+    )
 
     # read data as dict from path table_name
-    app.progress_bar_status["status"] = "Retrieving Materialization"
+    current_app.progress_bar_status["status"] = "Retrieving Materialization"
 
     # Read the CSV file
     df = pd.read_csv(table_name)
@@ -584,19 +607,19 @@ def neuron_centric_3d_data_processing(
     if view_style == "view":
         # should no cropping coordinates be provided, use the whole volume
         if subvolume[coordinate_order[2] + "2"] == -1:
-            subvolume[coordinate_order[2] + "2"] = app.source_cv.info["scales"][0][
-                "size"
-            ][2]
+            subvolume[coordinate_order[2] + "2"] = current_app.source_cv.info["scales"][
+                0
+            ]["size"][2]
 
         if subvolume[coordinate_order[1] + "2"] == -1:
-            subvolume[coordinate_order[1] + "2"] = app.source_cv.info["scales"][0][
-                "size"
-            ][1]
+            subvolume[coordinate_order[1] + "2"] = current_app.source_cv.info["scales"][
+                0
+            ]["size"][1]
 
         if subvolume[coordinate_order[0] + "2"] == -1:
-            subvolume[coordinate_order[0] + "2"] = app.source_cv.info["scales"][0][
-                "size"
-            ][0]
+            subvolume[coordinate_order[0] + "2"] = current_app.source_cv.info["scales"][
+                0
+            ]["size"][0]
 
         # query the dataframe for all instances with their coordinates x,y,z with in the range of the subvolume
         df = df.query(

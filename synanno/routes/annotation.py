@@ -1,9 +1,6 @@
 # import global configs
 import synanno
 
-# import the package app
-from synanno import app
-
 # flask util functions
 from flask import render_template, session, request, jsonify
 
@@ -25,9 +22,16 @@ from typing import Dict
 
 import synanno.backend.processing as ip
 
+from flask import Blueprint
+from flask import current_app as app
 
-@app.route("/annotation/<int:page>")
-@app.route("/annotation")
+
+# define a Blueprint for annotation routes
+blueprint = Blueprint("annotation", __name__)
+
+
+@blueprint.route("/annotation/<int:page>", endpoint="annotation_page")
+@blueprint.route("/annotation")
 def annotation(page: int = 0) -> Template:
     """Start the proofreading timer and load the annotation view.
 
@@ -64,7 +68,7 @@ def annotation(page: int = 0) -> Template:
     )
 
 
-@app.route("/set_grid_opacity", methods=["POST"])
+@blueprint.route("/set_grid_opacity", methods=["POST"])
 @cross_origin()
 def set_grid_opacity() -> Dict[str, object]:
     """Serves and Ajax request from annotation.js updating the grid's opacity value
@@ -78,7 +82,7 @@ def set_grid_opacity() -> Dict[str, object]:
     return json.dumps({"success": True}), 200, {"ContentType": "application/json"}
 
 
-@app.route("/update-card", methods=["POST"])
+@blueprint.route("/update-card", methods=["POST"])
 @cross_origin()
 def update_card() -> Dict[str, object]:
     """Updates the label of an instance. The labels switch from Correct, Incorrect to Unsure

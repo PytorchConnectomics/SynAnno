@@ -104,7 +104,7 @@
       <a
         type="button"
         class="page-link btn btn-primary nav-anno"
-        href="{{ url_for('annotation', page=page-1) }}"
+        href="{{ url_for('annotation.annotation_page', page=page-1) }}"
       >
         <i class="bi bi-arrow-left"></i>
       </a>
@@ -125,7 +125,7 @@
       <a
         type="button"
         class="page-link btn btn-primary nav-anno"
-        href="{{ url_for('annotation', page=page+1)}}"
+        href="{{ url_for('annotation.annotation_page', page=page+1)}}"
       >
         <i class="bi bi-arrow-right"></i>
       </a>
@@ -133,7 +133,7 @@
 
     {% else %}
     <li class="page-item">
-      <a class="page-link" href="{{ url_for('categorize') }}"
+      <a class="page-link" href="{{ url_for('categorize.categorize') }}"
         >Error Processing</a
       >
     </li>

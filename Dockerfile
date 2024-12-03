@@ -15,7 +15,6 @@ RUN mkdir -p /home/nginx/.cloudvolume/secrets \
 
 RUN mkdir -p /tmp/flask_session && chown -R nginx:nginx /tmp/flask_session
 
-
 # Set the working directory to /app
 WORKDIR /app
 
@@ -24,22 +23,21 @@ ENV SECRET_KEY=your-secret-key
 ENV APP_IP=0.0.0.0
 ENV APP_PORT=80
 
-# Copy setup.py and application code
+# Copy setup.py, application code and configs
 COPY setup.py /app/
 COPY synanno /app/synanno
 COPY run_production.py /app/
+COPY h01/synapse-export_000000000000.csv /app/h01/synapse-export_000000000000.csv
+
+# Create required directories
+RUN mkdir -p files/
+
+# Set ownership and write permissions of the static files
+RUN chown -R nginx:nginx /app/synanno/static/Images
+RUN chmod -R u+w /app/synanno/static/Images
 
 # Install dependencies using setup.py
 RUN pip install --no-cache-dir -e .
-
-# Copy other necessary application files
-COPY h01 /app/h01
-
-# Create required directories for static images and files
-RUN mkdir -p static/images/data/gt \
-    && mkdir -p static/images/data/source \
-    && mkdir -p static/images/data/target \
-    && mkdir -p files/
 
 # Expose the Nginx port (port 80)
 EXPOSE 80
@@ -48,5 +46,5 @@ EXPOSE 80
 COPY uwsgi.ini /app
 COPY nginx.conf /etc/nginx/nginx.conf
 
-# Command to run uWSGI with Nginx
-CMD ["uwsgi", "--ini", "/app/uwsgi.ini"]
+# Run Nginx and uWSGI in the foreground
+CMD ["/bin/bash", "-c", "uwsgi --ini /app/uwsgi.ini & service nginx start"]

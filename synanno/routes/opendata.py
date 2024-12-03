@@ -29,7 +29,7 @@ import pandas as pd
 import numpy as np
 
 from flask import Blueprint
-from flask import current_app as app
+from flask import current_app
 
 
 # define a Blueprint for opendata routes
@@ -66,7 +66,7 @@ def open_data(task: str) -> Template:
             modenext="d-none",
             modereset="inline",
             mode=draw_or_annotate,
-            json_name=app.config["JSON"],
+            json_name=current_app.config["JSON"],
             view_style="view",
         )
     return render_template(
@@ -94,37 +94,48 @@ def upload_file() -> Template:
     session["n_pages"] = 0
 
     # retrieve the view_style mode from the form, either view or neuron
-    app.view_style = request.form.get("view_style")
+    current_app.view_style = request.form.get("view_style")
 
     # Check if files folder exists, if not create it
     if not os.path.exists(
         os.path.join(
-            ".", os.path.join(app.config["PACKAGE_NAME"], app.config["UPLOAD_FOLDER"])
+            ".",
+            os.path.join(
+                current_app.config["PACKAGE_NAME"], current_app.config["UPLOAD_FOLDER"]
+            ),
         )
     ):
         os.mkdir(
             os.path.join(
                 ".",
-                os.path.join(app.config["PACKAGE_NAME"], app.config["UPLOAD_FOLDER"]),
+                os.path.join(
+                    current_app.config["PACKAGE_NAME"],
+                    current_app.config["UPLOAD_FOLDER"],
+                ),
             )
         )
 
     # remove the old json file should it exist
     if os.path.isfile(
         os.path.join(
-            os.path.join(app.config["PACKAGE_NAME"], app.config["UPLOAD_FOLDER"]),
-            app.config["JSON"],
+            os.path.join(
+                current_app.config["PACKAGE_NAME"], current_app.config["UPLOAD_FOLDER"]
+            ),
+            current_app.config["JSON"],
         )
     ):
         os.remove(
             os.path.join(
-                os.path.join(app.config["PACKAGE_NAME"], app.config["UPLOAD_FOLDER"]),
-                app.config["JSON"],
+                os.path.join(
+                    current_app.config["PACKAGE_NAME"],
+                    current_app.config["UPLOAD_FOLDER"],
+                ),
+                current_app.config["JSON"],
             )
         )
 
     # retrieve the coordinate order and resolution from the form and save them in a dict, used by the NG instance and the processing functions
-    app.coordinate_order = {
+    current_app.coordinate_order = {
         c: (
             request.form.get("res-source-" + str(i + 1)),
             request.form.get("res-target-" + str(i + 1)),
@@ -132,7 +143,7 @@ def upload_file() -> Template:
         for i, c in enumerate(list(request.form.get("coordinates")))
     }
 
-    coordinate_order = list(app.coordinate_order.keys())
+    coordinate_order = list(current_app.coordinate_order.keys())
 
     # retrieve the crop size from the form and save it to the session
     session["crop_size_x"] = int(
@@ -163,19 +174,19 @@ def upload_file() -> Template:
 
     # if a json was provided write its data to the metadata dataframe
     if file_json.filename:
-        # retrieve the columns from app.df_metadata
-        expected_columns = set(app.df_metadata.columns)
+        # retrieve the columns from current_app.df_metadata
+        expected_columns = set(current_app.df_metadata.columns)
 
-        app.df_metadata = pd.read_json(file_json, orient="records")
+        current_app.df_metadata = pd.read_json(file_json, orient="records")
 
-        # retrieve the columns from app.df_metadata
-        actual_columns = set(app.df_metadata.columns)
+        # retrieve the columns from current_app.df_metadata
+        actual_columns = set(current_app.df_metadata.columns)
 
         # Check if the expected columns match the actual ones
         if expected_columns == actual_columns:
             print("All columns are present.")
             # sort the dataframe by page and image_index
-            app.df_metadata.sort_values(["Page", "Image_Index"], inplace=True)
+            current_app.df_metadata.sort_values(["Page", "Image_Index"], inplace=True)
         else:
             missing_columns = expected_columns - actual_columns
             extra_columns = actual_columns - expected_columns
@@ -184,21 +195,24 @@ def upload_file() -> Template:
             raise ValueError("The provided JSON does not match the expected format!")
 
     # Convert coordinate resolution values to integers
-    app.coord_resolution_source = np.array(
-        [int(res[0]) for res in app.coordinate_order.values()]
+    current_app.coord_resolution_source = np.array(
+        [int(res[0]) for res in current_app.coordinate_order.values()]
     ).astype(int)
-    app.coord_resolution_target = np.array(
-        [int(res[1]) for res in app.coordinate_order.values()]
+    current_app.coord_resolution_target = np.array(
+        [int(res[1]) for res in current_app.coordinate_order.values()]
     ).astype(int)
 
     # calculate the scale factor for the source and target cloud volume
-    app.scale = {
+    current_app.scale = {
         c: v
         for c, v in zip(
             coordinate_order,
             np.where(
-                app.coord_resolution_target / app.coord_resolution_source > 0,
-                app.coord_resolution_target / app.coord_resolution_source,
+                current_app.coord_resolution_target
+                / current_app.coord_resolution_source
+                > 0,
+                current_app.coord_resolution_target
+                / current_app.coord_resolution_source,
                 1,
             ),
         )
@@ -210,8 +224,10 @@ def upload_file() -> Template:
 
     # check if the provided urls are valid based on the cloud provider prefix
     if any(
-        bucket in source_url for bucket in app.config["CLOUD_VOLUME_BUCKETS"]
-    ) and any(bucket in target_url for bucket in app.config["CLOUD_VOLUME_BUCKETS"]):
+        bucket in source_url for bucket in current_app.config["CLOUD_VOLUME_BUCKETS"]
+    ) and any(
+        bucket in target_url for bucket in current_app.config["CLOUD_VOLUME_BUCKETS"]
+    ):
         # retrieve the bucket secret if the user provided one
         if bucket_secret := request.files.get("secrets_file"):
             bucket_secret = json.loads(bucket_secret.read())
@@ -221,7 +237,7 @@ def upload_file() -> Template:
         materialization_url = request.form.get("materialization_url")
 
         # if the user chose the view view_style mode load the bbox specific subvolume and then process the data like in the local case
-        if app.view_style == "view":
+        if current_app.view_style == "view":
             subvolume = {}
             for coord in coordinate_order:
                 subvolume[coord + "1"] = (
@@ -236,6 +252,7 @@ def upload_file() -> Template:
                 )
 
             ip.neuron_centric_3d_data_processing(
+                current_app._get_current_object(),
                 source_url,
                 target_url,
                 materialization_url,
@@ -244,10 +261,10 @@ def upload_file() -> Template:
                 if bucket_secret
                 else "~/.cloudvolume/secrets",
                 mode=draw_or_annotate,
-                view_style=app.view_style,
+                view_style=current_app.view_style,
             )
         # if the user chose the neuron view_style mode, retrieve a list of all the synapses of the provided neuron ids and then process the data on synapse level
-        elif app.view_style == "neuron":
+        elif current_app.view_style == "neuron":
             # if the user chose the neuron view_style mode retrieve the neuron ids
             preid = (
                 int(request.form.get("preid")) if request.form.get("preid") else None
@@ -257,6 +274,7 @@ def upload_file() -> Template:
             )
 
             ip.neuron_centric_3d_data_processing(
+                current_app._get_current_object(),
                 source_url,
                 target_url,
                 materialization_url,
@@ -266,7 +284,7 @@ def upload_file() -> Template:
                 if bucket_secret
                 else "~/.cloudvolume/secrets",
                 mode=draw_or_annotate,
-                view_style=app.view_style,
+                view_style=current_app.view_style,
             )
 
     else:
@@ -279,7 +297,7 @@ def upload_file() -> Template:
         )
 
     # if the NG version number is None setup a new NG viewer
-    if app.ng_version is None:
+    if current_app.ng_version is None:
         ng_util.setup_ng(
             source="precomputed://" + source_url, target="precomputed://" + target_url
         )
@@ -289,7 +307,7 @@ def upload_file() -> Template:
         "opendata.html",
         modecurrent="disabled",
         modeform="formFileDisabled",
-        view_style=app.view_style,
+        view_style=current_app.view_style,
         mode=draw_or_annotate,
     )
 
@@ -311,14 +329,16 @@ def set_data(task: str = "annotate") -> Template:
 
     if task == "draw":
         # retrieve the the data from the metadata dataframe as a list of dicts
-        data = app.df_metadata.query('Label != "Correct"').sort_values(by="Image_Index")
+        data = current_app.df_metadata.query('Label != "Correct"').sort_values(
+            by="Image_Index"
+        )
         data = data.to_dict("records")
         return render_template("draw.html", images=data)
     # setup the session
     else:
         page = 0
         data = (
-            app.df_metadata.query("Page == @page")
+            current_app.df_metadata.query("Page == @page")
             .sort_values(by="Image_Index")
             .to_dict("records")
         )
@@ -328,7 +348,7 @@ def set_data(task: str = "annotate") -> Template:
             images=data,
             page=page,
             n_pages=session.get("n_pages"),
-            grid_opacity=app.grid_opacity,
+            grid_opacity=current_app.grid_opacity,
         )
 
 
@@ -341,7 +361,7 @@ def get_instance() -> Dict[str, object]:
         The instance specific data
     """
 
-    coordinate_order = list(app.coordinate_order.keys())
+    coordinate_order = list(current_app.coordinate_order.keys())
 
     # retrieve the page and instance index
     mode = str(request.form["mode"])
@@ -359,9 +379,9 @@ def get_instance() -> Dict[str, object]:
         slices_len = len(
             os.listdir(
                 "./synanno"
-                + app.df_metadata.loc[
-                    (app.df_metadata["Page"] == page)
-                    & (app.df_metadata["Image_Index"] == index),
+                + current_app.df_metadata.loc[
+                    (current_app.df_metadata["Page"] == page)
+                    & (current_app.df_metadata["Image_Index"] == index),
                     "EM",
                 ].item()
                 + "/"
@@ -369,17 +389,17 @@ def get_instance() -> Dict[str, object]:
         )
         # retrieve the middle slice
         middle_slice = int(
-            app.df_metadata.loc[
-                (app.df_metadata["Page"] == page)
-                & (app.df_metadata["Image_Index"] == index),
+            current_app.df_metadata.loc[
+                (current_app.df_metadata["Page"] == page)
+                & (current_app.df_metadata["Image_Index"] == index),
                 "Middle_Slice",
             ].item()
         )
 
         # retrieve the instance specific data
-        data = app.df_metadata.query("Page == @page & Image_Index == @index").to_dict(
-            "records"
-        )[0]
+        data = current_app.df_metadata.query(
+            "Page == @page & Image_Index == @index"
+        ).to_dict("records")[0]
 
         # retrieve the first slice of the instance
         range_min = data["Adjusted_Bbox"][coordinate_order.index("z") * 2]
@@ -432,8 +452,8 @@ def get_instance() -> Dict[str, object]:
             slices_len=slices_len,
             halflen=middle_slice,
             range_min=range_min,
-            host=app.config["IP"],
-            port=app.config["PORT"],
+            host=current_app.config["IP"],
+            port=current_app.config["PORT"],
             custom_mask_path_curve=custom_mask_path_curve,
             custom_mask_path_pre=custom_mask_path_pre,
             custom_mask_path_post=custom_mask_path_post,
@@ -441,9 +461,9 @@ def get_instance() -> Dict[str, object]:
 
     # when changing the depicted slice with in the modal view
     elif load == "single":
-        data = app.df_metadata.query("Page == @page & Image_Index == @index").to_dict(
-            "records"
-        )[0]
+        data = current_app.df_metadata.query(
+            "Page == @page & Image_Index == @index"
+        ).to_dict("records")[0]
 
         if mode == "draw":
             base_mask_path = str(request.form["base_mask_path"])
@@ -513,8 +533,8 @@ def progress() -> Dict[str, object]:
     """
     return jsonify(
         {
-            "status": app.progress_bar_status["status"],
-            "progress": app.progress_bar_status["percent"],
+            "status": current_app.progress_bar_status["status"],
+            "progress": current_app.progress_bar_status["percent"],
         }
     )
 
@@ -529,29 +549,32 @@ def neuro() -> Dict[str, object]:
         Passes the link to the NG instance as json.
     """
 
-    coordinate_order = list(app.coordinate_order.keys())
+    coordinate_order = list(current_app.coordinate_order.keys())
 
     # unpack the coordinates for the new focus point of the view
     mode = str(request.form["mode"])
     center = {}
     if mode == "annotate":
-        center["z"] = int(int(request.form["cz0"]) * app.scale["z"])
-        center["y"] = int(int(request.form["cy0"]) * app.scale["y"])
-        center["x"] = int(int(request.form["cx0"]) * app.scale["x"])
+        center["z"] = int(int(request.form["cz0"]) * current_app.scale["z"])
+        center["y"] = int(int(request.form["cy0"]) * current_app.scale["y"])
+        center["x"] = int(int(request.form["cx0"]) * current_app.scale["x"])
     elif mode == "draw":
         center["z"] = int(
-            (app.vol_dim[coordinate_order.index("z")] // 2) * app.scale["z"]
+            (current_app.vol_dim[coordinate_order.index("z")] // 2)
+            * current_app.scale["z"]
         )
         center["y"] = int(
-            (app.vol_dim[coordinate_order.index("y")] // 2) * app.scale["y"]
+            (current_app.vol_dim[coordinate_order.index("y")] // 2)
+            * current_app.scale["y"]
         )
         center["x"] = int(
-            (app.vol_dim[coordinate_order.index("x")] // 2) * app.scale["x"]
+            (current_app.vol_dim[coordinate_order.index("x")] // 2)
+            * current_app.scale["x"]
         )
 
-    if app.ng_version is not None:
+    if current_app.ng_version is not None:
         # update the view focus of the running NG instance
-        with app.ng_viewer.txn() as s:
+        with current_app.ng_viewer.txn() as s:
             s.position = [
                 center[coordinate_order[0]],
                 center[coordinate_order[1]],
@@ -562,15 +585,15 @@ def neuro() -> Dict[str, object]:
         raise Exception("No NG instance running")
 
     print(
-        f"Neuroglancer instance running at {app.ng_viewer}, centered at {coordinate_order[0]},{coordinate_order[1]},{coordinate_order[2]}: {center[coordinate_order[0]], center[coordinate_order[1]], center[coordinate_order[2]]}"
+        f"Neuroglancer instance running at {current_app.ng_viewer}, centered at {coordinate_order[0]},{coordinate_order[1]},{coordinate_order[2]}: {center[coordinate_order[0]], center[coordinate_order[1]], center[coordinate_order[2]]}"
     )
 
     final_json = jsonify(
         {
             "ng_link": "http://"
-            + app.config["IP"]
+            + current_app.config["IP"]
             + ":9015/v/"
-            + str(app.ng_version)
+            + str(current_app.ng_version)
             + "/"
         }
     )
@@ -599,13 +622,15 @@ def save_file(
     global draw_or_annotate
 
     path = (
-        os.path.join(app.config["PACKAGE_NAME"], app.config["UPLOAD_FOLDER"])
+        os.path.join(
+            current_app.config["PACKAGE_NAME"], current_app.config["UPLOAD_FOLDER"]
+        )
         if not path
         else path
     )
 
     file_ext = os.path.splitext(filename)[1]
-    if file_ext not in app.config["UPLOAD_EXTENSIONS"]:
+    if file_ext not in current_app.config["UPLOAD_EXTENSIONS"]:
         flash("Incorrect file format! Load again.", "error")
         render_template("opendata.html", modenext="disabled", mode=draw_or_annotate)
         return None

@@ -1,5 +1,5 @@
 from typing import Union, Tuple
-
+from flask import Flask
 import os
 import json
 import shutil
@@ -19,18 +19,12 @@ from flask import session
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from flask import Blueprint
-
 from flask import current_app
 
 
-# define a Blueprint for manual_annotate routes
-blueprint = Blueprint("manual_annotate", __name__)
-
-
-def run_with_app_context(func, *args, **kwargs):
+def run_with_app_context(app: Flask, func: callable, *args, **kwargs):
     """Helper function to run a task within the app context."""
-    with current_app.app_context():  # Ensure app context is available
+    with app.app_context():  # Ensure app context is available
         return func(*args, **kwargs)
 
 
@@ -191,12 +185,13 @@ def free_page() -> None:
 
 
 def retrieve_instance_metadata(
-    page: int = 0, mode: str = "annotate"
+    app: Flask, page: int = 0, mode: str = "annotate"
 ) -> Union[str, None]:
     """Visualize the synapse and EM images in 2D slices for each instance by cropping the bounding box of the instance.
         Processing each instance individually, retrieving them from the cloud volume and saving them to the local disk.
 
     Args:
+        app: an handle to the application context
         page (int): the current page number for which to compute the data.
 
     Returns:
@@ -230,7 +225,7 @@ def retrieve_instance_metadata(
         instance_list = []
 
         ### iterate over the synapses. save the middle slices and before/after ones for navigation. ###
-        for i, idx in enumerate(bbox_dict.keys()):
+        for idx in bbox_dict.keys():
             current_app.progress_bar_status[
                 "status"
             ] = f"Inst.{str(idx)}: Calculate bounding box."
@@ -310,36 +305,36 @@ def retrieve_instance_metadata(
         "records"
     )  # convert dataframe to list of dicts
 
-    with current_app.app_context():  # Ensure the app context is available here as well
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=8
-        ) as executor:  # adjust max_workers as needed
-            futures = [
-                executor.submit(
-                    run_with_app_context,
-                    _process_instance,
-                    item,
-                    create_dir(img_dir, str(item["Image_Index"])),
-                    create_dir(syn_dir, str(item["Image_Index"])),
-                )
-                for i, item in enumerate(page_metadata)
-            ]
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=8
+    ) as executor:  # adjust max_workers as needed
+        futures = [
+            executor.submit(
+                run_with_app_context,
+                app,
+                _process_instance,
+                item,
+                create_dir(img_dir, str(item["Image_Index"])),
+                create_dir(syn_dir, str(item["Image_Index"])),
+            )
+            for i, item in enumerate(page_metadata)
+        ]
 
-            current_app.progress_bar_status["status"] = f"Pre-process sub-volume."
-            current_app.progress_bar_status["percent"] = int(60)
-            for future in concurrent.futures.as_completed(futures):
+        current_app.progress_bar_status["status"] = f"Pre-process sub-volume."
+        current_app.progress_bar_status["percent"] = int(60)
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                _ = future.result()
+            except Exception as exc:
+                print("An exception occurred: %s" % exc)
+                print("Retry to process the instance.")
                 try:
-                    _ = future.result()
+                    future.result(timeout=15)
                 except Exception as exc:
-                    print("An exception occurred: %s" % exc)
-                    print("Retry to process the instance.")
-                    try:
-                        future.result(timeout=15)
-                    except Exception as exc:
-                        print("The exception persists: %s" % exc)
-                        traceback.print_exc()
+                    print("The exception persists: %s" % exc)
+                    traceback.print_exc()
 
-        current_app.progress_bar_status["percent"] = int(100)
+    current_app.progress_bar_status["percent"] = int(100)
 
 
 def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) -> None:
@@ -530,6 +525,7 @@ def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) 
 
 
 def neuron_centric_3d_data_processing(
+    app,
     source_url: str,
     target_url: str,
     table_name: str,
@@ -543,6 +539,7 @@ def neuron_centric_3d_data_processing(
     """Retrieve the bounding boxes and instances indexes from the table and call the render function to render the 3D data as 2D images.
 
     Args:
+        app (Flask): an handle to the application context
         source_url (str): the url to the source cloud volume (EM).
         target_url (str): the url to the target cloud volume (synapse).
         table_name (str): the path to the JSON file.
@@ -564,6 +561,7 @@ def neuron_centric_3d_data_processing(
         secrets=bucket_secret_json,
         fill_missing=True,
         parallel=True,
+        progress=False,
         use_https=True,
     )
     current_app.target_cv = CloudVolume(
@@ -571,6 +569,7 @@ def neuron_centric_3d_data_processing(
         secrets=bucket_secret_json,
         fill_missing=True,
         parallel=True,
+        progress=False,
         use_https=True,
     )
 
@@ -671,4 +670,4 @@ def neuron_centric_3d_data_processing(
 
     session["n_pages"] = number_pages
 
-    return retrieve_instance_metadata(page=0, mode=mode)
+    return retrieve_instance_metadata(app, page=0, mode=mode)

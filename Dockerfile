@@ -1,50 +1,41 @@
-# Stage 1: Builder Stage
-FROM tiangolo/uwsgi-nginx-flask:python3.9
+FROM tiangolo/uwsgi-nginx-flask:python3.10
 
 # Metadata
 LABEL Name="SynAnno" \
       Version="1.0.0"
 
-# Upgrade pip
-RUN python -m pip install --upgrade pip
-
-# Set up directories and permissions in a single RUN statement to reduce image layers
-RUN mkdir -p /home/nginx/.cloudvolume/secrets \
-    && chown -R nginx:nginx /home/nginx \
-    && usermod -d /home/nginx -s /bin/bash nginx
-
-RUN mkdir -p /tmp/flask_session && chown -R nginx:nginx /tmp/flask_session
-
-# Set the working directory to /app
-WORKDIR /app
-
+# Environment variables
 ENV DEBUG_APP=False
 ENV SECRET_KEY=your-secret-key
 ENV APP_IP=0.0.0.0
 ENV APP_PORT=80
+ENV STATIC_PATH /app/synanno/static
 
-# Copy setup.py, application code and configs
+# Set the working directory
+WORKDIR /app
+
+# Upgrade pip
+RUN python -m pip install --no-cache-dir --upgrade pip
+
+# Create necessary directories and set ownership/permissions
+RUN mkdir -p /tmp/flask_session /app/files /app/synanno/static/Images \
+    && chown -R nginx:nginx /tmp /app/files /app/synanno/static/Images \
+    && chmod -R u+w /app/synanno/static/Images
+
+# Copy application code, configuration, and setup files
 COPY setup.py /app/
 COPY synanno /app/synanno
 COPY run_production.py /app/
 COPY h01/synapse-export_000000000000.csv /app/h01/synapse-export_000000000000.csv
 
-# Create required directories
-RUN mkdir -p files/
-
-# Set ownership and write permissions of the static files
-RUN chown -R nginx:nginx /app/synanno/static/Images
-RUN chmod -R u+w /app/synanno/static/Images
-
-# Install dependencies using setup.py
+# Install application and dependencies from setup.py
 RUN pip install --no-cache-dir -e .
 
-# Expose the Nginx port (port 80)
+# Expose the Nginx port
 EXPOSE 80
 
-# Copy uwsgi.ini and nginx.conf files
+# Copy uWSGI configuration
 COPY uwsgi.ini /app
-COPY nginx.conf /etc/nginx/nginx.conf
 
-# Run Nginx and uWSGI in the foreground
+# Start the application
 CMD ["/bin/bash", "-c", "uwsgi --ini /app/uwsgi.ini & service nginx start"]

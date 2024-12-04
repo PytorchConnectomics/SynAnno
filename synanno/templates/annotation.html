@@ -66,7 +66,7 @@
           <img
             id="imgEM-GT-{{image.Image_Index}}"
             class="img_annotate"
-            src="{{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}}"
+            src="{{ url_for('static', filename=image.GT ~ '/' ~ image.Middle_Slice ~ '.png')}}"
             width="64px"
             height="64px"
             style="position: absolute; opacity: {{grid_opacity or '0.5'}};"
@@ -74,7 +74,7 @@
           <img
             id="imgGT-{{image.Image_Index}}"
             class="img_annotate"
-            src="{{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}}"
+            src="{{ url_for('static', filename= image.EM ~ '/' ~ image.Middle_Slice ~ '.png')}}"
             width="64px"
             height="64px"
             style="position: initial"

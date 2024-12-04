@@ -1,6 +1,3 @@
-# import global configs
-import synanno
-
 # flask util functions
 from flask import render_template, flash, request, jsonify, session, flash
 
@@ -56,7 +53,12 @@ def open_data(task: str) -> Template:
     global draw_or_annotate
     draw_or_annotate = task
 
-    if os.path.isdir("./synanno/static/Images/Img"):
+    if os.path.isdir(
+        os.path.join(
+            os.path.join(current_app.root_path, current_app.config["STATIC_FOLDER"]),
+            "Images/Img",
+        )
+    ):
         flash(
             'Click "Reset Backend" to clear the memory, start a new task, and start up a Neuroglancer instance.'
         )
@@ -100,16 +102,14 @@ def upload_file() -> Template:
     if not os.path.exists(
         os.path.join(
             ".",
-            os.path.join(
-                current_app.config["PACKAGE_NAME"], current_app.config["UPLOAD_FOLDER"]
-            ),
+            os.path.join(current_app.root_path, current_app.config["UPLOAD_FOLDER"]),
         )
     ):
         os.mkdir(
             os.path.join(
                 ".",
                 os.path.join(
-                    current_app.config["PACKAGE_NAME"],
+                    current_app.root_path,
                     current_app.config["UPLOAD_FOLDER"],
                 ),
             )
@@ -118,16 +118,14 @@ def upload_file() -> Template:
     # remove the old json file should it exist
     if os.path.isfile(
         os.path.join(
-            os.path.join(
-                current_app.config["PACKAGE_NAME"], current_app.config["UPLOAD_FOLDER"]
-            ),
+            os.path.join(current_app.root_path, current_app.config["UPLOAD_FOLDER"]),
             current_app.config["JSON"],
         )
     ):
         os.remove(
             os.path.join(
                 os.path.join(
-                    current_app.config["PACKAGE_NAME"],
+                    current_app.root_path,
                     current_app.config["UPLOAD_FOLDER"],
                 ),
                 current_app.config["JSON"],
@@ -373,33 +371,40 @@ def get_instance() -> Dict[str, object]:
     custom_mask_path_pre = None
     custom_mask_path_post = None
 
+    print(page)
+    print(index)
+    print(current_app.df_metadata)
+
     # when first opening a instance modal view
     if load == "full":
-        # calculating the number of slices
-        slices_len = len(
-            os.listdir(
-                "./synanno"
-                + current_app.df_metadata.loc[
+        with current_app.df_metadata_lock:
+            # calculating the number of slices
+            slices_len = len(
+                os.listdir(
+                    os.path.join(
+                        current_app.root_path, current_app.config["STATIC_FOLDER"]
+                    )
+                    + current_app.df_metadata.loc[
+                        (current_app.df_metadata["Page"] == page)
+                        & (current_app.df_metadata["Image_Index"] == index),
+                        "EM",
+                    ].item()
+                    + "/"
+                )
+            )
+            # retrieve the middle slice
+            middle_slice = int(
+                current_app.df_metadata.loc[
                     (current_app.df_metadata["Page"] == page)
                     & (current_app.df_metadata["Image_Index"] == index),
-                    "EM",
+                    "Middle_Slice",
                 ].item()
-                + "/"
             )
-        )
-        # retrieve the middle slice
-        middle_slice = int(
-            current_app.df_metadata.loc[
-                (current_app.df_metadata["Page"] == page)
-                & (current_app.df_metadata["Image_Index"] == index),
-                "Middle_Slice",
-            ].item()
-        )
 
-        # retrieve the instance specific data
-        data = current_app.df_metadata.query(
-            "Page == @page & Image_Index == @index"
-        ).to_dict("records")[0]
+            # retrieve the instance specific data
+            data = current_app.df_metadata.query(
+                "Page == @page & Image_Index == @index"
+            ).to_dict("records")[0]
 
         # retrieve the first slice of the instance
         range_min = data["Adjusted_Bbox"][coordinate_order.index("z") * 2]
@@ -438,11 +443,11 @@ def get_instance() -> Dict[str, object]:
                     + coordinates
                     + ".png",
                 )
-                if os.path.exists("./synanno" + path_curve):
+                if os.path.exists(current_app.root_path + path_curve):
                     custom_mask_path_curve = path_curve
-                if os.path.exists("./synanno" + path_circle_pre):
+                if os.path.exists(current_app.root_path + path_circle_pre):
                     custom_mask_path_pre = path_circle_pre
-                if os.path.exists("./synanno" + path_circle_post):
+                if os.path.exists(current_app.root_path + path_circle_post):
                     custom_mask_path_post = path_circle_post
 
         data = json.dumps(data)
@@ -503,11 +508,11 @@ def get_instance() -> Dict[str, object]:
                         + coordinates
                         + ".png",
                     )
-                    if os.path.exists("./synanno" + path_curve):
+                    if os.path.exists(current_app.root_path + path_curve):
                         custom_mask_path_curve = path_curve
-                    if os.path.exists("./synanno" + path_circle_pre):
+                    if os.path.exists(current_app.root_path + path_circle_pre):
                         custom_mask_path_pre = path_circle_pre
-                    if os.path.exists("./synanno" + path_circle_post):
+                    if os.path.exists(current_app.root_path + path_circle_post):
                         custom_mask_path_post = path_circle_post
 
         data = json.dumps(data)
@@ -622,9 +627,7 @@ def save_file(
     global draw_or_annotate
 
     path = (
-        os.path.join(
-            current_app.config["PACKAGE_NAME"], current_app.config["UPLOAD_FOLDER"]
-        )
+        os.path.join(current_app.root_path, current_app.config["UPLOAD_FOLDER"])
         if not path
         else path
     )

@@ -32,7 +32,7 @@ $(document).ready(function () {
       $("#imgDetails-EM").addClass(label.toLowerCase());
       $("#imgDetails-EM").attr(
         "src",
-        data_json.EM + "/" + data_json.Middle_Slice + ".png",
+        staticBaseUrl + data_json.EM + "/" + data_json.Middle_Slice + ".png",
       );
 
       // curve mask
@@ -160,7 +160,7 @@ $(document).ready(function () {
       data_json = JSON.parse(data.data);
       $("#imgDetails-EM").attr(
         "src",
-        data_json.EM + "/" + viewed_instance_slice + ".png",
+        staticBaseUrl + data_json.EM + "/" + viewed_instance_slice + ".png",
       );
 
       // curve mask

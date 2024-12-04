@@ -3,6 +3,7 @@ from flask_session import Session
 from flask_cors import CORS
 import pandas as pd
 import os
+from threading import Lock
 
 
 def create_app():
@@ -19,6 +20,9 @@ def create_app():
 
     # Set up context processor
     setup_context_processors(app)
+
+    # attach a lock for the data frame access to the app instance
+    app.df_metadata_lock = Lock()
 
     return app
 

@@ -225,7 +225,9 @@ def ng_bbox_fn_save() -> Dict[str, object]:
     item["Image_Index"] = len(app.df_metadata) + 1
 
     # crop out and save the relevant gt and im
-    idx_dir = create_dir("./synanno/static/", "Images")
+    idx_dir = create_dir(
+        os.path.join(app.root_path, app.config["STATIC_FOLDER"]), "Images"
+    )
     img_folder = create_dir(idx_dir, "Img")
     img_all = create_dir(img_folder, str(item["Image_Index"]))
 

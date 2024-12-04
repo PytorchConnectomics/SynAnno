@@ -133,6 +133,11 @@
       </nav>
     </header>
 
+        <!-- Define staticBaseUrl globally -->
+    <script>
+        const staticBaseUrl = "{{ url_for('static', filename='') }}";
+    </script>
+
     <main class="m-2">
       <div class="container">
         {% for message in get_flashed_messages() %}

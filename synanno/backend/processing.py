@@ -18,6 +18,7 @@ import pandas as pd
 from flask import session
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Lock
 
 from flask import current_app
 
@@ -152,9 +153,7 @@ def free_page() -> None:
 
     # create the handles to the directories
     base_folder = os.path.join(
-        os.path.join(
-            current_app.config["PACKAGE_NAME"], current_app.config["STATIC_FOLDER"]
-        ),
+        os.path.join(current_app.root_path, current_app.config["STATIC_FOLDER"]),
         "Images",
     )
     syn_dir, img_dir = os.path.join(base_folder, "Syn"), os.path.join(
@@ -162,9 +161,10 @@ def free_page() -> None:
     )
 
     # retrieve the image index for all instances that are not labeled as "Correct"
-    key_list = current_app.df_metadata.query('Label == "Correct"')[
-        "Image_Index"
-    ].values.tolist()
+    with current_app.df_metadata_lock:
+        key_list = current_app.df_metadata.query('Label == "Correct"')[
+            "Image_Index"
+        ].values.tolist()
 
     # remove the segmentation and images from the EM and GT folder for the previous and next page.
     for key in key_list:
@@ -210,10 +210,15 @@ def retrieve_instance_metadata(
         current_app.progress_bar_status["status"] = f"Loading page {str(page)}."
 
     # create the directories for saving the source and target images
-    idx_dir = create_dir("./synanno/static/", "Images")
+    idx_dir = create_dir(
+        os.path.join(current_app.root_path, current_app.config["STATIC_FOLDER"]),
+        "Images",
+    )
     syn_dir, img_dir = create_dir(idx_dir, "Syn"), create_dir(idx_dir, "Img")
 
-    if current_app.df_metadata.query("Page == @page").empty:
+    with current_app.df_metadata_lock:
+        page_empty = current_app.df_metadata.query("Page == @page").empty
+    if page_empty:
         # retrieve the meta data for the synapses associated with the current page
         bbox_dict = get_sub_dict_within_range(
             materialization,
@@ -241,8 +246,8 @@ def retrieve_instance_metadata(
             item = dict()
             item["Page"] = int(page)
             item["Image_Index"] = int(idx)
-            item["GT"] = "/" + "/".join(syn_dir_instance.strip(".\\").split("/")[2:])
-            item["EM"] = "/" + "/".join(img_dir_instance.strip(".\\").split("/")[2:])
+            item["GT"] = "/".join(syn_dir_instance.strip(".\\").split("/")[-3:])
+            item["EM"] = "/".join(img_dir_instance.strip(".\\").split("/")[-3:])
             item["Label"] = "Correct"
             item["Annotated"] = "No"
             item["Error_Description"] = "None"
@@ -289,25 +294,26 @@ def retrieve_instance_metadata(
             instance_list.append(item)
         # write the instance list to the dataframe
         df_list = pd.DataFrame(instance_list)
-        # concatenate the metadata and the df_list dataframe
-        current_app.df_metadata = pd.concat(
-            [current_app.df_metadata, df_list], ignore_index=True
-        )
+
+        with current_app.df_metadata_lock:
+            # concatenate the metadata and the df_list dataframe
+            current_app.df_metadata = pd.concat(
+                [current_app.df_metadata, df_list], ignore_index=True
+            )
 
     # retrieve the page's metadata from the dataframe
-    if mode == "annotate":
-        page_metadata = current_app.df_metadata.query("Page == @page")
-    elif mode == "draw":
-        page_metadata = current_app.df_metadata.query('Label != "Correct"')
+    with current_app.df_metadata_lock:
+        if mode == "annotate":
+            page_metadata = current_app.df_metadata.query("Page == @page")
+        elif mode == "draw":
+            page_metadata = current_app.df_metadata.query('Label != "Correct"')
 
     # sort the metadata by the image index
     page_metadata = page_metadata.sort_values(by="Image_Index").to_dict(
         "records"
     )  # convert dataframe to list of dicts
 
-    with concurrent.futures.ThreadPoolExecutor(
-        max_workers=8
-    ) as executor:  # adjust max_workers as needed
+    with ThreadPoolExecutor(max_workers=8) as executor:  # adjust max_workers as needed
         futures = [
             executor.submit(
                 run_with_app_context,
@@ -322,7 +328,7 @@ def retrieve_instance_metadata(
 
         current_app.progress_bar_status["status"] = f"Pre-process sub-volume."
         current_app.progress_bar_status["percent"] = int(60)
-        for future in concurrent.futures.as_completed(futures):
+        for future in as_completed(futures):
             try:
                 _ = future.result()
             except Exception as exc:

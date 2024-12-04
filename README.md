@@ -128,17 +128,19 @@ Repository includes a Dockerfile that enables you to build and run the applicati
 
 6. **Stop the Docker container**: When you're done, you can stop the Docker container by pressing `Ctrl + C` in the terminal where the container is running.
 
-### Install on Local Machine
+### Local Installation
 
-To set up SynAnno on your local machine, start by creating a fresh environment and installing the required packages from `requirements.txt` or `Pipfile`. The guide below provides an optimal setup using `pyenv` and `pipenv` on macOS to manage a specific Python version and isolated environment.
+To set up SynAnno on your local machine, start by creating a fresh environment and installing the required packages `setup.py`. The guide below provides an optimal setup using `pyenv` and `venv` on macOS to manage a specific Python version and isolated environment.
 
-#### Setting Up SynAnno with `pyenv` and `pipenv` on macOS
+#### Setting Up SynAnno with `venv` and `pipenv` on macOS (Z shell)
 
-Why Use pyenv and pipenv?
+Why Use `pyenv` and `pipenv`?
 
 - **Isolation**: Prevent dependency conflicts with isolated virtual environments.
-- **Reproducibility**: Ensure consistent dependency versions with `Pipfile.lock`.
+- **Reproducibility**: Ensure consistent dependency versions.
 - **Python Version Management**: Easily switch Python versions per project.
+
+##### Setup the project's Python Version (pyenv)
 
 1. **Install `pyenv`**:
 
@@ -152,45 +154,87 @@ Why Use pyenv and pipenv?
    echo 'eval "$(pyenv init --path)"' >> ~/.zshrc
    ```
 
+   Reload your shell:
+
+   ```bash
+   source ~/.zshrc
+   ```
+
 3. **Install Python version with `pyenv`**:
 
    ```bash
-   pyenv install 3.9.12
+   pyenv install $(cat .python-version)
    ```
 
-4. **Set global Python version**:
+4. **Navigate to your project folder**:
 
    ```bash
-   pyenv global 3.9.12
+   cd /home/user/SynAnno
    ```
-
-5. **Install `pipenv`**:
+5. **Set the Local Python Version**:
 
    ```bash
-   pip install pipenv
+   pyenv local $(cat .python-version)
    ```
 
-6. **Navigate to your project folder**:
+   *Note: This will create a .python-version file in the project directory.*
+   *Note: Alternatively you can also set the python version globally.*
+
+   ```bash
+   pyenv global $(cat .python-version)
+   ```
+
+##### Create a Virtual Environment (Venv)
+
+1. **Navigate to the Project folder**:
 
    ```bash
    cd /home/user/SynAnno
    ```
 
-7. **Initialize `pipenv` environment**:
+2. **Setup the Project Environment**:
 
    ```bash
-   pipenv --python $(pyenv which python)
+   python -m m venv .venv
    ```
 
-8. **Activate the environment**:
+3. **Activate the Virtual Environment**:
 
    ```bash
-   pipenv shell
+   source .venv/bin/activate
    ```
 
-9. **Install the `Pipfile`**:
+4. **Verify the correct Python version is used**:
+
+   ```bash
+   pyenv which python
+   ```
+
+   ```bash
+   python --version
+   ```
+
+   *The output should reflect the version written in .python-version*
+
+   ```bash
+   pyenv which python
+   ```
+
+   *The output should state: `<python version from .python-version> (set by /Home/user/SynAnno/.python-version)`*
+
+5. **Install the `Pipfile`**:
    ```bash
    pipenv install -e .
+   ```
+
+### Environment Variables
+
+SynAnno can be configured via environment variables. Simply provide a `.env` file which will be directly loaded by the tool.
+
+   ```md
+   SECRET_KEY=********
+   APP_IP=0.0.0.0
+   APP_PORT=5000
    ```
 
 ### Start up SynAnno

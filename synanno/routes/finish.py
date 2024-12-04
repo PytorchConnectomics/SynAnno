@@ -1,6 +1,3 @@
-# import the package app
-from synanno import app
-
 # flask util functions
 from flask import render_template, session, send_file, flash
 
@@ -22,8 +19,14 @@ import datetime
 
 import time
 
+from flask import Blueprint
+from flask import current_app
 
-@app.route("/export_annotate")
+# define a Blueprint for finish routes
+blueprint = Blueprint("finish", __name__)
+
+
+@blueprint.route("/export_annotate")
 def export_annotate() -> Template:
     """Renders final view of the annotation process that lets the user download the JSON.
 
@@ -36,7 +39,7 @@ def export_annotate() -> Template:
     return render_template("export_annotate.html", disable_snp="disabled")
 
 
-@app.route("/export_draw")
+@blueprint.route("/export_draw")
 def export_draw() -> Template:
     """Renders final view of the draw process that lets the user download the custom masks.
 
@@ -49,8 +52,8 @@ def export_draw() -> Template:
     return render_template("export_draw.html", disable_snp="disabled")
 
 
-@app.route("/export_data/<string:data_type>", methods=["GET"])
-def export_data(data_type) -> Union[Template, app.response_class]:
+@blueprint.route("/export_data/<string:data_type>", methods=["GET"])
+def export_data(data_type) -> Union[Template, current_app.response_class]:
     """Download the JSON or the custom masks.
 
     Args:
@@ -63,18 +66,20 @@ def export_data(data_type) -> Union[Template, app.response_class]:
 
     with open(
         os.path.join(
-            app.config["PACKAGE_NAME"],
-            os.path.join(app.config["UPLOAD_FOLDER"]),
-            app.config["JSON"],
+            current_app.root_path,
+            os.path.join(current_app.config["UPLOAD_FOLDER"]),
+            current_app.config["JSON"],
         ),
         "w",
     ) as f:
         # TODO: What to do with the timing data?
         # write the metadata to a json file
         final_file = dict()
-        final_file["Proofread Time"] = app.proofread_time
+        final_file["Proofread Time"] = current_app.proofread_time
 
-        json.dump(app.df_metadata.to_dict("records"), f, indent=4, default=json_serial)
+        json.dump(
+            current_app.df_metadata.to_dict("records"), f, indent=4, default=json_serial
+        )
 
         # provide sufficient time for the json update
         time.sleep(0.1 * session.get("n_pages"))
@@ -84,11 +89,13 @@ def export_data(data_type) -> Union[Template, app.response_class]:
         if session.get("n_pages"):
             return send_file(
                 os.path.join(
-                    os.path.join(app.root_path, app.config["UPLOAD_FOLDER"]),
-                    app.config["JSON"],
+                    os.path.join(
+                        current_app.root_path, current_app.config["UPLOAD_FOLDER"]
+                    ),
+                    current_app.config["JSON"],
                 ),
                 as_attachment=True,
-                download_name=app.config["JSON"],
+                download_name=current_app.config["JSON"],
             )
         else:
             flash("Now file - session data is empty.", "error")
@@ -96,14 +103,17 @@ def export_data(data_type) -> Union[Template, app.response_class]:
             return render_template("export_annotate.html", disable_snp=" ")
     elif data_type == "mask":
         total_folder_path = os.path.join(
-            os.path.join(app.root_path, app.config["STATIC_FOLDER"]), "custom_masks"
+            os.path.join(current_app.root_path, current_app.config["STATIC_FOLDER"]),
+            "custom_masks",
         )
         if os.path.exists(total_folder_path):
             # create zip of folder
             shutil.make_archive(total_folder_path, "zip", total_folder_path)
             return send_file(
                 os.path.join(
-                    os.path.join(app.root_path, app.config["STATIC_FOLDER"]),
+                    os.path.join(
+                        current_app.root_path, current_app.config["STATIC_FOLDER"]
+                    ),
                     "custom_masks.zip",
                 ),
                 as_attachment=True,
@@ -117,7 +127,7 @@ def export_data(data_type) -> Union[Template, app.response_class]:
             return render_template("export_draw.html", disable_snp=" ")
 
 
-@app.route("/reset")
+@blueprint.route("/reset")
 def reset() -> Template:
     """Resets all process by pooping all the session content, resting the process bar, resting the timer,
     deleting deleting the JSON, the images, masks and zip folder.
@@ -127,10 +137,10 @@ def reset() -> Template:
     """
 
     # reset progress bar
-    app.progress_bar_status = {"status": "Loading Source File", "percent": 0}
+    current_app.progress_bar_status = {"status": "Loading Source File", "percent": 0}
 
     # reset time
-    app.proofread_time = dict.fromkeys(app.proofread_time, None)
+    current_app.proofread_time = dict.fromkeys(current_app.proofread_time, None)
 
     # pop all the session content.
     for key in list(session.keys()):
@@ -139,20 +149,22 @@ def reset() -> Template:
     # delete json file.
     if os.path.isfile(
         os.path.join(
-            os.path.join(app.config["PACKAGE_NAME"], app.config["UPLOAD_FOLDER"]),
-            app.config["JSON"],
+            os.path.join(current_app.root_path, current_app.config["UPLOAD_FOLDER"]),
+            current_app.config["JSON"],
         )
     ):
         os.remove(
             os.path.join(
-                os.path.join(app.config["PACKAGE_NAME"], app.config["UPLOAD_FOLDER"]),
-                app.config["JSON"],
+                os.path.join(
+                    current_app.root_path, current_app.config["UPLOAD_FOLDER"]
+                ),
+                current_app.config["JSON"],
             )
         )
 
     # delete static images
     static_folder = os.path.join(
-        app.config["PACKAGE_NAME"], app.config["STATIC_FOLDER"]
+        current_app.root_path, current_app.config["STATIC_FOLDER"]
     )
     image_folder = os.path.join(static_folder, "Images")
 
@@ -181,7 +193,7 @@ def reset() -> Template:
             print("Failed to delete %s. Reason: %s" % (mask_folder, e))
 
     # set the metadataframe back to null
-    app.df_metadata.drop(app.df_metadata.index, inplace=True)
+    current_app.df_metadata.drop(current_app.df_metadata.index, inplace=True)
 
     return render_template("landingpage.html")
 

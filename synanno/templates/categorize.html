@@ -28,7 +28,7 @@
             <img
               id="imgEM-GT-{{image.Image_Index}}"
               class="img_categorize"
-              src="{{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}}"
+              src="{{ url_for('static', filename=image.GT ~ '/' ~ image.Middle_Slice ~ '.png')}}"
               width="64px"
               height="64px"
               style="opacity: 0.5"
@@ -36,7 +36,7 @@
             <img
               id="imgGT-{{image.Image_Index}}"
               class="img_categorize"
-              src="{{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}}"
+              src="{{ url_for('static', filename= image.EM ~ '/' ~ image.Middle_Slice ~ '.png')}}"
               width="64px"
               height="64px"
             />

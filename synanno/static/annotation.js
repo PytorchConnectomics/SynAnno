@@ -80,11 +80,11 @@ $(document).ready(function () {
       $("#imgDetails-EM").addClass(label.toLowerCase());
       $("#imgDetails-EM").attr(
         "src",
-        data_json.EM + "/" + data_json.Middle_Slice + ".png",
+        staticBaseUrl + data_json.EM + "/" + data_json.Middle_Slice + ".png",
       );
       $("#imgDetails-GT").attr(
         "src",
-        data_json.GT + "/" + data_json.Middle_Slice + ".png",
+        staticBaseUrl + data_json.GT + "/" + data_json.Middle_Slice + ".png",
       );
       $("#detailsModal").modal("show");
 
@@ -136,8 +136,8 @@ $(document).ready(function () {
     // update the slice and GT that is depicted
     req.done(function (data) {
       data_json = JSON.parse(data.data);
-      $("#imgDetails-EM").attr("src", data_json.EM + "/" + rangeValue + ".png");
-      $("#imgDetails-GT").attr("src", data_json.GT + "/" + rangeValue + ".png");
+      $("#imgDetails-EM").attr("src", staticBaseUrl + data_json.EM + "/" + rangeValue + ".png");
+      $("#imgDetails-GT").attr("src", staticBaseUrl + data_json.GT + "/" + rangeValue + ".png");
     });
   });
 });

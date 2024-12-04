@@ -4,9 +4,9 @@ setup(
     name="SynAnno",
     version="0.1.0",
     description="A package for annotation processing and cloud volume handling.",
-    author="Your Name",
-    author_email="your.email@example.com",
-    url="https://github.com/yourusername/SynAnno",
+    author="Leander Lauenburg",
+    author_email="leander.lauenburg@gmail.com",
+    url="https://github.com/PytorchConnectomics/SynAnno",
     packages=find_packages(),
     install_requires=[
         "cloud-volume",
@@ -24,6 +24,7 @@ setup(
         "scipy>=1.11.0",
         "tifffile>=2023.4.12",
         "fpzip==1.2.4",
+        "python-dotenv==1.0.1",
     ],
     extras_require={
         "dev": [

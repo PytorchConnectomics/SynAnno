@@ -1,9 +1,6 @@
 # import global configs
 import synanno
 
-# import the package app
-from synanno import app
-
 # flask util functions
 from flask import render_template, session, request, jsonify
 
@@ -25,9 +22,16 @@ from typing import Dict
 
 import synanno.backend.processing as ip
 
+from flask import Blueprint
+from flask import current_app
 
-@app.route("/annotation/<int:page>")
-@app.route("/annotation")
+
+# define a Blueprint for annotation routes
+blueprint = Blueprint("annotation", __name__)
+
+
+@blueprint.route("/annotation/<int:page>", endpoint="annotation_page")
+@blueprint.route("/annotation")
 def annotation(page: int = 0) -> Template:
     """Start the proofreading timer and load the annotation view.
 
@@ -42,15 +46,15 @@ def annotation(page: int = 0) -> Template:
     ip.free_page()
 
     # load the data for the current page
-    ip.retrieve_instance_metadata(page=page)
+    ip.retrieve_instance_metadata(current_app._get_current_object(), page=page)
 
     # start the timer for the annotation process
-    if app.proofread_time["start_grid"] is None:
-        app.proofread_time["start_grid"] = datetime.datetime.now()
+    if current_app.proofread_time["start_grid"] is None:
+        current_app.proofread_time["start_grid"] = datetime.datetime.now()
 
     # retrieve the data for the current page
     data = (
-        app.df_metadata.query("Page == @page")
+        current_app.df_metadata.query("Page == @page")
         .sort_values(by=["Image_Index"])
         .to_dict("records")
     )
@@ -60,11 +64,11 @@ def annotation(page: int = 0) -> Template:
         images=data,
         page=page,
         n_pages=session.get("n_pages"),
-        grid_opacity=app.grid_opacity,
+        grid_opacity=current_app.grid_opacity,
     )
 
 
-@app.route("/set_grid_opacity", methods=["POST"])
+@blueprint.route("/set_grid_opacity", methods=["POST"])
 @cross_origin()
 def set_grid_opacity() -> Dict[str, object]:
     """Serves and Ajax request from annotation.js updating the grid's opacity value
@@ -73,12 +77,12 @@ def set_grid_opacity() -> Dict[str, object]:
         Passes a success confirmation to the frontend
     """
     # retrieve the current opacity value, only keep first decimal
-    app.grid_opacity = int(float(request.form["grid_opacity"]) * 10) / 10
+    current_app.grid_opacity = int(float(request.form["grid_opacity"]) * 10) / 10
     # returning a JSON formatted response to trigger the ajax success logic
     return json.dumps({"success": True}), 200, {"ContentType": "application/json"}
 
 
-@app.route("/update-card", methods=["POST"])
+@blueprint.route("/update-card", methods=["POST"])
 @cross_origin()
 def update_card() -> Dict[str, object]:
     """Updates the label of an instance. The labels switch from Correct, Incorrect to Unsure
@@ -94,21 +98,21 @@ def update_card() -> Dict[str, object]:
 
     # update the session data with the new label
     if label == "Incorrect":
-        app.df_metadata.loc[
-            (app.df_metadata["Page"] == page)
-            & (app.df_metadata["Image_Index"] == index),
+        current_app.df_metadata.loc[
+            (current_app.df_metadata["Page"] == page)
+            & (current_app.df_metadata["Image_Index"] == index),
             "Label",
         ] = "Unsure"
     elif label == "Unsure":
-        app.df_metadata.loc[
-            (app.df_metadata["Page"] == page)
-            & (app.df_metadata["Image_Index"] == index),
+        current_app.df_metadata.loc[
+            (current_app.df_metadata["Page"] == page)
+            & (current_app.df_metadata["Image_Index"] == index),
             "Label",
         ] = "Correct"
     elif label == "Correct":
-        app.df_metadata.loc[
-            (app.df_metadata["Page"] == page)
-            & (app.df_metadata["Image_Index"] == index),
+        current_app.df_metadata.loc[
+            (current_app.df_metadata["Page"] == page)
+            & (current_app.df_metadata["Image_Index"] == index),
             "Label",
         ] = "Incorrect"
 

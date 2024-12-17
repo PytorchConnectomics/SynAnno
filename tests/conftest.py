@@ -1,7 +1,7 @@
 import pytest
-from synanno import configure_app
+from synanno import create_app
 
-app = configure_app()
+app = create_app()
 
 
 @app.after_request

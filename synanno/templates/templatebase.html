@@ -133,6 +133,11 @@
       </nav>
     </header>
 
+        <!-- Define staticBaseUrl globally -->
+    <script>
+        const staticBaseUrl = "{{ url_for('static', filename='') }}";
+    </script>
+
     <main class="m-2">
       <div class="container">
         {% for message in get_flashed_messages() %}
@@ -186,7 +191,7 @@
             <button
               type="button"
               class="btn btn-primary"
-              onclick="window.location.href='{{url_for('reset')}}';"
+              onclick="window.location.href='{{url_for('finish.reset')}}';"
             >
               Reset and Go Home
             </button>

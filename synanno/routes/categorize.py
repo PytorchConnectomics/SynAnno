@@ -1,8 +1,6 @@
 # import global configs
 import synanno
 
-# import the package app
-from synanno import app
 
 # flask util functions
 from flask import render_template, request, jsonify
@@ -26,8 +24,15 @@ global delete_fps
 
 delete_fps = False
 
+from flask import Blueprint
+from flask import current_app as app
 
-@app.route("/categorize")
+
+# define a Blueprint for categorize routes
+blueprint = Blueprint("categorize", __name__)
+
+
+@blueprint.route("/categorize")
 def categorize() -> Template:
     """Stop the annotation timer, start the categorization timer, and render the categorize view
 
@@ -59,7 +64,7 @@ def categorize() -> Template:
     return render_template("categorize.html", images=output_dict)
 
 
-@app.route("/pass_flags", methods=["GET", "POST"])
+@blueprint.route("/pass_flags", methods=["GET", "POST"])
 @cross_origin()
 def pass_flags() -> Dict[str, object]:
     """Serves an Ajax request from categorize.js, retrieving the new error tags from the
@@ -107,7 +112,7 @@ def pass_flags() -> Dict[str, object]:
     return json.dumps({"success": True}), 200, {"ContentType": "application/json"}
 
 
-@app.route("/custom_flag", methods=["GET", "POST"])
+@blueprint.route("/custom_flag", methods=["GET", "POST"])
 @cross_origin()
 def custom_flag() -> Dict[str, object]:
     """Serves an Ajax request from categorize.js, retrieving the custom error message."""

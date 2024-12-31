@@ -40,306 +40,204 @@
   >
     <div class="mb-1"></div>
 
-    <div id="cloud-form">
-      <label for="source_url" class="form-label"
-        >Source bucket (precomputed: Neuroglancer's native format) -
-        Required</label
-      >
-      <p>
-        <input
-          class="form-control"
-          type="url"
-          id="source_url"
-          name="source_url"
-          placeholder="Cloud Volume Bucket - file://<path_to_your_file>"
-          value="gs://h01-release/data/20210601/4nm_raw"
-        />
-      </p>
-      <label for="target_url" class="form-label"
-        >Target bucket (precomputed: Neuroglancer's native format) -
-        Required</label
-      >
-      <p>
-        <input
-          class="form-control"
-          type="url"
-          id="target_url"
-          name="target_url"
-          placeholder="Cloud Volume Bucket - file://<path_to_your_file>"
-          value="gs://h01-release/data/20210729/c3/synapses/whole_ei_onlyvol"
-        />
-      </p>
-      <label for="materialization_url" class="form-label"
-        >Materialization (url/name of the table containing the ID association
-        and bounding box information)</label
-      >
-      <p>
-        <input
-          class="form-control"
-          type="text"
-          id="materialization_url"
-          name="materialization_url"
-          placeholder="Materialization - synapses"
-          value="h01/synapse-export_000000000000.csv"
-        />
-      </p>
-      <label for="secrets_file" class="form-label"
-        >Secrets (File containing the bucket secrets, defaults to looking in
-        ~/.cloudvolume/secrets)</label
-      >
-      <p>
-        <input
-          class="form-control"
-          type="file"
-          id="secrets_file"
-          name="secrets_file"
-        />
-      </p>
-      <label class="form-label">SynAnno JSON file</label>
-      <p>
-        <input
-          class="form-control {{mode}}"
-          type="file"
-          id="formFile"
-          name="file_json"
-        />
-      </p>
-
-      <label class="form-check-label">
-        <input
-          type="radio"
-          class="form-check-input"
-          id="view_centric_button"
-          name="view_style"
-          value="view"
-          {%
-          if
-          (view_style=="view")
-          %}
-          checked
-          {%
-          endif
-          %}
-        />
-        View Centric
-      </label>
-      <label class="form-check-label">
-        <input
-          type="radio"
-          class="form-check-input"
-          id="neuron_centric_button"
-          name="view_style"
-          value="neuron"
-          {%
-          if
-          view_style=="neuron"
-          %}
-          checked
-          {%
-          endif
-          %}
-        />
-        Neuron Centric
-      </label>
-      <label class="form-label">
-        <select id="coordinates" name="coordinates">
-          <option value="xyz" selected>XYZ</option>
-          <option value="xzy">XZY</option>
-          <option value="zyx">ZYX</option>
-          <option value="zxy">ZXY</option>
-          <option value="yxz">YXZ</option>
-          <option value="yzx">YZX</option>
-        </select>
-        Coordinate Order
-      </label>
-
-      <div class="mb-1"></div>
-
-      <div
-        id="neuron-form"
-        {%
-        if
-        view_style=="view"
-        %}
-        class="hidden-form"
-        {%
-        endif
-        %}
-      >
-        <label for="pre-post-syn" class="form-label"
-          >Pre- and postsynaptic IDs</label
-        >
-        <div class="number-container" id="pre-post-syn">
-          <input
-            class="number-dims"
-            type="number"
-            id="preid"
-            name="preid"
-            placeholder="Presynaptic ID"
-          />
-          <input
-            class="number-dims"
-            type="number"
-            id="postid"
-            name="postid"
-            placeholder="Postsynaptic ID"
-          />
+    <div class="accordion">
+      <!-- Data Sources Section -->
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingOne">
+          <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+            Data Sources
+          </button>
+        </h2>
+        <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
+          <div class="accordion-body">
+            <label for="source_url" class="form-label">
+              Source bucket (precomputed: Neuroglancer's native format) - Required
+            </label>
+            <p>
+              <input
+                class="form-control"
+                type="url"
+                id="source_url"
+                name="source_url"
+                placeholder="Cloud Volume Bucket - file://<path_to_your_file>"
+                value="gs://h01-release/data/20210601/4nm_raw"
+                {% if mode == 'draw' or mode == 'annotate' %} data-required="true" {% endif %}
+              />
+            </p>
+            <label for="target_url" class="form-label">
+              Target bucket (precomputed: Neuroglancer's native format) - Required
+            </label>
+            <p>
+              <input
+                class="form-control"
+                type="url"
+                id="target_url"
+                name="target_url"
+                placeholder="Cloud Volume Bucket - file://<path_to_your_file>"
+                value="gs://h01-release/data/20210729/c3/synapses/whole_ei_onlyvol"
+                {% if mode == 'draw' or mode == 'annotate' %} data-required="true" {% endif %}
+              />
+            </p>
+            <label for="materialization_url" class="form-label">
+              Materialization (url/name of the table containing the ID association and bounding box information)
+            </label>
+            <p>
+              <input
+                class="form-control"
+                type="text"
+                id="materialization_url"
+                name="materialization_url"
+                placeholder="file://<path_to_your_file>"
+                {% if mode == 'draw' or mode == 'annotate' %} data-required="true" {% endif %}
+              />
+            </p>
+          </div>
         </div>
-      </div>
-
-      <div
-        id="view-form"
-        {%
-        if
-        view_style=="neuron"
-        %}
-        class="hidden-form"
-        {%
-        endif
-        %}
-      >
-        <label for="coordinate-container-view" class="form-label"
-          >Slicing Indices for the Segmentation Volume (will be scalled for the
-          image volume in case of a resolution missmatch)</label
-        >
-        <div class="coordinate-container" id="coordinate-container-view">
-          <input
-            class="coordinate-dims"
-            type="number"
-            id="x1"
-            name="x1"
-            placeholder="X1 - Default: 0"
-          />
-          <input
-            class="coordinate-dims"
-            type="number"
-            id="x2"
-            name="x2"
-            placeholder="X2 - Default: max(X)"
-          />
-          <input
-            class="coordinate-dims"
-            type="number"
-            id="y1"
-            name="y1"
-            placeholder="Y1 - Default: 0"
-          />
-          <input
-            class="coordinate-dims"
-            type="number"
-            id="y2"
-            name="y2"
-            placeholder="Y2 - Default: max(Y)"
-          />
-          <input
-            class="coordinate-dims"
-            type="number"
-            id="z1"
-            name="z1"
-            placeholder="Z1 - Default: 0"
-          />
-          <input
-            class="coordinate-dims"
-            type="number"
-            id="z2"
-            name="z2"
-            placeholder="Z2 - Default: max(Z)"
-          />
-        </div>
-      </div>
-
-      <div class="mb-3"></div>
-
-      <div>
-        <label class="form-label" style="margin-right: 2px"
-          >Source Volume Resolution (in nm)</label
-        >
-        <input
-          class="X-Res"
-          type="number"
-          id="res-source-1"
-          name="res-source-1"
-          placeholder="Default: 4"
-          value="4"
-        />
-        <input
-          class="Y-Res"
-          type="number"
-          id="res-source-2"
-          name="res-source-2"
-          placeholder="Default: 4"
-          value="4"
-        />
-        <input
-          class="Z-Res"
-          type="number"
-          id="res-source-3"
-          name="res-source-3"
-          placeholder="Default: 33"
-          value="33"
-        />
-      </div>
-
-      <div>
-        <label class="form-label" style="margin-right: 8px"
-          >Target Volume Resolution (in nm)</label
-        >
-        <input
-          class="X-Res"
-          type="number"
-          id="res-target-1"
-          name="res-target-1"
-          placeholder="Default: 8"
-          value="8"
-        />
-        <input
-          class="Y-Res"
-          type="number"
-          id="res-target-2"
-          name="res-target-2"
-          placeholder="Default: 8"
-          value="8"
-        />
-        <input
-          class="Z-Res"
-          type="number"
-          id="res-target-3"
-          name="res-target-3"
-          placeholder="Default: 33"
-          value="33"
-        />
       </div>
     </div>
 
-    <div class="mb-1"></div>
+    <div class="accordion" id="accordionExample">
+      <!-- Secrets and Configurations Section -->
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingTwo">
+          <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="true" aria-controls="collapseTwo">
+            Secrets and Configurations
+          </button>
+        </h2>
+        <div id="collapseTwo" class="accordion-collapse collapse show" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
+          <div class="accordion-body">
+            <label for="secrets_file" class="form-label">Secrets (File containing the bucket secrets, defaults to looking in ~/.cloudvolume/secrets)</label>
+            <p>
+              <input 
+                class="form-control" 
+                type="file" 
+                id="secrets_file" 
+                name="secrets_file" 
+              />
+            </p>
+            <label class="form-label">SynAnno JSON file</label>
+            <p>
+              <input 
+                class="form-control {{mode}}" 
+                type="file" 
+                id="formFile" 
+                name="file_json"
+                {% if mode == 'draw'%} data-required="true" {% endif %}
+              />
+            </p>
+          </div>
+        </div>
+      </div>
 
-    <label
-      for="formGroupExampleInput"
-      class="form-label"
-      style="margin-right: 50px"
-      >Instance crop size (in pixel)</label
-    >
-    <input
-      type="number"
-      id="cropsize_x"
-      placeholder="256"
-      name="crop_size_c0"
-      value="256"
-    />
-    <input
-      type="number"
-      id="cropsize_y"
-      placeholder="256"
-      name="crop_size_c1"
-      value="256"
-    />
-    <input
-      type="number"
-      id="cropsize_z"
-      placeholder="16"
-      name="crop_size_c2"
-      value="16"
-    />
+      <!-- Volume Parameters Section -->
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingThree">
+          <button 
+            class="accordion-button" 
+            type="button" 
+            data-bs-toggle="collapse" 
+            data-bs-target="#collapseThree" 
+            aria-expanded="true" 
+            aria-controls="collapseThree">
+            Volume Parameters
+          </button>
+        </h2>
+        <div id="collapseThree" class="accordion-collapse collapse show" aria-labelledby="headingThree" data-bs-parent="#accordionExample">
+          <div class="accordion-body">
+            <label class="form-check-label">
+              <input 
+                type="radio" 
+                class="form-check-input" 
+                id="view_centric_button" 
+                name="view_style" 
+                value="view" 
+                {% if view_style=="view" %} checked {% endif %} 
+              />
+              View Centric
+            </label>
+            <label class="form-check-label">
+              <input 
+                type="radio" 
+                class="form-check-input" 
+                id="neuron_centric_button" 
+                name="view_style" 
+                value="neuron" 
+                {% if view_style=="neuron" %} checked {% endif %} 
+              />
+              Neuron Centric
+            </label>
+            <label class="form-label">
+              <select id="coordinates" name="coordinates">
+                <option value="xyz" selected>XYZ</option>
+                <option value="xzy">XZY</option>
+                <option value="zyx">ZYX</option>
+                <option value="zxy">ZXY</option>
+                <option value="yxz">YXZ</option>
+                <option value="yzx">YZX</option>
+              </select>
+              Coordinate Order
+            </label>
+
+            <div class="mb-1"></div>
+
+            <div id="neuron-form" {% if view_style=="view" %} class="hidden-form" {% endif %}>
+              <label for="pre-post-syn" class="form-label">Pre- and postsynaptic IDs</label>
+              <div class="number-container" id="pre-post-syn">
+                <input 
+                  class="number-dims" 
+                  type="number" 
+                  id="preid" 
+                  name="preid" 
+                  placeholder="Presynaptic ID" 
+                />
+                <input 
+                  class="number-dims" 
+                  type="number" 
+                  id="postid" 
+                  name="postid" 
+                  placeholder="Postsynaptic ID" 
+                />
+              </div>
+            </div>
+
+            <div id="view-form" {% if view_style=="neuron" %} class="hidden-form" {% endif %}>
+              <label for="coordinate-container-view" class="form-label">Slicing Indices for the Segmentation Volume (will be scaled for the image volume in case of a resolution mismatch)</label>
+              <div class="coordinate-container" id="coordinate-container-view">
+                <input class="coordinate-dims" type="number" id="x1" name="x1" placeholder="X1 - Default: 0" />
+                <input class="coordinate-dims" type="number" id="x2" name="x2" placeholder="X2 - Default: max(X)" />
+                <input class="coordinate-dims" type="number" id="y1" name="y1" placeholder="Y1 - Default: 0" />
+                <input class="coordinate-dims" type="number" id="y2" name="y2" placeholder="Y2 - Default: max(Y)" />
+                <input class="coordinate-dims" type="number" id="z1" name="z1" placeholder="Z1 - Default: 0" />
+                <input class="coordinate-dims" type="number" id="z2" name="z2" placeholder="Z2 - Default: max(Z)" />
+              </div>
+            </div>
+
+            <div class="mb-3"></div>
+
+            <div>
+              <label class="form-label" style="margin-right: 2px">Source Volume Resolution (in nm)</label>
+              <input class="X-Res" type="number" id="res-source-1" name="res-source-1" placeholder="Default: 4" value="4" />
+              <input class="Y-Res" type="number" id="res-source-2" name="res-source-2" placeholder="Default: 4" value="4" />
+              <input class="Z-Res" type="number" id="res-source-3" name="res-source-3" placeholder="Default: 33" value="33" />
+            </div>
+
+            <div>
+              <label class="form-label" style="margin-right: 8px">Target Volume Resolution (in nm)</label>
+              <input class="X-Res" type="number" id="res-target-1" name="res-target-1" placeholder="Default: 8" value="8" />
+              <input class="Y-Res" type="number" id="res-target-2" name="res-target-2" placeholder="Default: 8" value="8" />
+              <input class="Z-Res" type="number" id="res-target-3" name="res-target-3" placeholder="Default: 33" value="33" />
+            </div>
+
+            <div class="mb-1"></div>
+
+            <label for="formGroupExampleInput" class="form-label" style="margin-right: 50px">Instance crop size (in pixel)</label>
+            <input type="number" id="cropsize_x" placeholder="256" name="crop_size_c0" value="256" />
+            <input type="number" id="cropsize_y" placeholder="256" name="crop_size_c1" value="256" />
+            <input type="number" id="cropsize_z" placeholder="16" name="crop_size_c2" value="16" />
+          </div>
+        </div>
+      </div>
+    </div>
 
     <p class="mt-4">
       <input

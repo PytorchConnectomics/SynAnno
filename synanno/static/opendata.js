@@ -81,5 +81,16 @@ $(document).ready(function () {
     updateHeaderColor(accordionItem);
   });
 
+  // toggle between view and neuron centric view
+  $('input[type="radio"]').change(function () {
+    if ($(this).val() === "view") {
+      $("#view-form").show();
+      $("#neuron-form").hide();
+    } else if ($(this).val() === "neuron") {
+      $("#view-form").hide();
+      $("#neuron-form").show();
+    }
+  });
+
   updateSubmitButtonState();
 });

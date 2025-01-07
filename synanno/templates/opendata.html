@@ -1,4 +1,5 @@
-{% extends "templatebase.html" %} {% block help_content %}
+{% extends "templatebase.html" %}
+{% block help_content %}
 <p class="text-muted">
   The opendata view asks you to provide a source bucket and target bucket (both
   in Neuroglancer's precomputed format), a URL to a materialization table,
@@ -108,19 +109,19 @@
           <div class="accordion-body">
             <label for="secrets_file" class="form-label">Secrets (File containing the bucket secrets, defaults to looking in ~/.cloudvolume/secrets)</label>
             <p>
-              <input 
-                class="form-control" 
-                type="file" 
-                id="secrets_file" 
-                name="secrets_file" 
+              <input
+                class="form-control"
+                type="file"
+                id="secrets_file"
+                name="secrets_file"
               />
             </p>
             <label class="form-label">SynAnno JSON file</label>
             <p>
-              <input 
-                class="form-control {{mode}}" 
-                type="file" 
-                id="formFile" 
+              <input
+                class="form-control {{mode}}"
+                type="file"
+                id="formFile"
                 name="file_json"
                 {% if mode == 'draw'%} data-required="true" {% endif %}
               />
@@ -132,12 +133,12 @@
       <!-- Volume Parameters Section -->
       <div class="accordion-item">
         <h2 class="accordion-header" id="headingThree">
-          <button 
-            class="accordion-button" 
-            type="button" 
-            data-bs-toggle="collapse" 
-            data-bs-target="#collapseThree" 
-            aria-expanded="true" 
+          <button
+            class="accordion-button"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#collapseThree"
+            aria-expanded="true"
             aria-controls="collapseThree">
             Volume Parameters
           </button>
@@ -145,24 +146,24 @@
         <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#accordionExample">
           <div class="accordion-body">
             <label class="form-check-label">
-              <input 
-                type="radio" 
-                class="form-check-input" 
-                id="view_centric_button" 
-                name="view_style" 
-                value="view" 
-                {% if view_style=="view" %} checked {% endif %} 
+              <input
+                type="radio"
+                class="form-check-input"
+                id="view_centric_button"
+                name="view_style"
+                value="view"
+                {% if view_style=="view" %} checked {% endif %}
               />
               View Centric
             </label>
             <label class="form-check-label">
-              <input 
-                type="radio" 
-                class="form-check-input" 
-                id="neuron_centric_button" 
-                name="view_style" 
-                value="neuron" 
-                {% if view_style=="neuron" %} checked {% endif %} 
+              <input
+                type="radio"
+                class="form-check-input"
+                id="neuron_centric_button"
+                name="view_style"
+                value="neuron"
+                {% if view_style=="neuron" %} checked {% endif %}
               />
               Neuron Centric
             </label>
@@ -181,21 +182,19 @@
             <div class="mb-1"></div>
 
             <div id="neuron-form" {% if view_style=="view" %} class="hidden-form" {% endif %}>
-              <label for="pre-post-syn" class="form-label">Pre- and postsynaptic IDs</label>
-              <div class="number-container" id="pre-post-syn">
-                <input 
-                  class="number-dims" 
-                  type="number" 
-                  id="preid" 
-                  name="preid" 
-                  placeholder="Presynaptic ID" 
+                <input
+                  class="number-dims"
+                  type="number"
+                  id="preid"
+                  name="preid"
+                  placeholder="Presynaptic ID"
                 />
-                <input 
-                  class="number-dims" 
-                  type="number" 
-                  id="postid" 
-                  name="postid" 
-                  placeholder="Postsynaptic ID" 
+                <input
+                  class="number-dims"
+                  type="number"
+                  id="postid"
+                  name="postid"
+                  placeholder="Postsynaptic ID"
                 />
               </div>
             </div>

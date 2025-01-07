@@ -98,10 +98,9 @@
 </div>
 
 <!-- Page Navigation -->
-<nav aria-label="Page navigation mt-5">
+<nav aria-label="Page navigation mt-5" class="position-fixed bottom-0 start-50 translate-middle-x mb-4">
   <ul class="pagination justify-content-center">
     {% if page > 0 %}
-
     <li class="page-item">
       <a
         type="button"
@@ -117,12 +116,10 @@
         <i class="bi bi-arrow-left"></i>
       </a>
     </li>
-
     {% endif %}
     <li style="padding: 0.375rem 0.75rem">{{page+1}} / {{n_pages}}</li>
     {% if page+1 < n_pages %}
     <li class="page-item"></li>
-
     <li class="page-item">
       <a
         type="button"
@@ -132,7 +129,6 @@
         <i class="bi bi-arrow-right"></i>
       </a>
     </li>
-
     {% else %}
     <li class="page-item disabled">
       <a type="button" class="page-link btn btn-primary">

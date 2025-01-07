@@ -69,7 +69,7 @@
             src="{{ url_for('static', filename=image.GT ~ '/' ~ image.Middle_Slice ~ '.png')}}"
             width="64px"
             height="64px"
-            style="position: absolute; opacity: {{grid_opacity or '0.5'}};"
+            style="position: absolute; opacity: grid_opacity if grid_opacity else '0.5';"
           />
           <img
             id="imgGT-{{image.Image_Index}}"
@@ -96,10 +96,11 @@
     {% endfor %}
   </div>
 </div>
-<nav aria-label="Page navigation mt-5">
+
+<!-- Page Navigation -->
+<nav aria-label="Page navigation mt-5" class="position-fixed bottom-0 start-50 translate-middle-x mb-4">
   <ul class="pagination justify-content-center">
     {% if page > 0 %}
-
     <li class="page-item">
       <a
         type="button"
@@ -115,12 +116,10 @@
         <i class="bi bi-arrow-left"></i>
       </a>
     </li>
-
     {% endif %}
     <li style="padding: 0.375rem 0.75rem">{{page+1}} / {{n_pages}}</li>
     {% if page+1 < n_pages %}
     <li class="page-item"></li>
-
     <li class="page-item">
       <a
         type="button"
@@ -130,16 +129,22 @@
         <i class="bi bi-arrow-right"></i>
       </a>
     </li>
-
     {% else %}
-    <li class="page-item">
-      <a class="page-link" href="{{ url_for('categorize.categorize') }}"
-        >Error Processing</a
-      >
+    <li class="page-item disabled">
+      <a type="button" class="page-link btn btn-primary">
+        <i class="bi bi-arrow-right"></i>
+      </a>
     </li>
     {% endif %}
   </ul>
 </nav>
+
+<!--Error Processing Button Across Pages-->
+<div class="position-fixed bottom-0 end-0 m-4">
+  <a class="btn btn-primary" href="{{ url_for('categorize.categorize') }}">
+    Error Processing
+  </a>
+</div>
 
 <!-- Modal with progress bar -->
 <div

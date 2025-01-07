@@ -1,9 +1,6 @@
 import neuroglancer
 from random import randint
 
-# import the package app
-from flask import current_app as app  # import the package app
-
 # for type hinting
 import numpy as np
 
@@ -11,13 +8,17 @@ import numpy.typing as npt
 
 
 from typing import Union
+from flask import Flask
 
 
-def setup_ng(source: Union[npt.NDArray, str], target: Union[npt.NDArray, str]) -> None:
+def setup_ng(
+    app: Flask, source: Union[npt.NDArray, str], target: Union[npt.NDArray, str]
+) -> None:
     """Setup function for the Neuroglancer (ng) that enables the recording and depiction
     of center markers for newly identified FN instances.
 
     Args:
+        app: a handle to the application context
         source_img: The image volume depicted by the ng
         target_seg: The target volume depicted by the ng
     """

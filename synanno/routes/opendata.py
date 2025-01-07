@@ -297,7 +297,9 @@ def upload_file() -> Template:
     # if the NG version number is None setup a new NG viewer
     if current_app.ng_version is None:
         ng_util.setup_ng(
-            source="precomputed://" + source_url, target="precomputed://" + target_url
+            app=current_app._get_current_object(),
+            source="precomputed://" + source_url,
+            target="precomputed://" + target_url,
         )
 
     flash("Data ready!")

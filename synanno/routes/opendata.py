@@ -413,10 +413,11 @@ def get_instance() -> Dict[str, object]:
 
         if mode == "draw":
             base_mask_path = str(request.form["base_mask_path"])
+            isinstance_mask_path = os.path.join(base_mask_path, str(index))
             if base_mask_path:
                 coordinates = "_".join(list(map(str, data["Adjusted_Bbox"])))
                 path_curve = os.path.join(
-                    base_mask_path,
+                    isinstance_mask_path,
                     "curve_idx_"
                     + str(data["Image_Index"])
                     + "_slice_"
@@ -426,7 +427,7 @@ def get_instance() -> Dict[str, object]:
                     + ".png",
                 )
                 path_circle_pre = os.path.join(
-                    base_mask_path,
+                    isinstance_mask_path,
                     "circlePre_idx_"
                     + str(data["Image_Index"])
                     + "_slice_"
@@ -436,7 +437,7 @@ def get_instance() -> Dict[str, object]:
                     + ".png",
                 )
                 path_circle_post = os.path.join(
-                    base_mask_path,
+                    isinstance_mask_path,
                     "circlePost_idx_"
                     + str(data["Image_Index"])
                     + "_slice_"
@@ -474,6 +475,7 @@ def get_instance() -> Dict[str, object]:
 
         if mode == "draw":
             base_mask_path = str(request.form["base_mask_path"])
+            isinstance_mask_path = os.path.join(base_mask_path, str(index))
             viewed_instance_slice = request.form["viewed_instance_slice"]
 
             if base_mask_path:
@@ -481,7 +483,7 @@ def get_instance() -> Dict[str, object]:
                 if viewed_instance_slice:
                     coordinates = "_".join(list(map(str, data["Adjusted_Bbox"])))
                     path_curve = os.path.join(
-                        base_mask_path,
+                        isinstance_mask_path,
                         "curve_idx_"
                         + str(data["Image_Index"])
                         + "_slice_"
@@ -491,7 +493,7 @@ def get_instance() -> Dict[str, object]:
                         + ".png",
                     )
                     path_circle_pre = os.path.join(
-                        base_mask_path,
+                        isinstance_mask_path,
                         "circlePre_idx_"
                         + str(data["Image_Index"])
                         + "_slice_"
@@ -501,7 +503,7 @@ def get_instance() -> Dict[str, object]:
                         + ".png",
                     )
                     path_circle_post = os.path.join(
-                        base_mask_path,
+                        isinstance_mask_path,
                         "circlePost_idx_"
                         + str(data["Image_Index"])
                         + "_slice_"

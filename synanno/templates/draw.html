@@ -83,9 +83,9 @@
       {% set custom_mask_name_circle_post = 'circlePost_' ~ custom_base_path %}
 
       <!-- Updated paths to use `url_for` -->
-      {% set custom_mask_path_check_curve = url_for('static', filename='custom_masks/' ~ custom_mask_name_curve) %}
-      {% set custom_mask_path_check_circle_pre = url_for('static', filename='custom_masks/' ~ custom_mask_name_circle_pre) %}
-      {% set custom_mask_path_check_circle_post = url_for('static', filename='custom_masks/' ~ custom_mask_name_circle_post) %}
+      {% set custom_mask_path_check_curve = url_for('static', filename='static/Images/Mask/' ~ custom_mask_name_curve) %}
+      {% set custom_mask_path_check_circle_pre = url_for('static', filename='static/Images/Mask/' ~ custom_mask_name_circle_pre) %}
+      {% set custom_mask_path_check_circle_post = url_for('static', filename='static/Images/Mask/' ~ custom_mask_name_circle_post) %}
 
 
       <div

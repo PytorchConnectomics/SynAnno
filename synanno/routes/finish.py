@@ -102,20 +102,17 @@ def export_data(data_type) -> Union[Template, current_app.response_class]:
             # rerender export-draw and enable the 'Start New Process' button
             return render_template("export_annotate.html", disable_snp=" ")
     elif data_type == "mask":
-        total_folder_path = os.path.join(
+        static_folder = os.path.join(
             os.path.join(current_app.root_path, current_app.config["STATIC_FOLDER"]),
-            "custom_masks",
         )
-        if os.path.exists(total_folder_path):
+        image_folder = os.path.join(static_folder, "Images")
+        mask_folder = os.path.join(image_folder, "Mask")
+
+        if os.path.exists(mask_folder):
             # create zip of folder
-            shutil.make_archive(total_folder_path, "zip", total_folder_path)
+            shutil.make_archive(mask_folder, "zip", mask_folder)
             return send_file(
-                os.path.join(
-                    os.path.join(
-                        current_app.root_path, current_app.config["STATIC_FOLDER"]
-                    ),
-                    "custom_masks.zip",
-                ),
+                os.path.join(image_folder, "Mask.zip"),
                 as_attachment=True,
             )
         else:
@@ -181,11 +178,11 @@ def reset() -> Template:
             print("Failed to delete %s. Reason: %s" % (image_folder, e))
 
     # delete masks zip file.
-    if os.path.isfile(os.path.join(static_folder, "custom_masks.zip")):
-        os.remove(os.path.join(static_folder, "custom_masks.zip"))
+    if os.path.isfile(os.path.join(image_folder, "Mask.zip")):
+        os.remove(os.path.join(image_folder, "Mask.zip"))
 
     # delete custom masks
-    mask_folder = os.path.join(static_folder, "custom_masks")
+    mask_folder = os.path.join(image_folder, "Mask")
     if os.path.exists(mask_folder):
         try:
             shutil.rmtree(mask_folder)

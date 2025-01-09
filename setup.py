@@ -34,7 +34,8 @@ setup(
         "seg": [
             "torch",
             "torchvision",
-            "torchsummary" "tqdm",
+            "torchsummary",
+            "tqdm",
             "urllib3",
             "matplotlib",
         ],

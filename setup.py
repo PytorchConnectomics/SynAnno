@@ -30,7 +30,14 @@ setup(
         "dev": [
             "pytest",
             "pre-commit",
-        ]
+        ],
+        "seg": [
+            "torch",
+            "torchvision",
+            "torchsummary" "tqdm",
+            "urllib3",
+            "matplotlib",
+        ],
     },
     python_requires=">=3.9",
     classifiers=[

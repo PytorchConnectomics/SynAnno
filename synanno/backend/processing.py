@@ -218,7 +218,10 @@ def retrieve_instance_metadata(
 
     with current_app.df_metadata_lock:
         page_empty = current_app.df_metadata.query("Page == @page").empty
-    if page_empty:
+
+    if page_empty and not (
+        mode == "draw" and current_app.df_metadata.query('Label != "Correct"').empty
+    ):
         # retrieve the meta data for the synapses associated with the current page
         bbox_dict = get_sub_dict_within_range(
             materialization,
@@ -323,7 +326,7 @@ def retrieve_instance_metadata(
                 create_dir(img_dir, str(item["Image_Index"])),
                 create_dir(syn_dir, str(item["Image_Index"])),
             )
-            for i, item in enumerate(page_metadata)
+            for item in page_metadata
         ]
 
         current_app.progress_bar_status["status"] = f"Pre-process sub-volume."

@@ -377,7 +377,7 @@ def get_instance() -> Dict[str, object]:
     print(index)
     print(current_app.df_metadata)
 
-    # when first opening a instance modal view
+    # when first opening an instance modal view
     if load == "full":
         with current_app.df_metadata_lock:
             # calculating the number of slices

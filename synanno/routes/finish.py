@@ -81,8 +81,8 @@ def export_data(data_type) -> Union[Template, current_app.response_class]:
             current_app.df_metadata.to_dict("records"), f, indent=4, default=json_serial
         )
 
-        # provide sufficient time for the json update
-        time.sleep(0.1 * session.get("n_pages"))
+        # provide sufficient time for the json update dependent on the length df_metadata
+        time.sleep(0.1 * len(current_app.df_metadata))
 
     if data_type == "json":
         # exporting the final json

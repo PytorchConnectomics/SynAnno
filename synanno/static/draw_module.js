@@ -123,7 +123,7 @@ $(document).ready(function () {
 
     // disable all options except the activate canvas button
     $("#canvasButtonFill").prop("disabled", true);
-    $("#canvasButtonSplit").prop("disabled", true);
+    $("#canvasButtonRevise").prop("disabled", true);
     $("#canvasButtonSave").prop("disabled", true);
 
     // get the current slice slice index

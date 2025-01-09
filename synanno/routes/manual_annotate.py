@@ -340,11 +340,6 @@ def ng_bbox_fn_save() -> Dict[str, object]:
         bound, coord_resolution=coord_resolution, mip=0
     )
 
-    # save the cropped image
-    Image.fromarray(adjust_datatype(cropped_img.squeeze(axis=3)[:, :, 0])[0]).save(
-        os.path.join(img_all, "X.png"), "PNG"
-    )
-
     # remove the singleton dimension, take care as the z dimension might be singleton
     cropped_img = cropped_img.squeeze(axis=3)
 

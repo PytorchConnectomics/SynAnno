@@ -59,10 +59,10 @@ def run_training() -> None:
     meta_data = prepare_metadata(source_cv, target_cv)
 
     print("Loading training dataset...")
-    train_dataset = SynapseDataset(materialization_df, meta_data, (0, 2))
+    train_dataset = SynapseDataset(materialization_df, meta_data, (130, 150))
 
     print("Loading validation dataset...")
-    val_dataset = SynapseDataset(materialization_df, meta_data, (2, 4))
+    val_dataset = SynapseDataset(materialization_df, meta_data, (150, 155))
 
     train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True, num_workers=4)
     val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=4)
@@ -86,12 +86,15 @@ def run_training() -> None:
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            # add a date to the saved model path
+
+            model_name = f"best_unet3d_tl_{train_loss:.4f}_vl{val_loss:.4f}.pth"
             torch.save(
                 model.state_dict(),
-                f"best_unet3d_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.pth",
+                model_name,
             )
-            print(f"New best model saved with validation loss: {val_loss:.4f}")
+            print(
+                f"New best model {model_name} saved with validation loss: {val_loss:.4f}"
+            )
 
 
 def run_inference() -> None:
@@ -134,5 +137,5 @@ def run_inference() -> None:
 
 
 if __name__ == "__main__":
-    # run_training()
+    run_training()
     run_inference()

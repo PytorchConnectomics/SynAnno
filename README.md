@@ -195,7 +195,7 @@ Why Use `pyenv` and `pipenv`?
 2. **Setup the Project Environment**:
 
    ```bash
-   python -m m venv .venv
+   python -m venv .venv
    ```
 
 3. **Activate the Virtual Environment**:

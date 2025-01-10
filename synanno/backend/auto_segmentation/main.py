@@ -1,6 +1,5 @@
 import pandas as pd
 import torch
-from torch.utils.data import DataLoader
 from synanno.backend.auto_segmentation.dataset import SynapseDataset
 from synanno.backend.auto_segmentation.config import CONFIG
 from synanno.backend.auto_segmentation.match_source_and_target import (
@@ -9,15 +8,9 @@ from synanno.backend.auto_segmentation.match_source_and_target import (
 )
 from synanno.backend.auto_segmentation.retrieve_instances import setup_cloud_volume
 from synanno.backend.auto_segmentation.visualize_instances import visualize_instances
-from synanno.backend.auto_segmentation.trainer import (
-    load_model,
-    train,
-    validate,
-    WeightedBCEWithLogitsLoss,
-)
+from synanno.backend.auto_segmentation.trainer import Trainer
 from tqdm import tqdm
 from cloudvolume import CloudVolume
-import datetime
 from typing import Any
 
 
@@ -50,7 +43,7 @@ def prepare_metadata(source_cv, target_cv) -> dict[str, Any]:
     }
 
 
-def run_training() -> None:
+if __name__ == "__main__":
     """Main function to train and validate the model."""
     materialization_df = load_materialization_csv(
         "/Users/lando/Code/SynAnno/h01/synapse-export_000000000000.csv"
@@ -58,75 +51,24 @@ def run_training() -> None:
     source_cv, target_cv = setup_cloud_volumes()
     meta_data = prepare_metadata(source_cv, target_cv)
 
+    trainer = Trainer()
+
     print("Loading training dataset...")
-    train_dataset = SynapseDataset(materialization_df, meta_data, (130, 150))
+    train_dataset = SynapseDataset(materialization_df, meta_data, (0, 2))
 
     print("Loading validation dataset...")
-    val_dataset = SynapseDataset(materialization_df, meta_data, (150, 155))
+    val_dataset = SynapseDataset(materialization_df, meta_data, (2, 3))
 
-    train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True, num_workers=4)
-    val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=4)
+    print("Running training process...")
+    trainer.run_training(train_dataset, val_dataset)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = load_model("best_unet3d.pth")
-
-    criterion = WeightedBCEWithLogitsLoss(pos_weight=torch.tensor(4.0).to(device))
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-
-    num_epochs = 20
-    best_val_loss = float("inf")
-
-    for epoch in range(num_epochs):
-        print(f"Epoch {epoch + 1}/{num_epochs}")
-
-        train_loss = train(model, train_loader, criterion, optimizer, device)
-        val_loss = validate(model, val_loader, criterion, device)
-
-        print(f"Train Loss: {train_loss:.4f} | Validation Loss: {val_loss:.4f}")
-
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-
-            model_name = f"best_unet3d_tl_{train_loss:.4f}_vl{val_loss:.4f}.pth"
-            torch.save(
-                model.state_dict(),
-                model_name,
-            )
-            print(
-                f"New best model {model_name} saved with validation loss: {val_loss:.4f}"
-            )
-
-
-def run_inference() -> None:
-    """Run inference using the UNet3D model."""
-    model = load_model("best_unet3d.pth")
-    materialization_df = load_materialization_csv(
-        "/Users/lando/Code/SynAnno/h01/synapse-export_000000000000.csv"
-    )
-    source_cv, target_cv = setup_cloud_volumes()
-    meta_data = prepare_metadata(source_cv, target_cv)
-
+    print("Loading test dataset...")
     test_dataset = SynapseDataset(materialization_df, meta_data, (0, 4))
-    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=4)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
-    model.eval()
+    print("Running inference...")
+    targets, predictions = trainer.run_inference("best_unet3d.pth", test_dataset)
 
-    targets = []
-    predictions = []
-
-    with torch.no_grad():
-        for inputs, target in tqdm(test_loader, desc="Inference", leave=False):
-            inputs = inputs.to(device)
-            outputs = model(inputs)
-
-            outputs = torch.sigmoid(outputs)
-            binary_mask = (outputs > 0.5).float()
-
-            targets.append(target)
-            predictions.append(binary_mask)
-
+    print("Visual result validation...")
     for tar, pred in zip(targets, predictions):
         visualize_instances(tar[0, 0, :, :, :], pred[0, 0, :, :, :], 5, 0)
         visualize_instances(tar[0, 0, :, :, :], pred[0, 0, :, :, :], 6, 0)
@@ -134,8 +76,3 @@ def run_inference() -> None:
         visualize_instances(tar[0, 0, :, :, :], pred[0, 0, :, :, :], 8, 0)
         visualize_instances(tar[0, 0, :, :, :], pred[0, 0, :, :, :], 9, 0)
         visualize_instances(tar[0, 0, :, :, :], pred[0, 0, :, :, :], 10, 0)
-
-
-if __name__ == "__main__":
-    run_training()
-    run_inference()

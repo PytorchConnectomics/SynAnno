@@ -81,12 +81,13 @@
       {% set custom_mask_name_curve = 'curve_' ~ custom_base_path %}
       {% set custom_mask_name_circle_pre = 'circlePre_' ~ custom_base_path %}
       {% set custom_mask_name_circle_post = 'circlePost_' ~ custom_base_path %}
+      {% set auto_mask_name_curve = 'auto_curve_idx_' ~ image.Image_Index ~ '_slice_' ~ image.Middle_Slice ~ '.png' %}
 
       <!-- Updated paths to use `url_for` -->
-      {% set custom_mask_path_check_curve = url_for('static', filename='static/Images/Mask/' ~ custom_mask_name_curve) %}
-      {% set custom_mask_path_check_circle_pre = url_for('static', filename='static/Images/Mask/' ~ custom_mask_name_circle_pre) %}
-      {% set custom_mask_path_check_circle_post = url_for('static', filename='static/Images/Mask/' ~ custom_mask_name_circle_post) %}
-
+      {% set custom_mask_path_check_curve = url_for('static', filename='Images/Mask/'  ~ image.Image_Index ~ '/' ~ custom_mask_name_curve) %}
+      {% set custom_mask_path_check_circle_pre = url_for('static', filename='Images/Mask/'  ~ image.Image_Index ~ '/' ~ custom_mask_name_circle_pre) %}
+      {% set custom_mask_path_check_circle_post = url_for('static', filename='Images/Mask/' ~  image.Image_Index ~ '/' ~ custom_mask_name_circle_post) %}
+      {% set auto_mask_path_check_curve = url_for('static', filename='Images/Mask/' ~  image.Image_Index ~ '/' ~ auto_mask_name_curve) %}
 
       <div
         class="card border rounded card-body card-body-proof-read text-center"
@@ -108,7 +109,7 @@
             <img
               id="img-target-curve-{{image.Page}}-{{image.Image_Index}}"
               class="img_categorize"
-              src="{% if os.path.exists(custom_mask_path_check_curve) %} {{custom_mask_path_load_curve}} {% else %} {{ url_for('static', filename=image.GT ~ '/' ~ image.Middle_Slice ~ '.png')}} {% endif %}"
+              src="{% if os.path.exists(custom_mask_path_check_curve) %} {{custom_mask_path_load_curve}} {% elif os.path.exists(auto_mask_path_check_curve) %} {{auto_mask_path_check_curve}} {% else %} {{ url_for('static', filename=image.GT ~ '/' ~ image.Middle_Slice ~ '.png')}} {% endif %}"
               width="64px"
               height="64px"
               style="opacity: 0.5"
@@ -133,7 +134,7 @@
             <img
               id="img-target-curve-{{image.Page}}-{{image.Image_Index}}"
               class="img_categorize"
-              src="{% if os.path.exists(custom_mask_path_check_curve) %} {{custom_mask_path_load_curve}} {% else %} {{url_for('static', filename= image.EM ~ '/' ~ image.Middle_Slice ~ '.png')}} {% endif %}"
+              src="{% if os.path.exists(custom_mask_path_check_curve) %} {{custom_mask_path_load_curve}} {% elif os.path.exists(auto_mask_path_check_curve) %} {{auto_mask_path_check_curve}} {% else %} {{url_for('static', filename= image.EM ~ '/' ~ image.Middle_Slice ~ '.png')}} {% endif %}"
               width="64px"
               height="64px"
               style="opacity: 0.5"

@@ -12,8 +12,34 @@ from synanno.backend.auto_segmentation.retrieve_instances import (
 )
 from synanno.backend.auto_segmentation.model_source_data import generate_seed_target
 import torch
-from synanno.backend.auto_segmentation.config import CONFIG
+from synanno.backend.auto_segmentation.config import CONFIG, DATASET_CONFIG
 from typing import Any
+
+
+def normalize_tensor(tensor: torch.Tensor, max_value: int = 255.0) -> torch.Tensor:
+    """
+    Normalize a tensor to [0, 1].
+
+    Args:
+        tensor (torch.Tensor): Target tensor.
+
+    Returns:
+        torch.Tensor: Normalized target tensor.
+    """
+    return tensor / max_value
+
+
+def binarize_tensor(tensor: torch.Tensor) -> torch.Tensor:
+    """
+    Binarize a tensor.
+
+    Args:
+        tensor (torch.Tensor): Target tensor.
+
+    Returns:
+        torch.Tensor: Binarized target tensor.
+    """
+    return (tensor > 0.5).float()
 
 
 class SynapseDataset(Dataset):
@@ -42,6 +68,18 @@ class SynapseDataset(Dataset):
         self.synapse_id_range = synapse_id_range
         self.transform = transform
         self.target_transform = target_transform
+        self.num_pools = DATASET_CONFIG["num_pools"]
+        self.maxsize = DATASET_CONFIG["maxsize"]
+        self.max_workers = DATASET_CONFIG["max_workers"]
+        self.timeout = DATASET_CONFIG["timeout"]
+        self.resize_depth = DATASET_CONFIG["resize_depth"]
+        self.resize_height = DATASET_CONFIG["resize_height"]
+        self.resize_width = DATASET_CONFIG["resize_width"]
+        self.crop_size_x = DATASET_CONFIG["crop_size_x"]
+        self.crop_size_y = DATASET_CONFIG["crop_size_y"]
+        self.crop_size_z = DATASET_CONFIG["crop_size_z"]
+        self.slices_to_generate = DATASET_CONFIG["slices_to_generate"]
+        self.target_range = DATASET_CONFIG["target_range"]
         self.dataset = self._generate_dataset()
 
     def _generate_dataset(self) -> list[dict[str, Any]]:
@@ -60,9 +98,9 @@ class SynapseDataset(Dataset):
                 idx,
                 self.materialization_df,
                 CONFIG["coordinate_order"],
-                CONFIG["crop_size_x"],
-                CONFIG["crop_size_y"],
-                CONFIG["crop_size_z"],
+                self.crop_size_x,
+                self.crop_size_y,
+                self.crop_size_z,
                 self.meta_data["vol_dim"],
             )
             instance_list.append(instance)
@@ -74,13 +112,11 @@ class SynapseDataset(Dataset):
 
         dataset = []
         urllib3.PoolManager(
-            num_pools=CONFIG["dataset"]["num_pools"],
-            maxsize=CONFIG["dataset"]["maxsize"],
+            num_pools=self.num_pools,
+            maxsize=self.maxsize,
         )
 
-        with ThreadPoolExecutor(
-            max_workers=CONFIG["dataset"]["max_workers"]
-        ) as executor:
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             futures = [
                 executor.submit(retrieve_instance_from_cv, item, self.meta_data)
                 for item in instance_meta_data_list_of_dics
@@ -94,16 +130,14 @@ class SynapseDataset(Dataset):
                     print(f"An exception occurred: {exc}")
                     print("Retry to process the instance.")
                     try:
-                        dataset.append(
-                            future.result(timeout=CONFIG["dataset"]["timeout"])
-                        )
+                        dataset.append(future.result(timeout=self.timeout))
                     except Exception as exc:
                         print(f"The exception persists: {exc}")
                         traceback.print_exc()
 
         for sample in tqdm(dataset, desc="Seed/Target Generation"):
             seed_volume, selected_seed_slices = generate_seed_target(
-                sample["target"], CONFIG["slices_to_generate"], CONFIG["target_range"]
+                sample["target"], self.slices_to_generate, self.target_range
             )
             sample["source_seed_target"] = seed_volume
             sample["source"] = np.stack([sample["source_image"], seed_volume], axis=-1)
@@ -172,9 +206,9 @@ class SynapseDataset(Dataset):
         image_channel = torch.nn.functional.interpolate(
             image_channel,
             size=(
-                CONFIG["dataset"]["resize_depth"],
-                CONFIG["dataset"]["resize_height"],
-                CONFIG["dataset"]["resize_width"],
+                self.resize_depth,
+                self.resize_height,
+                self.resize_width,
             ),
             mode="trilinear",
             align_corners=False,
@@ -182,18 +216,18 @@ class SynapseDataset(Dataset):
         mask_channel = torch.nn.functional.interpolate(
             mask_channel,
             size=(
-                CONFIG["dataset"]["resize_depth"],
-                CONFIG["dataset"]["resize_height"],
-                CONFIG["dataset"]["resize_width"],
+                self.resize_depth,
+                self.resize_height,
+                self.resize_width,
             ),
             mode="nearest",
         )
         target = torch.nn.functional.interpolate(
             target,
             size=(
-                CONFIG["dataset"]["resize_depth"],
-                CONFIG["dataset"]["resize_height"],
-                CONFIG["dataset"]["resize_width"],
+                self.resize_depth,
+                self.resize_height,
+                self.resize_width,
             ),
             mode="nearest",
         )
@@ -210,25 +244,12 @@ class SynapseDataset(Dataset):
         # Merge channels
         source = torch.cat([image_channel, mask_channel], dim=0)  # Shape: (2, D, H, W)
 
-        # Normalize the image channel to [0, 1]
-        source[0] = (source[0]) / 255.0
+        # Normalize the image channel
+        source[0] = normalize_tensor(source[0])
 
-        assert (
-            torch.min(source[0]) >= 0.0 and torch.max(source[0]) <= 1.0
-        ), "The image channel values are not in the range [0, 1]."
-
-        # Ensure the segmentation channel and target are binary
-        source[1] = (source[1] > 0.5).float()
-        target = (target > 0.5).float()
-
-        assert (
-            torch.min(target) >= 0.0 and torch.max(target) <= 1.0
-        ), "The target values are not in the range [0, 1]."
-
-        if self.transform:
-            source = self.transform(source)
-        if self.target_transform:
-            target = self.target_transform(target)
+        # Binarize the segmentation channel and target
+        source[1] = binarize_tensor(source[1])
+        target = binarize_tensor(target)
 
         return source, target
 
@@ -272,33 +293,59 @@ if __name__ == "__main__":
     sample = train_dataset[0]
 
     # Validate the shape
-    print(f"Sample input shape: {sample[0].shape}")
-    print(f"Sample target shape: {sample[1].shape}")
+    assert sample[0].shape == (
+        2,
+        16,
+        256,
+        256,
+    ), f"Sample input shape: {sample[0].shape}"
+    assert sample[1].shape == (
+        1,
+        16,
+        256,
+        256,
+    ), f"Sample target shape: {sample[1].shape}"
 
     # Validate the value ranges
-    print(f"Min value image channel: {torch.min(sample[0][0,:,:,:])}")  # 0.0
-    print(f"Max value image channel: {torch.max(sample[0][0,:,:,:])}")  # 1.0
-    print(
-        f"Number of unique values in the image channel: {torch.unique(sample[0][0,:,:,:])}"
-    )
+    assert (
+        torch.min(sample[0][0, :, :, :]) == 0.0
+    ), f"Min value image channel: {torch.min(sample[0][0,:,:,:])}"
+    assert (
+        torch.max(sample[0][0, :, :, :]) == 1.0
+    ), f"Max value image channel: {torch.max(sample[0][0,:,:,:])}"
+    assert (
+        len(torch.unique(sample[0][0, :, :, :])) > 1
+    ), f"Number of unique values in the image channel: {torch.unique(sample[0][0,:,:,:])}"
 
-    print(f"Min value seed channel: {torch.min(sample[0][1,:,:,:])}")  # 0.0
-    print(f"Max value seed channel: {torch.max(sample[0][1,:,:,:])}")  # 1.0
-    print(
-        f"Number of unique values in the seed channel: {torch.unique(sample[0][1,:,:,:])}"
-    )  # 0.0, 1.0
-    print(
-        f"Number of non-zero values in the seed channel: {torch.sum(sample[0][1,:,:,:] > 0)}"
-    )
+    assert (
+        torch.min(sample[0][1, :, :, :]) == 0.0
+    ), f"Min value seed channel: {torch.min(sample[0][1,:,:,:])}"
+    assert (
+        torch.max(sample[0][1, :, :, :]) == 1.0
+    ), f"Max value seed channel: {torch.max(sample[0][1,:,:,:])}"
+    assert (
+        len(torch.unique(sample[0][1, :, :, :])) == 2
+    ), f"Number of unique values in the seed channel: {torch.unique(sample[0][1,:,:,:])}"
+    assert (
+        torch.sum(sample[0][1, :, :, :] > 0) > 0
+    ), f"Number of non-zero values in the seed channel: {torch.sum(sample[0][1,:,:,:] > 0)}"
 
-    print(f"Min value target: {torch.min(sample[1][0,:,:,:])}")  # 0.0
-    print(f"Max value target: {torch.max(sample[1][0,:,:,:])}")  # 1.0
-    print(
-        f"Number of unique values in the target: {torch.unique(sample[1][0,:,:,:])}"
-    )  # 0.0, 1.0
-    print(
-        f"Number of non-zero values in the target sample: {torch.sum(sample[1][0,:,:,:] > 0)}"
-    )
+    assert (
+        torch.min(sample[1][0, :, :, :]) == 0.0
+    ), f"Min value target: {torch.min(sample[1][0,:,:,:])}"
+    assert (
+        torch.max(sample[1][0, :, :, :]) == 1.0
+    ), f"Max value target: {torch.max(sample[1][0,:,:,:])}"
+    assert (
+        len(torch.unique(sample[1][0, :, :, :])) == 2
+    ), f"Number of unique values in the target: {torch.unique(sample[1][0,:,:,:])}"
+    assert (
+        torch.sum(sample[1][0, :, :, :] > 0) > 0
+    ), f"Number of non-zero values in the target sample: {torch.sum(sample[1][0,:,:,:] > 0)}"
+
+    assert torch.sum(sample[0][1, :, :, :] > 0) < torch.sum(
+        sample[1][0, :, :, :] > 0
+    ), "The target should have more non-zero values than the seed channel."
 
     # Visualize the first non-zero seed segmentation slice
     visualize_instances(

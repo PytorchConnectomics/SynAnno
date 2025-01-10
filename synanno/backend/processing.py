@@ -21,6 +21,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock
 
 from flask import current_app
+import logging
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def run_with_app_context(app: Flask, func: callable, *args, **kwargs):
@@ -209,12 +214,16 @@ def retrieve_instance_metadata(
         current_app.progress_bar_status["percent"] = 0
         current_app.progress_bar_status["status"] = f"Loading page {str(page)}."
 
-    # create the directories for saving the source and target images
-    idx_dir = create_dir(
-        os.path.join(current_app.root_path, current_app.config["STATIC_FOLDER"]),
-        "Images",
-    )
-    syn_dir, img_dir = create_dir(idx_dir, "Syn"), create_dir(idx_dir, "Img")
+    # Safely create directories
+    try:
+        idx_dir = create_dir(
+            os.path.join(current_app.root_path, current_app.config["STATIC_FOLDER"]),
+            "Images",
+        )
+        syn_dir, img_dir = create_dir(idx_dir, "Syn"), create_dir(idx_dir, "Img")
+    except OSError as e:
+        logger.error("Failed to create directories: %s", e)
+        raise
 
     with current_app.df_metadata_lock:
         page_empty = current_app.df_metadata.query("Page == @page").empty
@@ -222,84 +231,72 @@ def retrieve_instance_metadata(
     if page_empty and not (
         mode == "draw" and current_app.df_metadata.query('Label != "Correct"').empty
     ):
-        # retrieve the meta data for the synapses associated with the current page
         bbox_dict = get_sub_dict_within_range(
             materialization,
             (page * session["per_page"]),
             session["per_page"] + (page * session["per_page"]) - 1,
         )
 
-        # collect the instances to only write to the metadata frame once
         instance_list = []
-
-        ### iterate over the synapses. save the middle slices and before/after ones for navigation. ###
         for idx in bbox_dict.keys():
             current_app.progress_bar_status[
                 "status"
-            ] = f"Inst.{str(idx)}: Calculate bounding box."
+            ] = f"Inst.{idx}: Calculate bounding box."
 
-            # create the instance specific directories for saving the source and target images
             syn_dir_instance, img_dir_instance = create_dir(
                 syn_dir, str(idx)
             ), create_dir(img_dir, str(idx))
 
-            ### Note that all dimensions are saved in then scale of the target (segmentation) volume. ###
+            item = {
+                "Page": int(page),
+                "Image_Index": int(idx),
+                "GT": "/".join(syn_dir_instance.strip(".\\").split("/")[-3:]),
+                "EM": "/".join(img_dir_instance.strip(".\\").split("/")[-3:]),
+                "Label": "Correct",
+                "Annotated": "No",
+                "Error_Description": "None",
+                "X_Index": coordinate_order.index("x"),
+                "Y_Index": coordinate_order.index("y"),
+                "Z_Index": coordinate_order.index("z"),
+                "Middle_Slice": int(bbox_dict[idx]["z"]),
+                "cz0": int(bbox_dict[idx]["z"]),
+                "cy0": int(bbox_dict[idx]["y"]),
+                "cx0": int(bbox_dict[idx]["x"]),
+                "pre_pt_x": int(bbox_dict[idx]["pre_pt_x"]),
+                "pre_pt_y": int(bbox_dict[idx]["pre_pt_y"]),
+                "pre_pt_z": int(bbox_dict[idx]["pre_pt_z"]),
+                "post_pt_x": int(bbox_dict[idx]["post_pt_x"]),
+                "post_pt_y": int(bbox_dict[idx]["post_pt_y"]),
+                "post_pt_z": int(bbox_dict[idx]["post_pt_z"]),
+                "crop_size_x": session["crop_size_x"],
+                "crop_size_y": session["crop_size_y"],
+                "crop_size_z": session["crop_size_z"],
+            }
 
-            # create a new item
-            item = dict()
-            item["Page"] = int(page)
-            item["Image_Index"] = int(idx)
-            item["GT"] = "/".join(syn_dir_instance.strip(".\\").split("/")[-3:])
-            item["EM"] = "/".join(img_dir_instance.strip(".\\").split("/")[-3:])
-            item["Label"] = "Correct"
-            item["Annotated"] = "No"
-            item["Error_Description"] = "None"
-            item["X_Index"] = coordinate_order.index("x")
-            item["Y_Index"] = coordinate_order.index("y")
-            item["Z_Index"] = coordinate_order.index("z")
-            item["Middle_Slice"] = int(bbox_dict[idx]["z"])
-            item["cz0"] = int(bbox_dict[idx]["z"])
-            item["cy0"] = int(bbox_dict[idx]["y"])
-            item["cx0"] = int(bbox_dict[idx]["x"])
-            item["pre_pt_x"] = int(bbox_dict[idx]["pre_pt_x"])
-            item["pre_pt_y"] = int(bbox_dict[idx]["pre_pt_y"])
-            item["pre_pt_z"] = int(bbox_dict[idx]["pre_pt_z"])
-            item["post_pt_x"] = int(bbox_dict[idx]["post_pt_x"])
-            item["post_pt_y"] = int(bbox_dict[idx]["post_pt_y"])
-            item["post_pt_z"] = int(bbox_dict[idx]["post_pt_z"])
-            item["crop_size_x"] = session["crop_size_x"]
-            item["crop_size_y"] = session["crop_size_y"]
-            item["crop_size_z"] = session["crop_size_z"]
+            # Calculate bounding boxes
+            bbox_org = [
+                item["cz0"] - session["crop_size_z"] // 2,
+                item["cz0"] + session["crop_size_z"] // 2,
+                item["cy0"] - session["crop_size_y"] // 2,
+                item["cy0"] + session["crop_size_y"] // 2,
+                item["cx0"] - session["crop_size_x"] // 2,
+                item["cx0"] + session["crop_size_x"] // 2,
+            ]
 
-            # retrieve the bounding box for the current synapse from the central synapse coordinates
-            z1 = item["cz0"] - session["crop_size_z"] // 2
-            z2 = item["cz0"] + session["crop_size_z"] // 2
-            y1 = item["cy0"] - session["crop_size_y"] // 2
-            y2 = item["cy0"] + session["crop_size_y"] // 2
-            x1 = item["cx0"] - session["crop_size_x"] // 2
-            x2 = item["cx0"] + session["crop_size_x"] // 2
-
-            bbox_org = list(map(int, [z1, z2, y1, y2, x1, x2]))
-
-            # save the original bounding box using the provided coordinate order
             item["Original_Bbox"] = [
                 bbox_org[coordinate_order.index(coord) * 2 + i]
                 for coord in ["z", "y", "x"]
                 for i in range(2)
             ]
-
-            # retrieve the actual crop coordinates and possible padding based on the max dimensions of the whole cloud volume
-            crop_bbox, img_padding = calculate_crop_pad(
+            item["Adjusted_Bbox"], item["Padding"] = calculate_crop_pad(
                 item["Original_Bbox"], current_app.vol_dim
             )
 
-            item["Adjusted_Bbox"], item["Padding"] = crop_bbox, img_padding
             instance_list.append(item)
-        # write the instance list to the dataframe
-        df_list = pd.DataFrame(instance_list)
 
+        # Append to shared DataFrame
+        df_list = pd.DataFrame(instance_list)
         with current_app.df_metadata_lock:
-            # concatenate the metadata and the df_list dataframe
             current_app.df_metadata = pd.concat(
                 [current_app.df_metadata, df_list], ignore_index=True
             )
@@ -330,20 +327,22 @@ def retrieve_instance_metadata(
         ]
 
         current_app.progress_bar_status["status"] = f"Pre-process sub-volume."
-        current_app.progress_bar_status["percent"] = int(60)
+        current_app.progress_bar_status["percent"] = 60
+
         for future in as_completed(futures):
             try:
-                _ = future.result()
+                future.result()
             except Exception as exc:
-                print("An exception occurred: %s" % exc)
-                print("Retry to process the instance.")
+                logger.error("Error processing instance: %s", exc)
+                logger.info("Retrying...")
                 try:
                     future.result(timeout=15)
-                except Exception as exc:
-                    print("The exception persists: %s" % exc)
+                except Exception as exc_retry:
+                    logger.error("Retry failed: %s", exc_retry)
                     traceback.print_exc()
 
-    current_app.progress_bar_status["percent"] = int(100)
+    current_app.progress_bar_status["percent"] = 100
+    logger.info("Completed processing for page %d.", page)
 
 
 def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) -> None:
@@ -385,18 +384,20 @@ def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) 
     )
 
     # retrieve the source and target images from the cloud volume
-    cropped_img = current_app.source_cv.download(
-        bound_source,
-        coord_resolution=current_app.coord_resolution_source,
-        mip=0,
-        parallel=True,
-    )
-    cropped_gt = current_app.target_cv.download(
-        bound_target,
-        coord_resolution=current_app.coord_resolution_target,
-        mip=0,
-        parallel=True,
-    )
+    # Lock for cloud volume downloads
+    with current_app.cloud_volume_download_lock:
+        cropped_img = current_app.source_cv.download(
+            bound_source,
+            coord_resolution=current_app.coord_resolution_source,
+            mip=0,
+            parallel=True,
+        )
+        cropped_gt = current_app.target_cv.download(
+            bound_target,
+            coord_resolution=current_app.coord_resolution_target,
+            mip=0,
+            parallel=True,
+        )
 
     # remove the singleton dimension, take care as the z dimension might be singleton
     cropped_img = cropped_img.squeeze(axis=3)
@@ -511,26 +512,32 @@ def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) 
         img_c.save(os.path.join(img_dir_instance, img_name), "PNG")
 
         # label
-        lab_c = Image.fromarray(vis_label[tuple(slicing_seg)])
-
-        # reduce the opacity of all black pixels to zero
-        lab_c = lab_c.convert("RGBA")
-
-        lab_c = np.asarray(lab_c)
-        r, g, b, a = np.rollaxis(lab_c, axis=-1)  # split into 4 n x m arrays
-        r_m = r != 0  # binary mask for red channel, True for all non black values
-        g_m = g != 0  # binary mask for green channel, True for all non black values
-        b_m = b != 0  # binary mask for blue channel, True for all non black values
-
-        # combine the three binary masks by multiplying them (1*1=1, 1*0=0, 0*1=0, 0*0=0)
-        # multiply the combined binary mask with the alpha channel
-        a = a * ((r_m == 1) | (g_m == 1) | (b_m == 1))
-
-        lab_c = Image.fromarray(
-            np.dstack([r, g, b, a]), "RGBA"
-        )  # stack the img back together
-
+        lab_c = apply_transparency(vis_label[tuple(slicing_seg)])
         lab_c.save(os.path.join(syn_dir_instance, img_name), "PNG")
+
+
+def apply_transparency(image: np.ndarray) -> Image:
+    """Reduce the opacity of all black pixels to zero in an RGBA image.
+
+    Args:
+        image (np.ndarray): The input image.
+
+    Returns:
+        The image with transparency applied to black pixels.
+    """
+    image = Image.fromarray(image)
+    image = image.convert("RGBA")
+    image = np.asarray(image)
+    r, g, b, a = np.rollaxis(image, axis=-1)  # split into 4 n x m arrays
+    r_m = r != 0  # binary mask for red channel, True for all non black values
+    g_m = g != 0  # binary mask for green channel, True for all non black values
+    b_m = b != 0  # binary mask for blue channel, True for all non black values
+
+    # combine the three binary masks by multiplying them (1*1=1, 1*0=0, 0*1=0, 0*0=0)
+    # multiply the combined binary mask with the alpha channel
+    a = a * ((r_m == 1) | (g_m == 1) | (b_m == 1))
+
+    return Image.fromarray(np.dstack([r, g, b, a]), "RGBA")
 
 
 def neuron_centric_3d_data_processing(

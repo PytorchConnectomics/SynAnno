@@ -72,18 +72,22 @@ $(document).ready(function () {
 
   // on click canvasButtonAuto call backend python function that queries a model to predict the mask
   $("#canvasButtonAuto").on("click", async function () {
+    try {
+      const response = await $.ajax({
+        type: "POST",
+        url: "/auto_annotate",
+        data: {
+          data_id: data_id,
+        },
+      });
 
-    // call the backend function passing the path to the image and the custom mask
-    const response = await $.ajax({
-      type: "POST",
-      url: "/auto_annotate",
-      data: {
-        page: page,
-        data_id: data_id,
-      },
-    });
+      if (response.result != "success") {
+        console.error("Auto annotation failed.");
+      }
+    } catch (error) {
+      console.error("An error occurred during auto annotation:", error);
+    }
   });
-
 
   // on click activate canvas
   $("#canvasButtonPreCRD").on("click", function () {

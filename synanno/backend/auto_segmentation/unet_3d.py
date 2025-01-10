@@ -1,13 +1,20 @@
 import torch
 import torch.nn as nn
 from torchsummary import summary
-from synanno.backend.auto_segmentation.config import CONFIG
+from synanno.backend.auto_segmentation.config import UNET3D_CONFIG
 
 
 class ConvBlock(nn.Module):
     """Basic convolutional block with two 3D convolutions, batch normalization, and ReLU."""
 
     def __init__(self, in_channels: int, out_channels: int):
+        """
+        Initialize the ConvBlock.
+
+        Args:
+            in_channels (int): Number of input channels.
+            out_channels (int): Number of output channels.
+        """
         super(ConvBlock, self).__init__()
         self.conv = nn.Sequential(
             nn.Conv3d(in_channels, out_channels, kernel_size=3, padding=1),
@@ -19,7 +26,15 @@ class ConvBlock(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass through the ConvBlock."""
+        """
+        Forward pass through the ConvBlock.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor.
+        """
         return self.conv(x)
 
 
@@ -27,6 +42,13 @@ class DownBlock(nn.Module):
     """Downsampling block with strided convolution followed by a ConvBlock."""
 
     def __init__(self, in_channels: int, out_channels: int):
+        """
+        Initialize the DownBlock.
+
+        Args:
+            in_channels (int): Number of input channels.
+            out_channels (int): Number of output channels.
+        """
         super(DownBlock, self).__init__()
         self.block = nn.Sequential(
             nn.MaxPool3d(kernel_size=2),
@@ -34,7 +56,15 @@ class DownBlock(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass through the DownBlock."""
+        """
+        Forward pass through the DownBlock.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor.
+        """
         return self.block(x)
 
 
@@ -42,6 +72,14 @@ class UpBlock(nn.Module):
     """Upsampling block with concatenation and ConvBlock."""
 
     def __init__(self, in_channels: int, out_channels: int, bilinear: bool = True):
+        """
+        Initialize the UpBlock.
+
+        Args:
+            in_channels (int): Number of input channels.
+            out_channels (int): Number of output channels.
+            bilinear (bool): Whether to use bilinear upsampling. Defaults to True.
+        """
         super(UpBlock, self).__init__()
 
         # Determine upsampling method
@@ -58,7 +96,16 @@ class UpBlock(nn.Module):
         self.conv = ConvBlock(up_channels + out_channels, out_channels)
 
     def forward(self, x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
-        """Forward pass through the UpBlock."""
+        """
+        Forward pass through the UpBlock.
+
+        Args:
+            x1 (torch.Tensor): Input tensor from the previous layer.
+            x2 (torch.Tensor): Input tensor from the skip connection.
+
+        Returns:
+            torch.Tensor: Output tensor.
+        """
         x1 = self.up(x1)
 
         # Padding to match dimensions if needed
@@ -86,11 +133,26 @@ class OutputConv(nn.Module):
     """Final output convolution to map to the desired number of channels."""
 
     def __init__(self, in_channels: int, out_channels: int):
+        """
+        Initialize the OutputConv.
+
+        Args:
+            in_channels (int): Number of input channels.
+            out_channels (int): Number of output channels.
+        """
         super(OutputConv, self).__init__()
         self.conv = nn.Conv3d(in_channels, out_channels, kernel_size=1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass through the OutputConv."""
+        """
+        Forward pass through the OutputConv.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor.
+        """
         return self.conv(x)
 
 
@@ -98,12 +160,14 @@ class UNet3D(nn.Module):
     """3D U-Net model with encoder-decoder architecture."""
 
     def __init__(self):
+        """
+        Initialize the UNet3D model.
+        """
         super(UNet3D, self).__init__()
-        config = CONFIG["unet3d"]
-        in_channels = config["in_channels"]
-        out_channels = config["out_channels"]
-        bilinear = config["bilinear"]
-        features = config["features"]
+        in_channels = UNET3D_CONFIG["in_channels"]
+        out_channels = UNET3D_CONFIG["out_channels"]
+        bilinear = UNET3D_CONFIG["bilinear"]
+        features = UNET3D_CONFIG["features"]
 
         self.inc = ConvBlock(in_channels, features[0])
         self.down_blocks = nn.ModuleList(
@@ -118,7 +182,15 @@ class UNet3D(nn.Module):
         self.outc = OutputConv(features[0], out_channels)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass through the UNet3D."""
+        """
+        Forward pass through the UNet3D.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor.
+        """
         encoder_outputs = []
         x1 = self.inc(x)
         encoder_outputs.append(x1)
@@ -148,6 +220,13 @@ if __name__ == "__main__":
 
     # Forward Pass
     output = model(input_tensor)
-    print(f"Output shape: {output.shape}")  # Expected: (1, 1, 16, 256, 256)
+
+    assert output.shape == (
+        1,
+        1,
+        16,
+        256,
+        256,
+    ), f"Output shape mismatch - {output.shape}"
 
     summary(model, input_size=(2, 16, 256, 256))

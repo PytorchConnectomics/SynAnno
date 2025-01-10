@@ -24,6 +24,9 @@ def create_app():
     # attach a lock for the data frame access to the app instance
     app.df_metadata_lock = Lock()
 
+    # global lock for cloud volume download operations
+    app.cloud_volume_download_lock = Lock()
+
     return app
 
 
@@ -126,6 +129,7 @@ def register_routes(app):
     from synanno.routes.categorize import blueprint as categorize_blueprint
     from synanno.routes.landingpage import blueprint as landingpage_blueprint
     from synanno.routes.manual_annotate import blueprint as manual_annotate_blueprint
+    from synanno.routes.auto_annotate import blueprint as auto_annotate_blueprint
 
     # Register the Blueprints with the app object.
     app.register_blueprint(annotation_blueprint)
@@ -134,6 +138,7 @@ def register_routes(app):
     app.register_blueprint(categorize_blueprint)
     app.register_blueprint(landingpage_blueprint)
     app.register_blueprint(manual_annotate_blueprint)
+    app.register_blueprint(auto_annotate_blueprint)
 
 
 def setup_context_processors(app):

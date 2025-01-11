@@ -49,6 +49,54 @@ $(document).ready(function () {
     }
   });
 
+  // Function to check if a URL exists without throwing a 404 error
+  async function urlExists(url) {
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      return response.ok;
+    } catch (error) {
+      console.error("An error occurred while checking the URL:", error);
+      return false;
+    }
+  }
+
+  // Check and inject mask paths on page load
+  imageData.forEach(async function(image) {
+    const page = image.Page;
+    const data_id = image.Image_Index;
+    const base = "-" + page + "-" + data_id;
+
+    const coordinates = image.Adjusted_Bbox.join('_');
+    const middle_slice = image.Middle_Slice;
+
+    const custom_mask_path_check_curve = `/static/Images/Mask/${data_id}/curve_idx_${data_id}_slice_${middle_slice}_cor_${coordinates}.png`;
+    const custom_mask_path_check_circle_pre = `/static/Images/Mask/${data_id}/circlePre_idx_${data_id}_slice_${middle_slice}_cor_${coordinates}.png`;
+    const custom_mask_path_check_circle_post = `/static/Images/Mask/${data_id}/circlePost_idx_${data_id}_slice_${middle_slice}_cor_${coordinates}.png`;
+    const auto_mask_path_check_curve = `/static/Images/Mask/${data_id}/auto_curve_idx_${data_id}_slice_${middle_slice}.png`;
+
+    const canvas_target_image_curve = `#img-target-curve${base}`;
+    const canvas_target_image_circle_pre = `#img-target-circlePre${base}`;
+    const canvas_target_image_circle_post = `#img-target-circlePost${base}`;
+
+    if (await urlExists(custom_mask_path_check_curve)) {
+      $(canvas_target_image_curve).attr("src", `${custom_mask_path_check_curve}?${Date.now()}`);
+      $(canvas_target_image_curve).removeClass('d-none');
+    } else if (await urlExists(auto_mask_path_check_curve)) {
+      $(canvas_target_image_curve).attr("src", `${auto_mask_path_check_curve}?${Date.now()}`);
+      $(canvas_target_image_curve).removeClass('d-none');
+    }
+
+    if (await urlExists(custom_mask_path_check_circle_pre)) {
+      $(canvas_target_image_circle_pre).attr("src", `${custom_mask_path_check_circle_pre}?${Date.now()}`);
+      $(canvas_target_image_circle_pre).removeClass('d-none');
+    }
+
+    if (await urlExists(custom_mask_path_check_circle_post)) {
+      $(canvas_target_image_circle_post).attr("src", `${custom_mask_path_check_circle_post}?${Date.now()}`);
+      $(canvas_target_image_circle_post).removeClass('d-none');
+    }
+  });
+
   // setup/reset the canvas whenever a draw button is clicked
   $('[id^="drawButton-"]').click(async function () {
     [page, data_id, label] = $(this).attr("id").replace(/drawButton-/, "").split("-");
@@ -73,6 +121,9 @@ $(document).ready(function () {
   // on click canvasButtonAuto call backend python function that queries a model to predict the mask
   $("#canvasButtonAuto").on("click", async function () {
     try {
+      const image = imageData.find(img => img.Page == page && img.Image_Index == data_id);
+      const middle_slice = image.Middle_Slice;
+
       const response = await $.ajax({
         type: "POST",
         url: "/auto_annotate",
@@ -81,7 +132,22 @@ $(document).ready(function () {
         },
       });
 
-      if (response.result != "success") {
+      if (response.result === "success") {
+        const base = "-" + page + "-" + data_id;
+        const auto_mask_name = `auto_curve_idx_${data_id}_slice_${middle_slice}.png`;
+        const auto_mask_path = `${base_mask_path}${data_id}/${auto_mask_name}`;
+        const canvas_target_image = `#img-target-curve${base}`;
+
+        // Check if auto-generated mask exists and update the image source
+        $.ajax({
+          url: auto_mask_path,
+          type: 'HEAD',
+          success: function() {
+            $(canvas_target_image).attr("src", `${auto_mask_path}?${Date.now()}`);
+            $(canvas_target_image).removeClass('d-none');
+          }
+        });
+      } else {
         console.error("Auto annotation failed.");
       }
     } catch (error) {
@@ -187,14 +253,14 @@ $(document).ready(function () {
       draw_mask = true;
       $("#canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonAuto, #rangeSlices").prop("disabled", true);
     } else {
-      $("canvas.curveCanvas").css("z-index", 3);
-      $("canvas.circleCanvasPost").css("z-index", 2);
-      $("canvas.circleCanvasPre").css("z-index", 1);
-      $("#canvasButtonFill, #canvasButtonRevise, #canvasButtonSave, #canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonAuto, #rangeSlices").prop("disabled", true);
+      $("canvas.curveCanvas").addClass("d-none");
+      $("#canvasButtonDrawMask").text("Draw Mask");
+      $("#canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonAuto, #rangeSlices").prop("disabled", false);
+      $("#canvasButtonFill, #canvasButtonRevise, #canvasButtonSave").prop("disabled", true);
       points = [];
       pointsQBez = [];
       split_mask = false;
-      draw_mask = true;
+      draw_mask = false;
     }
   });
 

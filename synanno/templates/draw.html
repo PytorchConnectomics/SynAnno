@@ -1,4 +1,6 @@
-{% extends "templatebase.html" %} {% block help_content %}
+{% extends "templatebase.html" %}
+
+{% block help_content %}
 <p class="text-muted">
   In this view, you can create segmentation masks, set pre-/post-synaptic IDs,
   and add missed false negatives. If you arrived here from the Proofreading
@@ -36,39 +38,22 @@
   the pre and post-synaptic coordinate ID markers for all instances, click the
   `Submit and Finish` button to proceed to the final view.
 </p>
-{% endblock %} {% block content %}
+{% endblock %}
 
+{% block content %}
 <div class="container-fluid content-row mt-5">
   <div class="container-fluid py-2">
     <div class="d-flex flex-row flex-nowrap overflow-auto">
-      <div
-        class="card border rounded card-body card-body-proof-read text-center"
-        style="border-width: 4px !important"
-      >
+      <div class="card border rounded card-body card-body-proof-read text-center" style="border-width: 4px !important">
         <h5 class="card-header border-bottom-0 mb-2">False Negative</h5>
-        <div
-          class="card-block border-0 p-1 image-card-btn unsure mt-auto"
-          label="Unsure"
-        >
+        <div class="card-block border-0 p-1 image-card-btn unsure mt-auto" label="Unsure">
           <div class="main-image-categorize">
-            <img
-              class="img_categorize"
-              src="/static/placeholder/place_holder_fn.png"
-              width="64px"
-              height="64px"
-            />
+            <img class="img_categorize" src="/static/placeholder/place_holder_fn.png" width="64px" height="64px" />
           </div>
         </div>
         <div class="card-block mt-2 mt-auto">
           <div class="col justify-content-center">
-            <button
-              id="add_new_instance"
-              class="btn btn-primary"
-              type="button"
-              data-bs-target="#drawModalFN"
-              data-bs-toggle="modal"
-              data-bs-dismiss="modal"
-            >
+            <button id="add_new_instance" class="btn btn-primary" type="button" data-bs-target="#drawModalFN" data-bs-toggle="modal" data-bs-dismiss="modal">
               Add New Instance
             </button>
           </div>
@@ -84,98 +69,31 @@
       {% set auto_mask_name_curve = 'auto_curve_idx_' ~ image.Image_Index ~ '_slice_' ~ image.Middle_Slice ~ '.png' %}
 
       <!-- Updated paths to use `url_for` -->
-      {% set custom_mask_path_check_curve = url_for('static', filename='Images/Mask/'  ~ image.Image_Index ~ '/' ~ custom_mask_name_curve) %}
-      {% set custom_mask_path_check_circle_pre = url_for('static', filename='Images/Mask/'  ~ image.Image_Index ~ '/' ~ custom_mask_name_circle_pre) %}
-      {% set custom_mask_path_check_circle_post = url_for('static', filename='Images/Mask/' ~  image.Image_Index ~ '/' ~ custom_mask_name_circle_post) %}
-      {% set auto_mask_path_check_curve = url_for('static', filename='Images/Mask/' ~  image.Image_Index ~ '/' ~ auto_mask_name_curve) %}
+      {% set custom_mask_path_check_curve = url_for('static', filename='Images/Mask/' ~ image.Image_Index ~ '/' ~ custom_mask_name_curve) %}
+      {% set custom_mask_path_check_circle_pre = url_for('static', filename='Images/Mask/' ~ image.Image_Index ~ '/' ~ custom_mask_name_circle_pre) %}
+      {% set custom_mask_path_check_circle_post = url_for('static', filename='Images/Mask/' ~ image.Image_Index ~ '/' ~ custom_mask_name_circle_post) %}
+      {% set auto_mask_path_check_curve = url_for('static', filename='Images/Mask/' ~ image.Image_Index ~ '/' ~ auto_mask_name_curve) %}
 
-      <div
-        class="card border rounded card-body card-body-proof-read text-center"
-        style="border-width: 4px !important"
-        id="id_error-{{image.Page}}_{{image.Image_Index}}"
-      >
-        <h5 class="card-header border-bottom-0 mb-2">
-          {{image.Error_Description}}
-        </h5>
-        <div
-          class="card-block border-0 p-1 image-card-btn redraw-images {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}"
-          page="{{ image.Page }}"
-          data_id="{{ image.Image_Index }}"
-          label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}"
-        >
+      <div class="card border rounded card-body card-body-proof-read text-center" style="border-width: 4px !important" id="id_error-{{image.Page}}_{{image.Image_Index}}">
+        <h5 class="card-header border-bottom-0 mb-2">{{image.Error_Description}}</h5>
+        <div class="card-block border-0 p-1 image-card-btn redraw-images {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}" page="{{ image.Page }}" data_id="{{ image.Image_Index }}" label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}">
           <div class="main-image-categorize">
             <!-- In case of a FN we depict we use the source image also as the target to act as placholder -->
             {% if image.Error_Description != "False Negatives"%}
-            <img
-              id="img-target-curve-{{image.Page}}-{{image.Image_Index}}"
-              class="img_categorize"
-              src="{% if os.path.exists(custom_mask_path_check_curve) %} {{custom_mask_path_load_curve}} {% elif os.path.exists(auto_mask_path_check_curve) %} {{auto_mask_path_check_curve}} {% else %} {{ url_for('static', filename=image.GT ~ '/' ~ image.Middle_Slice ~ '.png')}} {% endif %}"
-              width="64px"
-              height="64px"
-              style="opacity: 0.5"
-            />
-            <img
-              id="img-target-circlePre-{{image.Page}}-{{image.Image_Index}}"
-              class="img_categorize d-none"
-              src="{% if os.path.exists(custom_mask_path_check_circle_pre) %} {{custom_mask_path_load_circle_pre}} {% else %} {{ url_for('static', filename=image.GT ~ '/' ~ image.Middle_Slice ~ '.png')}} {% endif %}"
-              width="64px"
-              height="64px"
-              style="opacity: 0.5"
-            />
-            <img
-              id="img-target-circlePost-{{image.Page}}-{{image.Image_Index}}"
-              class="img_categorize d-none"
-              src="{% if os.path.exists(custom_mask_path_check_circle_post) %} {{custom_mask_path_load_circle_post}} {% else %} {{ url_for('static', filename=image.GT ~ '/' ~ image.Middle_Slice ~ '.png')}} {% endif %}"
-              width="64px"
-              height="64px"
-              style="opacity: 0.5"
-            />
+            <img id="img-target-curve-{{image.Page}}-{{image.Image_Index}}" class="img_categorize" src="{{ url_for('static', filename=image.GT ~ '/' ~ image.Middle_Slice ~ '.png')}}" width="64px" height="64px" style="opacity: 0.5" />
+            <img id="img-target-circlePre-{{image.Page}}-{{image.Image_Index}}" class="img_categorize d-none" src="{{ url_for('static', filename=image.GT ~ '/' ~ image.Middle_Slice ~ '.png')}}" width="64px" height="64px" style="opacity: 0.5" />
+            <img id="img-target-circlePost-{{image.Page}}-{{image.Image_Index}}" class="img_categorize d-none" src="{{ url_for('static', filename=image.GT ~ '/' ~ image.Middle_Slice ~ '.png')}}" width="64px" height="64px" style="opacity: 0.5" />
             {% else %}
-            <img
-              id="img-target-curve-{{image.Page}}-{{image.Image_Index}}"
-              class="img_categorize"
-              src="{% if os.path.exists(custom_mask_path_check_curve) %} {{custom_mask_path_load_curve}} {% elif os.path.exists(auto_mask_path_check_curve) %} {{auto_mask_path_check_curve}} {% else %} {{url_for('static', filename= image.EM ~ '/' ~ image.Middle_Slice ~ '.png')}} {% endif %}"
-              width="64px"
-              height="64px"
-              style="opacity: 0.5"
-            />
-            <img
-              id="img-target-circlePre-{{image.Page}}-{{image.Image_Index}}"
-              class="img_categorize d-none"
-              src="{% if os.path.exists(custom_mask_path_check_circle_pre) %} {{custom_mask_path_load_circle_pre}} {% else %} {{url_for('static', filename= image.EM ~ '/' ~ image.Middle_Slice ~ '.png')}} {% endif %}"
-              width="64px"
-              height="64px"
-              style="opacity: 0.5"
-            />
-            <img
-              id="img-target-circlePost-{{image.Page}}-{{image.Image_Index}}"
-              class="img_categorize d-none"
-              src="{% if os.path.exists(custom_mask_path_check_circle_post) %} {{custom_mask_path_load_circle_post}} {% else %} {{url_for('static', filename= image.EM ~ '/' ~ image.Middle_Slice ~ '.png')}} {% endif %}"
-              width="64px"
-              height="64px"
-              style="opacity: 0.5"
-            />
+            <img id="img-target-curve-{{image.Page}}-{{image.Image_Index}}" class="img_categorize" src="{{url_for('static', filename= image.EM ~ '/' ~ image.Middle_Slice ~ '.png')}}" width="64px" height="64px" style="opacity: 0.5" />
+            <img id="img-target-circlePre-{{image.Page}}-{{image.Image_Index}}" class="img_categorize d-none" src="{{url_for('static', filename= image.EM ~ '/' ~ image.Middle_Slice ~ '.png')}}" width="64px" height="64px" style="opacity: 0.5" />
+            <img id="img-target-circlePost-{{image.Page}}-{{image.Image_Index}}" class="img_categorize d-none" src="{{url_for('static', filename= image.EM ~ '/' ~ image.Middle_Slice ~ '.png')}}" width="64px" height="64px" style="opacity: 0.5" />
             {% endif %}
-            <img
-              id="imgGT-{{image.Page}}-{{image.Image_Index}}"
-              class="img_categorize"
-              data-image_base_path="{{ url_for('static', filename=image.EM) }}"
-              src="{{ url_for('static', filename=image.EM ~ '/' ~ image.Middle_Slice ~ '.png')}}"
-              width="64px"
-              height="64px"
-            />
+            <img id="imgGT-{{image.Page}}-{{image.Image_Index}}" class="img_categorize" data-image_base_path="{{ url_for('static', filename=image.EM) }}" src="{{ url_for('static', filename=image.EM ~ '/' ~ image.Middle_Slice ~ '.png')}}" width="64px" height="64px" />
           </div>
         </div>
         <div class="card-block mt-2">
           <div class="col justify-content-center">
-            <button
-              class="btn btn-primary"
-              id="drawButton-{{image.Page}}-{{image.Image_Index}}-{{image.Label}}"
-              type="button"
-              data-bs-target="#drawModal"
-              data-bs-toggle="modal"
-              data-bs-dismiss="modal"
-            >
+            <button class="btn btn-primary" id="drawButton-{{image.Page}}-{{image.Image_Index}}-{{image.Label}}" type="button" data-bs-target="#drawModal" data-bs-toggle="modal" data-bs-dismiss="modal">
               Draw Mask
             </button>
           </div>
@@ -190,13 +108,7 @@
   </div>
 
   <div class="m-4 p-1">
-    <a
-      type="button"
-      id="submit_button"
-      class="btn btn-primary {{ modenext }}"
-      href="{{ url_for('finish.export_draw') }}"
-      >Submit and Finish</a
-    >
+    <a type="button" id="submit_button" class="btn btn-primary {{ modenext }}" href="{{ url_for('finish.export_draw') }}">Submit and Finish</a>
   </div>
 </div>
 
@@ -207,7 +119,10 @@
 {% include "draw_modal_fn.html" %}
 
 <script src="{{ url_for('static', filename='draw_module.js') }}"></script>
+<script src="{{ url_for('static', filename='draw.js') }}"></script>
 
-<script src="{{url_for('static', filename='draw.js') }}"></script>
+<script>
+  var imageData = {{ images|tojson }};
+</script>
 
 {% endblock %}

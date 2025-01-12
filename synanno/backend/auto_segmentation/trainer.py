@@ -141,7 +141,10 @@ class Trainer:
         for epoch in range(num_epochs):
             logger.info(f"Epoch {epoch + 1}/{num_epochs}")
 
+            logger.info("Training pass...")
             train_loss = self.train(model, train_loader, criterion, optimizer, device)
+
+            logger.info("validation pass...")
             val_loss = self.validate(model, val_loader, criterion, device)
 
             logger.info(
@@ -241,6 +244,11 @@ class Trainer:
             dataloader, desc="Training", leave=False, disable=not sys.stdout.isatty()
         ):
             inputs, targets = inputs.to(device), targets.to(device)
+
+            # log the inputs and target shape
+            logger.info(f"Input shape: {inputs.shape}")
+            logger.info(f"Input targets: {targets.shape}")
+
             optimizer.zero_grad()
             outputs = model(inputs)
             loss = criterion(outputs, targets)

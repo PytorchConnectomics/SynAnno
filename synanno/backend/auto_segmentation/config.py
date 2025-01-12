@@ -35,7 +35,7 @@ DATASET_CONFIG = {
 }
 
 TRAINING_CONFIG = {
-    "batch_size": 4,
+    "batch_size": 1,
     "num_workers": 4,
     "pos_weight": 4.0,
     "learning_rate": 1e-4,
@@ -43,8 +43,8 @@ TRAINING_CONFIG = {
     "schedular_gamma": 0.1,
     "num_epochs": 2,
     "patience": 5,
-    "train_range": (0, 10),
-    "val_range": (10, 12),
+    "train_range": (0, 4),
+    "val_range": (10, 14),
     "test_range": (12, 13),
     "checkpoints": "/mmfs1/data/lauenbur/syn_anno_checkpoints/",
     # "checkpoints": "/Users/lando/Code/SynAnno/synanno/backend/auto_segmentation/syn_anno_checkpoints/",

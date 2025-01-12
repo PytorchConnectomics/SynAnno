@@ -36,7 +36,6 @@ setup(
             "torchvision",
             "torchsummary",
             "tqdm",
-            "urllib3",
             "matplotlib",
         ],
     },

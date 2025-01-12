@@ -1,7 +1,6 @@
 import pandas as pd
-import torch
 from synanno.backend.auto_segmentation.dataset import SynapseDataset
-from synanno.backend.auto_segmentation.config import CONFIG
+from synanno.backend.auto_segmentation.config import CONFIG, TRAINING_CONFIG
 from synanno.backend.auto_segmentation.match_source_and_target import (
     retrieve_smallest_volume_dim,
     compute_scale_factor,
@@ -9,7 +8,6 @@ from synanno.backend.auto_segmentation.match_source_and_target import (
 from synanno.backend.auto_segmentation.retrieve_instances import setup_cloud_volume
 from synanno.backend.auto_segmentation.visualize_instances import visualize_instances
 from synanno.backend.auto_segmentation.trainer import Trainer
-from tqdm import tqdm
 from cloudvolume import CloudVolume
 from typing import Any
 
@@ -45,34 +43,36 @@ def prepare_metadata(source_cv, target_cv) -> dict[str, Any]:
 
 if __name__ == "__main__":
     """Main function to train and validate the model."""
-    materialization_df = load_materialization_csv(
-        "/Users/lando/Code/SynAnno/h01/synapse-export_000000000000.csv"
-    )
+    materialization_df = load_materialization_csv(CONFIG["materialization_csv"])
     source_cv, target_cv = setup_cloud_volumes()
     meta_data = prepare_metadata(source_cv, target_cv)
 
-    trainer = Trainer()
-
     print("Loading training dataset...")
-    train_dataset = SynapseDataset(materialization_df, meta_data, (0, 2))
+    train_dataset = SynapseDataset(
+        materialization_df, meta_data, TRAINING_CONFIG["train_range"]
+    )
 
     print("Loading validation dataset...")
-    val_dataset = SynapseDataset(materialization_df, meta_data, (2, 3))
+    val_dataset = SynapseDataset(
+        materialization_df, meta_data, TRAINING_CONFIG["val_range"]
+    )
+
+    trainer = Trainer()
 
     print("Running training process...")
     trainer.run_training(train_dataset, val_dataset)
 
     print("Loading test dataset...")
-    test_dataset = SynapseDataset(materialization_df, meta_data, (0, 4))
+    test_dataset = SynapseDataset(
+        materialization_df, meta_data, TRAINING_CONFIG["test_range"]
+    )
 
     print("Running inference...")
-    targets, predictions = trainer.run_inference("best_unet3d.pth", test_dataset)
+    targets, predictions = trainer.run_inference(
+        TRAINING_CONFIG["checkpoints"], test_dataset
+    )
 
-    print("Visual result validation...")
-    for tar, pred in zip(targets, predictions):
-        visualize_instances(tar[0, 0, :, :, :], pred[0, 0, :, :, :], 5, 0)
-        visualize_instances(tar[0, 0, :, :, :], pred[0, 0, :, :, :], 6, 0)
-        visualize_instances(tar[0, 0, :, :, :], pred[0, 0, :, :, :], 7, 0)
-        visualize_instances(tar[0, 0, :, :, :], pred[0, 0, :, :, :], 8, 0)
-        visualize_instances(tar[0, 0, :, :, :], pred[0, 0, :, :, :], 9, 0)
-        visualize_instances(tar[0, 0, :, :, :], pred[0, 0, :, :, :], 10, 0)
+    # print("Visual result validation...")
+    # for tar, pred in zip(targets, predictions):
+    #    for i in range(5, 11):
+    #        visualize_instances(tar[0, 0, :, :, :], pred[0, 0, :, :, :], i, 0)

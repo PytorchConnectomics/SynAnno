@@ -2,7 +2,6 @@ from torch.utils.data import Dataset
 import pandas as pd
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import urllib3
 import traceback
 from tqdm import tqdm
 from synanno.backend.auto_segmentation.retrieve_instances import (
@@ -111,10 +110,6 @@ class SynapseDataset(Dataset):
         ).to_dict("records")
 
         dataset = []
-        urllib3.PoolManager(
-            num_pools=self.num_pools,
-            maxsize=self.maxsize,
-        )
 
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             futures = [

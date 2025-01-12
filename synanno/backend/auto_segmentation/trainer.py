@@ -12,6 +12,10 @@ import os
 import glob
 import sys
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class Trainer:
     def __init__(self):
@@ -32,7 +36,7 @@ class Trainer:
         """
         model = UNet3D()
 
-        print("Checking for checkpoint...")
+        logger.info("Checking for checkpoint...")
         if model_path is None:
             model_files = sorted(
                 glob.glob(os.path.join(self.checkpoint_dir, "best_unet3d_tl_*.pth")),
@@ -43,7 +47,9 @@ class Trainer:
                 model_path = model_files[
                     0
                 ]  # Load the model with the smallest validation loss
-                print(f"Loading best model based on validation loss: {model_path}")
+                logger.info(
+                    f"Loading best model based on validation loss: {model_path}"
+                )
 
         if model_path and os.path.isfile(model_path):
             model.load_state_dict(torch.load(model_path))
@@ -77,12 +83,14 @@ class Trainer:
         )
 
         if len(model_files) >= 3:
-            print(f"Removing oldest model: {model_files[-1]}")
+            logger.info(f"Removing oldest model: {model_files[-1]}")
             os.remove(model_files[-1])
 
         # Save new model
         torch.save(model.state_dict(), model_path)
-        print(f"New best model {model_name} saved with validation loss: {val_loss:.4f}")
+        logger.info(
+            f"New best model {model_name} saved with validation loss: {val_loss:.4f}"
+        )
 
     def run_training(
         self, train_dataset: SynapseDataset, val_dataset: SynapseDataset
@@ -131,12 +139,14 @@ class Trainer:
         patience_counter = 0
 
         for epoch in range(num_epochs):
-            print(f"Epoch {epoch + 1}/{num_epochs}")
+            logger.info(f"Epoch {epoch + 1}/{num_epochs}")
 
             train_loss = self.train(model, train_loader, criterion, optimizer, device)
             val_loss = self.validate(model, val_loader, criterion, device)
 
-            print(f"Train Loss: {train_loss:.4f} | Validation Loss: {val_loss:.4f}")
+            logger.info(
+                f"Train Loss: {train_loss:.4f} | Validation Loss: {val_loss:.4f}"
+            )
 
             if val_loss < best_val_loss:
                 self.save_best_model(model, train_loss, val_loss)
@@ -146,7 +156,7 @@ class Trainer:
                 patience_counter += 1
 
             if patience_counter >= patience:
-                print(
+                logger.info(
                     "Early stopping triggered due to no improvement in validation loss."
                 )
                 break

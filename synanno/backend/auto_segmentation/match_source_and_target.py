@@ -1,5 +1,9 @@
 import numpy as np
 from cloudvolume import CloudVolume
+import logging
+
+# Retrieve logger
+logger = logging.getLogger(__name__)
 
 
 def retrieve_smallest_volume_dim(
@@ -21,7 +25,7 @@ def retrieve_smallest_volume_dim(
     if list(source_size) == list(target_size):
         vol_dim = tuple([s - 1 for s in source_size])
     else:
-        print(
+        logger.info(
             f"The dimensions of the source ({source_size}) and target ({target_size}) volumes do not match. Using the smaller size of the two volumes."
         )
         vol_dim = tuple([s - 1 for s in min(source_size, target_size, key=np.prod)])

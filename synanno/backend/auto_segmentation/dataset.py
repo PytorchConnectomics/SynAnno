@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import traceback
+import logging
 from tqdm import tqdm
 from synanno.backend.auto_segmentation.retrieve_instances import (
     retrieve_instance_from_cv,
@@ -13,6 +14,11 @@ from synanno.backend.auto_segmentation.model_source_data import generate_seed_ta
 import torch
 from synanno.backend.auto_segmentation.config import CONFIG, DATASET_CONFIG
 from typing import Any
+import threading
+
+
+# Retrieve logger
+logger = logging.getLogger(__name__)
 
 
 def normalize_tensor(tensor: torch.Tensor, max_value: int = 255.0) -> torch.Tensor:
@@ -110,6 +116,7 @@ class SynapseDataset(Dataset):
         ).to_dict("records")
 
         dataset = []
+        lock = threading.Lock()  # Lock for thread-safe appending
 
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             futures = [
@@ -120,16 +127,25 @@ class SynapseDataset(Dataset):
                 as_completed(futures), total=len(futures), desc="Data Retrieval"
             ):
                 try:
-                    dataset.append(future.result())
+                    result = future.result(timeout=self.timeout)
+                    with lock:  # Ensure thread-safe addition to the dataset
+                        dataset.append(result)
+                    logger.info(f"Successfully retrieved data sample.")
                 except Exception as exc:
-                    print(f"An exception occurred: {exc}")
-                    print("Retry to process the instance.")
+                    logger.error(f"An exception occurred during data retrieval: {exc}")
+                    # Retry logic
                     try:
-                        dataset.append(future.result(timeout=self.timeout))
+                        result = future.result(timeout=self.timeout)
+                        with lock:
+                            dataset.append(result)
+                        logger.info(f"Successfully retrieved data sample after retry")
                     except Exception as exc:
-                        print(f"The exception persists: {exc}")
+                        logger.error(f"Retry failed with error: {exc}")
                         traceback.print_exc()
 
+        logger.info(f"Finished data retrieval with {len(dataset)} items.")
+
+        # Seed/Target Generation
         for sample in tqdm(dataset, desc="Seed/Target Generation"):
             seed_volume, selected_seed_slices = generate_seed_target(
                 sample["target"], self.slices_to_generate, self.target_range
@@ -152,27 +168,12 @@ class SynapseDataset(Dataset):
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Retrieve a source and target sample from the dataset.
-
-        Note:
-            The source volume has 2 channels: Input shape: (batch_size, 2, depth, height, width)
-            - Channel 0 (raw image): Normalized image data.
-            - Channel 1 (seed masks): Contains partial segmentation masks for some slices, with zeros elsewhere.
-
-            The target has a single-channel volume: (batch_size, 1, depth, height, width)
-            - Channel 0 (mask): This represents the predicted segmentation mask for the entire volume.
-
-        Args:
-            idx (int): Index of the item to retrieve.
-
-        Returns:
-            tuple[torch.Tensor, torch.Tensor]: Source and target tensors.
         """
-        # Get the source and target for the current index
         sample = self.dataset[idx]
         source = sample["source"]  # Shape: (x, y, z, 2)
         target = sample["target"]  # Shape: (x, y, z)
 
-        # Convert to tensors
+        # Convert to tensors and permute the dimensions
         source = torch.tensor(source, dtype=torch.float32).permute(
             3, 2, 0, 1
         )  # Shape: (2, D, H, W)
@@ -193,11 +194,6 @@ class SynapseDataset(Dataset):
         mask_channel = mask_channel.unsqueeze(0)  # Shape: (1, 1, D, H, W)
         target = target.unsqueeze(0)  # Shape: (1, 1, D, H, W)
 
-        assert (
-            image_channel.shape == mask_channel.shape == target.shape
-        ), "The shapes of the source and target do not match."
-
-        # Resize channels
         image_channel = torch.nn.functional.interpolate(
             image_channel,
             size=(
@@ -232,19 +228,11 @@ class SynapseDataset(Dataset):
         mask_channel = mask_channel.squeeze(0)  # Shape: (1, D, H, W)
         target = target.squeeze(0)  # Shape: (1, D, H, W)
 
-        assert (
-            image_channel.shape == mask_channel.shape == target.shape
-        ), "The shapes of the source and target do not match."
-
-        # Merge channels
+        # Combine and normalize
         source = torch.cat([image_channel, mask_channel], dim=0)  # Shape: (2, D, H, W)
-
-        # Normalize the image channel
-        source[0] = normalize_tensor(source[0])
-
-        # Binarize the segmentation channel and target
-        source[1] = binarize_tensor(source[1])
-        target = binarize_tensor(target)
+        source[0] = normalize_tensor(source[0])  # Normalize the image channel
+        source[1] = binarize_tensor(source[1])  # Binarize the seed mask
+        target = binarize_tensor(target)  # Binarize the target
 
         return source, target
 

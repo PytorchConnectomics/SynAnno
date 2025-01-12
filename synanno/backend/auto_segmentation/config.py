@@ -3,8 +3,10 @@ import numpy as np
 CONFIG = {
     "source_bucket_url": "gs://h01-release/data/20210601/4nm_raw",
     "target_bucket_url": "gs://h01-release/data/20210729/c3/synapses/whole_ei_onlyvol",
-    "materialization_csv": "/mmfs1/data/lauenbur/synapse-export_000000000000.csv",
-    "cv_secret": "/mmfs1/data/lauenbur/secrets",
+    # "materialization_csv": "/mmfs1/data/lauenbur/synapse-export_000000000000.csv",
+    "materialization_csv": "/Users/lando/Code/SynAnno/h01/synapse-export_000000000000.csv",
+    # "cv_secret": "/mmfs1/data/lauenbur/secrets",
+    "cv_secret": "~/.cloudvolume/secrets",
     "coordinate_order": ["x", "y", "z"],
     "coord_resolution_target": np.array([8, 8, 33]),
     "coord_resolution_source": np.array([4, 4, 33]),
@@ -33,16 +35,17 @@ DATASET_CONFIG = {
 }
 
 TRAINING_CONFIG = {
-    "batch_size": 4,
+    "batch_size": 1,
     "num_workers": 4,
     "pos_weight": 4.0,
     "learning_rate": 1e-4,
     "scheduler_step_size": 10,
     "schedular_gamma": 0.1,
-    "num_epochs": 5,
+    "num_epochs": 1,
     "patience": 5,
-    "train_range": (0, 16),
-    "val_range": (16, 20),
-    "test_range": (3, 4),
-    "checkpoints": "/mmfs1/data/lauenbur/syn_anno_checkpoints/",
+    "train_range": (0, 1),
+    "val_range": (1, 2),
+    "test_range": (2, 3),
+    # "checkpoints": "/mmfs1/data/lauenbur/syn_anno_checkpoints/",
+    "checkpoints": "/Users/lando/Code/SynAnno/synanno/backend/auto_segmentation/syn_anno_checkpoints/",
 }

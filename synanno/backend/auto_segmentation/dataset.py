@@ -234,10 +234,6 @@ class SynapseDataset(Dataset):
         source[1] = binarize_tensor(source[1])  # Binarize the seed mask
         target = binarize_tensor(target)  # Binarize the target
 
-        # log the inputs and target shape
-        logger.info(f"Input shape: {source.shape}")
-        logger.info(f"Input targets: {target.shape}")
-
         return source, target
 
 

@@ -67,13 +67,13 @@ if __name__ == "__main__":
     logger.info("Running training process...")
     trainer.run_training(train_dataset, val_dataset)
 
-    logger.info("Loading test dataset...")
-    test_dataset = SynapseDataset(
-        materialization_df, meta_data, TRAINING_CONFIG["test_range"]
-    )
-
     logger.info("Finished Training.")
 
+    # logger.info("Loading test dataset...")
+    #
+    # test_dataset = SynapseDataset(
+    #    materialization_df, meta_data, TRAINING_CONFIG["test_range"]
+    # )
     # logger.info("Running inference...")
     # targets, predictions = trainer.run_inference(
     #    TRAINING_CONFIG["checkpoints"], test_dataset

@@ -35,6 +35,8 @@ class Trainer:
             UNet3D: Loaded UNet3D model.
         """
         model = UNet3D()
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model.to(device)
 
         logger.info("Checking for checkpoint...")
         if model_path is None:
@@ -52,7 +54,7 @@ class Trainer:
                 )
 
         if model_path and os.path.isfile(model_path):
-            model.load_state_dict(torch.load(model_path))
+            model.load_state_dict(torch.load(model_path, map_location=device))
 
         return model
 
@@ -95,11 +97,9 @@ class Trainer:
     def run_training(
         self, train_dataset: SynapseDataset, val_dataset: SynapseDataset
     ) -> None:
-        """Run the training process for the UNet3D model.
-
-        Args:
-            train_dataset (SynapseDataset): Training dataset.
-            val_dataset (SynapseDataset): Validation dataset.
+        """Run
+        train_dataset (SynapseDataset): Training dataset.
+        val_dataset (SynapseDataset): Validation dataset.
         """
         train_loader = DataLoader(
             train_dataset,
@@ -144,7 +144,7 @@ class Trainer:
             logger.info("Training pass...")
             train_loss = self.train(model, train_loader, criterion, optimizer, device)
 
-            logger.info("validation pass...")
+            logger.info("Training pass...")
             val_loss = self.validate(model, val_loader, criterion, device)
 
             logger.info(
@@ -244,11 +244,6 @@ class Trainer:
             dataloader, desc="Training", leave=False, disable=not sys.stdout.isatty()
         ):
             inputs, targets = inputs.to(device), targets.to(device)
-
-            # log the inputs and target shape
-            logger.info(f"Input shape: {inputs.shape}")
-            logger.info(f"Input targets: {targets.shape}")
-
             optimizer.zero_grad()
             outputs = model(inputs)
             loss = criterion(outputs, targets)

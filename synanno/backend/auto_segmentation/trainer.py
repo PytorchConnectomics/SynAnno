@@ -144,7 +144,7 @@ class Trainer:
             logger.info("Training pass...")
             train_loss = self.train(model, train_loader, criterion, optimizer, device)
 
-            logger.info("Training pass...")
+            logger.info("Validation pass...")
             val_loss = self.validate(model, val_loader, criterion, device)
 
             logger.info(

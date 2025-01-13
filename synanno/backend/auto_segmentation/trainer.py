@@ -124,11 +124,13 @@ class Trainer:
             model.parameters(), lr=TRAINING_CONFIG["learning_rate"]
         )
 
-        # Update the learning rate every nth epoch by gamma
-        scheduler = torch.optim.lr_scheduler.StepLR(
+        # Use ReduceLROnPlateau to reduce the learning rate if no improvement in validation loss
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
-            step_size=TRAINING_CONFIG["scheduler_step_size"],
-            gamma=TRAINING_CONFIG["schedular_gamma"],
+            mode="min",
+            factor=TRAINING_CONFIG["schedular_gamma"],
+            patience=TRAINING_CONFIG["schedular_patience"],
+            verbose=True,
         )
 
         num_epochs = TRAINING_CONFIG["num_epochs"]
@@ -164,7 +166,11 @@ class Trainer:
                 )
                 break
 
-            scheduler.step()
+            scheduler.step(val_loss)
+            if scheduler._last_lr[0] != optimizer.param_groups[0]["lr"]:
+                logger.info(
+                    f"Learning rate adjusted to: {optimizer.param_groups[0]['lr']}"
+                )
 
     def run_inference(
         self, model_path: str, dataset: Union[SynapseDataset, list[torch.Tensor]]

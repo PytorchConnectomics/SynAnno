@@ -20,8 +20,6 @@ UNET3D_CONFIG = {
 }
 
 DATASET_CONFIG = {
-    "num_pools": 50,
-    "maxsize": 50,
     "max_workers": 8,
     "timeout": 15,
     "resize_depth": 16,
@@ -43,8 +41,8 @@ TRAINING_CONFIG = {
     "schedular_gamma": 0.1,
     "num_epochs": 200,
     "patience": 25,
-    "train_range": (0, 1000),
-    "val_range": (2000, 2100),
+    "train_range": (0, 200),
+    "val_range": (200, 220),
     # "test_range": (56, 13),
     "checkpoints": "/mmfs1/data/lauenbur/syn_anno_checkpoints/",
     # "checkpoints": "/Users/lando/Code/SynAnno/synanno/backend/auto_segmentation/syn_anno_checkpoints/",

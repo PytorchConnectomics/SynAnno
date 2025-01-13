@@ -73,8 +73,6 @@ class SynapseDataset(Dataset):
         self.synapse_id_range = synapse_id_range
         self.transform = transform
         self.target_transform = target_transform
-        self.num_pools = DATASET_CONFIG["num_pools"]
-        self.maxsize = DATASET_CONFIG["maxsize"]
         self.max_workers = DATASET_CONFIG["max_workers"]
         self.timeout = DATASET_CONFIG["timeout"]
         self.resize_depth = DATASET_CONFIG["resize_depth"]
@@ -150,7 +148,7 @@ class SynapseDataset(Dataset):
             seed_volume, selected_seed_slices = generate_seed_target(
                 sample["target"], self.slices_to_generate, self.target_range
             )
-            sample["source_seed_target"] = seed_volume
+            # sample["source_seed_target"] = seed_volume
             sample["source"] = np.stack([sample["source_image"], seed_volume], axis=-1)
             sample["selected_slices"] = selected_seed_slices
 

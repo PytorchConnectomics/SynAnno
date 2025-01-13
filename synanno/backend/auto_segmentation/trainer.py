@@ -97,9 +97,12 @@ class Trainer:
     def run_training(
         self, train_dataset: SynapseDataset, val_dataset: SynapseDataset
     ) -> None:
-        """Run
-        train_dataset (SynapseDataset): Training dataset.
-        val_dataset (SynapseDataset): Validation dataset.
+        """
+        Run the training process for the UNet3D model.
+
+        Args:
+            train_dataset (SynapseDataset): Training dataset.
+            val_dataset (SynapseDataset): Validation dataset.
         """
         train_loader = DataLoader(
             train_dataset,
@@ -128,15 +131,15 @@ class Trainer:
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             mode="min",
-            factor=TRAINING_CONFIG["schedular_gamma"],
-            patience=TRAINING_CONFIG["schedular_patience"],
+            factor=TRAINING_CONFIG["scheduler_gamma"],
+            patience=TRAINING_CONFIG["scheduler_patience"],
             verbose=True,
         )
 
         num_epochs = TRAINING_CONFIG["num_epochs"]
         best_val_loss = float("inf")
 
-        # Trigger early stop if not improvement for #patience epochs
+        # Trigger early stop if no improvement for #patience epochs
         patience = TRAINING_CONFIG.get("patience", 5)
         patience_counter = 0
 
@@ -153,6 +156,8 @@ class Trainer:
                 f"Train Loss: {train_loss:.4f} | Validation Loss: {val_loss:.4f}"
             )
 
+            scheduler.step(val_loss)
+
             if val_loss < best_val_loss:
                 self.save_best_model(model, train_loss, val_loss)
                 best_val_loss = val_loss
@@ -165,12 +170,6 @@ class Trainer:
                     "Early stopping triggered due to no improvement in validation loss."
                 )
                 break
-
-            scheduler.step(val_loss)
-            if scheduler._last_lr[0] != optimizer.param_groups[0]["lr"]:
-                logger.info(
-                    f"Learning rate adjusted to: {optimizer.param_groups[0]['lr']}"
-                )
 
     def run_inference(
         self, model_path: str, dataset: Union[SynapseDataset, list[torch.Tensor]]

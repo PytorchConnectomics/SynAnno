@@ -1,6 +1,6 @@
 $(document).ready(function () {
   // path where to save the custom masks
-  const base_mask_path = "/static/custom_masks/";
+  const base_mask_path = "/static/Images/Mask/";
 
   $('[id^="drawButton-"]').click(async function () {
     var [page, data_id, label] = $($(this))
@@ -123,7 +123,7 @@ $(document).ready(function () {
 
     // disable all options except the activate canvas button
     $("#canvasButtonFill").prop("disabled", true);
-    $("#canvasButtonSplit").prop("disabled", true);
+    $("#canvasButtonRevise").prop("disabled", true);
     $("#canvasButtonSave").prop("disabled", true);
 
     // get the current slice slice index

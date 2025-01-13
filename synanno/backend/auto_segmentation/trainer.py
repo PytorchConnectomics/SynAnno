@@ -133,6 +133,7 @@ class Trainer:
             mode="min",
             factor=TRAINING_CONFIG["scheduler_gamma"],
             patience=TRAINING_CONFIG["scheduler_patience"],
+            threshold=TRAINING_CONFIG.get("scheduler_threshold", 1e-4),
             verbose=True,
         )
 
@@ -145,18 +146,18 @@ class Trainer:
 
         for epoch in range(num_epochs):
             logger.info(f"Epoch {epoch + 1}/{num_epochs}")
+            logger.info(f"Current Learning Rate: {optimizer.param_groups[0]['lr']}")
 
             logger.info("Training pass...")
             train_loss = self.train(model, train_loader, criterion, optimizer, device)
 
             logger.info("Validation pass...")
             val_loss = self.validate(model, val_loader, criterion, device)
+            scheduler.step(val_loss)
 
             logger.info(
                 f"Train Loss: {train_loss:.4f} | Validation Loss: {val_loss:.4f}"
             )
-
-            scheduler.step(val_loss)
 
             if val_loss < best_val_loss:
                 self.save_best_model(model, train_loss, val_loss)

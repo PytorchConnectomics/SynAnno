@@ -167,9 +167,8 @@ $(document).ready(function () {
     if ($("canvas.circleCanvasPre").hasClass("d-none")) {
       clear_canvas(ctx_circle_pre, canvas_circle_pre);
       $("#imgDetails-EM-GT-circlePre").addClass("d-none");
-      $("#canvasButtonPreCRD").text("Save");
       $("canvas.circleCanvasPre").removeClass("d-none");
-      $("#canvasButtonDrawMask, #canvasButtonPostCRD, #canvasButtonAuto").prop("disabled", true);
+      $("#canvasButtonDrawMask, #canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonAuto").prop("disabled", true);
       rect_circle = $("#imgDetails-EM")[0].getBoundingClientRect();
       $("canvas.circleCanvasPre")[0].width = rect_circle.width;
       $("canvas.circleCanvasPre")[0].height = rect_circle.height;
@@ -180,22 +179,32 @@ $(document).ready(function () {
       post_CRD = false;
       split_mask = false;
       draw_mask = false;
-    } else if ($("#canvasButtonPreCRD").text() == "Save") {
-      save_canvas(canvas_circle_pre, "circlePre");
-      $("#canvasButtonPreCRD").text("Pre-Synaptic CRD");
-      $("#canvasButtonPostCRD, #canvasButtonDrawMask, #canvasButtonAuto").prop("disabled", false);
-      pre_CRD = false;
     } else {
       clear_canvas(ctx_circle_pre, canvas_circle_pre);
       $("canvas.circleCanvasPre").css("z-index", 3);
       $("canvas.circleCanvasPost").css("z-index", 2);
       $("canvas.curveCanvas").css("z-index", 1);
-      $("#canvasButtonPreCRD").text("Save");
-      $("#canvasButtonDrawMask, #canvasButtonPostCRD, #canvasButtonFill, #canvasButtonRevise, #canvasButtonSave, #canvasButtonAuto").prop("disabled", true);
+      $("#canvasButtonDrawMask, #canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonFill, #canvasButtonRevise, #canvasButtonSave, #canvasButtonAuto").prop("disabled", true);
       pre_CRD = true;
       post_CRD = false;
       split_mask = false;
       draw_mask = false;
+    }
+  });
+
+  $("canvas.circleCanvasPre").on("click", async function (e) {
+    if (pre_CRD) {
+      clear_canvas(ctx_circle_pre, canvas_circle_pre);
+      var pos = getXY(canvas_circle_pre, e, rect_circle);
+      x_syn_crd = pos.x;
+      y_syn_crd = pos.y;
+      ctx_circle_pre.fillStyle = "rgb(0, 255, 0)";
+      ctx_circle_pre.beginPath();
+      ctx_circle_pre.arc(x_syn_crd, y_syn_crd, 10, 0, 2 * Math.PI);
+      ctx_circle_pre.fill();
+      save_canvas(canvas_circle_pre, "circlePre");
+      $("#canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonDrawMask, #canvasButtonAuto").prop("disabled", false);
+      pre_CRD = false;
     }
   });
 
@@ -205,9 +214,8 @@ $(document).ready(function () {
     if ($("canvas.circleCanvasPost").hasClass("d-none")) {
       clear_canvas(ctx_circle_post, canvas_circle_post);
       $("#imgDetails-EM-GT-circlePost").addClass("d-none");
-      $("#canvasButtonPostCRD").text("Save");
       $("canvas.circleCanvasPost").removeClass("d-none");
-      $("#canvasButtonDrawMask, #canvasButtonPreCRD, #canvasButtonAuto").prop("disabled", true);
+      $("#canvasButtonDrawMask, #canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonAuto").prop("disabled", true);
       rect_circle = $("#imgDetails-EM")[0].getBoundingClientRect();
       $("canvas.circleCanvasPost")[0].width = rect_circle.width;
       $("canvas.circleCanvasPost")[0].height = rect_circle.height;
@@ -218,22 +226,32 @@ $(document).ready(function () {
       post_CRD = true;
       split_mask = false;
       draw_mask = false;
-    } else if ($("#canvasButtonPostCRD").text() == "Save") {
-      save_canvas(canvas_circle_post, "circlePost");
-      $("#canvasButtonPostCRD").text("Post-Synaptic CRD");
-      $("#canvasButtonPreCRD, #canvasButtonDrawMask, #canvasButtonAuto").prop("disabled", false);
-      post_CRD = false;
     } else {
       clear_canvas(ctx_circle_post, canvas_circle_post);
       $("canvas.circleCanvasPost").css("z-index", 3);
       $("canvas.circleCanvasPre").css("z-index", 2);
       $("canvas.curveCanvas").css("z-index", 1);
-      $("#canvasButtonPostCRD").text("Save");
-      $("#canvasButtonDrawMask, #canvasButtonPreCRD, #canvasButtonFill, #canvasButtonRevise, #canvasButtonSave, #canvasButtonAuto").prop("disabled", true);
+      $("#canvasButtonDrawMask, #canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonFill, #canvasButtonRevise, #canvasButtonSave, #canvasButtonAuto").prop("disabled", true);
       pre_CRD = false;
       post_CRD = true;
       split_mask = false;
       draw_mask = false;
+    }
+  });
+
+  $("canvas.circleCanvasPost").on("click", async function (e) {
+    if (post_CRD) {
+      clear_canvas(ctx_circle_post, canvas_circle_post);
+      var pos = getXY(canvas_circle_post, e, rect_circle);
+      x_syn_crd = pos.x;
+      y_syn_crd = pos.y;
+      ctx_circle_post.fillStyle = "rgb(0, 0, 255)";
+      ctx_circle_post.beginPath();
+      ctx_circle_post.arc(x_syn_crd, y_syn_crd, 10, 0, 2 * Math.PI);
+      ctx_circle_post.fill();
+      save_canvas(canvas_circle_post, "circlePost");
+      $("#canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonDrawMask, #canvasButtonAuto").prop("disabled", false);
+      post_CRD = false;
     }
   });
 

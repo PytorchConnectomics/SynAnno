@@ -3,7 +3,7 @@ $(document).ready(function () {
   const base_mask_path = "/static/Images/Mask/";
 
   $('[id^="drawButton-"]').click(async function () {
-    var [page, data_id, label] = $($(this))
+    var [page, data_id, label] = $(this)
       .attr("id")
       .replace(/drawButton-/, "")
       .split("-");
@@ -14,7 +14,7 @@ $(document).ready(function () {
     // we require the information about the whole instance
     var load = "full";
 
-    req_data = $.ajax({
+    let req_data = $.ajax({
       url: "/get_instance",
       type: "POST",
       data: {
@@ -28,7 +28,7 @@ $(document).ready(function () {
 
     // set the base image to the center slice
     await req_data.done(function (data) {
-      data_json = JSON.parse(data.data);
+      let data_json = JSON.parse(data.data);
       $("#imgDetails-EM").addClass(label.toLowerCase());
       $("#imgDetails-EM").attr(
         "src",
@@ -81,15 +81,15 @@ $(document).ready(function () {
       $("#minSlice").html(0);
       $("#maxSlice").html(data.slices_len - 1);
 
-      cz0 = data_json.cz0;
-      cy0 = data_json.cy0;
-      cx0 = data_json.cx0;
+      let cz0 = data_json.cz0;
+      let cy0 = data_json.cy0;
+      let cx0 = data_json.cx0;
 
       $("#rangeSlices").data("viewed_instance_slice", data_json.Middle_Slice);
     });
 
     // retrieve the updated NG link
-    req_ng = $.ajax({
+    let req_ng = $.ajax({
       url: "/neuro",
       type: "POST",
       // we set mode to 'annotate' as we would like to set the focus on the particular instance
@@ -97,7 +97,7 @@ $(document).ready(function () {
     });
 
     req_ng.done(function (data) {
-      ng_link = data.ng_link;
+      let ng_link = data.ng_link;
       $("#ng-iframe-draw").attr("src", ng_link);
     });
   });
@@ -127,7 +127,7 @@ $(document).ready(function () {
     $("#canvasButtonSave").prop("disabled", true);
 
     // get the current slice slice index
-    viewed_instance_slice = $(this).val();
+    let viewed_instance_slice = $(this).val();
     // update the appropriate attribute to be used by the draw.js script
     $(this).data("viewed_instance_slice", viewed_instance_slice);
 
@@ -142,7 +142,7 @@ $(document).ready(function () {
     var load = "single";
 
     // retrieve the information from the backend
-    req = $.ajax({
+    let req = $.ajax({
       url: "/get_instance",
       type: "POST",
       data: {
@@ -157,7 +157,7 @@ $(document).ready(function () {
 
     // update the slice and GT that is depicted
     req.done(function (data) {
-      data_json = JSON.parse(data.data);
+      let data_json = JSON.parse(data.data);
       $("#imgDetails-EM").attr(
         "src",
         staticBaseUrl + data_json.EM + "/" + viewed_instance_slice + ".png",
@@ -201,16 +201,16 @@ $(document).ready(function () {
     });
   });
 
-  $("#add_new_instance").click(async function (e) {
+  $("#add_new_instance").click(async function () {
     // open a new Neuroglancer view
-    req_ng = $.ajax({
+    let req_ng = $.ajax({
       url: "/neuro",
       type: "POST",
       data: { cz0: 0, cy0: 0, cx0: 0, mode: "draw" },
     });
 
     req_ng.done(function (data) {
-      ng_link = data.ng_link;
+      let ng_link = data.ng_link;
       $("#ng-iframe-draw").attr("src", ng_link);
     });
 

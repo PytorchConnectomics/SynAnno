@@ -118,6 +118,22 @@
 <!-- Modal for adding false positve synapses -->
 {% include "draw_modal_fn.html" %}
 
+<!-- Progress Modal -->
+<div class="modal fade" id="progressModal" tabindex="-1" role="dialog" aria-labelledby="progressModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+          <div class="modal-body text-center">
+              <div class="spinner-border text-primary" role="status">
+                  <span class="sr-only">Loading...</span>
+              </div>
+              <div id="spinnerText">
+                  <strong>Loading...</strong>
+              </div>
+          </div>
+      </div>
+  </div>
+</div>
+
 <script src="{{ url_for('static', filename='draw_module.js') }}"></script>
 <script src="{{ url_for('static', filename='draw.js') }}"></script>
 

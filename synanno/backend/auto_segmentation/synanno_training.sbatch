@@ -32,6 +32,9 @@ BRANCH_NAME="leander/auto-seg-model"
 # Adjust to your preferred directory
 INSTALL_DIR="/mmfs1/data/lauenbur/SynAnno"
 
+# Set the environment variable for SLURM execution
+export EXECUTION_ENV="slurm"
+
 # Clone the repository if not already done
 echo "Cloning repository..."
 if [ ! -d "$INSTALL_DIR" ]; then

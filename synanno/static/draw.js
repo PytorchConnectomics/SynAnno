@@ -121,6 +121,9 @@ $(document).ready(function () {
   // on click canvasButtonAuto call backend python function that queries a model to predict the mask
   $("#canvasButtonAuto").on("click", async function () {
     try {
+      // Show the spinner
+      $("#progressModal").modal("show");
+
       const image = imageData.find(img => img.Page == page && img.Image_Index == data_id);
       const middle_slice = image.Middle_Slice;
 
@@ -152,6 +155,9 @@ $(document).ready(function () {
       }
     } catch (error) {
       console.error("An error occurred during auto annotation:", error);
+    } finally {
+      // Hide the spinner
+      $("#progressModal").modal("hide");
     }
   });
 

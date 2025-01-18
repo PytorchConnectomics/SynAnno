@@ -4,7 +4,7 @@ from glob import glob
 import torch
 from PIL import Image
 import numpy as np
-from synanno.backend.auto_segmentation.config import DATASET_CONFIG
+from synanno.backend.auto_segmentation.config import get_config
 from synanno.backend.auto_segmentation.dataset import normalize_tensor, binarize_tensor
 from synanno.backend.auto_segmentation.trainer import Trainer
 from synanno.backend.auto_segmentation.visualize_instances import visualize_instances
@@ -12,6 +12,11 @@ from synanno.backend.processing import apply_transparency
 
 # Define a Blueprint for auto_annotate routes
 blueprint = Blueprint("auto_annotate", __name__)
+
+CONFIG = get_config()
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def load_images_and_masks(
@@ -53,9 +58,9 @@ def load_images_and_masks(
 
     mask_np_3d = np.zeros(
         (
-            DATASET_CONFIG["resize_depth"],
-            DATASET_CONFIG["resize_height"],
-            DATASET_CONFIG["resize_width"],
+            CONFIG["DATASET_CONFIG"]["resize_depth"],
+            CONFIG["DATASET_CONFIG"]["resize_height"],
+            CONFIG["DATASET_CONFIG"]["resize_width"],
         )
     )
 
@@ -96,9 +101,9 @@ def prepare_sample(img_np_3d: np.ndarray, mask_np_3d: np.ndarray) -> torch.Tenso
     img_tensor = torch.nn.functional.interpolate(
         img_tensor,
         size=(
-            DATASET_CONFIG["resize_depth"],
-            DATASET_CONFIG["resize_height"],
-            DATASET_CONFIG["resize_width"],
+            CONFIG["DATASET_CONFIG"]["resize_depth"],
+            CONFIG["DATASET_CONFIG"]["resize_height"],
+            CONFIG["DATASET_CONFIG"]["resize_width"],
         ),
         mode="trilinear",
         align_corners=False,
@@ -106,9 +111,9 @@ def prepare_sample(img_np_3d: np.ndarray, mask_np_3d: np.ndarray) -> torch.Tenso
     mask_tensor = torch.nn.functional.interpolate(
         mask_tensor,
         size=(
-            DATASET_CONFIG["resize_depth"],
-            DATASET_CONFIG["resize_height"],
-            DATASET_CONFIG["resize_width"],
+            CONFIG["DATASET_CONFIG"]["resize_depth"],
+            CONFIG["DATASET_CONFIG"]["resize_height"],
+            CONFIG["DATASET_CONFIG"]["resize_width"],
         ),
         mode="nearest",
     )
@@ -126,9 +131,9 @@ def prepare_sample(img_np_3d: np.ndarray, mask_np_3d: np.ndarray) -> torch.Tenso
     assert sample.shape == (
         1,
         2,
-        DATASET_CONFIG["resize_depth"],
-        DATASET_CONFIG["resize_height"],
-        DATASET_CONFIG["resize_width"],
+        CONFIG["DATASET_CONFIG"]["resize_depth"],
+        CONFIG["DATASET_CONFIG"]["resize_height"],
+        CONFIG["DATASET_CONFIG"]["resize_width"],
     ), f"The shape is incorrect: {sample.shape}"
 
     return sample
@@ -161,10 +166,12 @@ def save_auto_masks(
         os.makedirs(mask_sub_folder)
 
     for i in range(prediction[0].shape[2]):
-        img_array = (prediction[0][0, 0, i, :, :].cpu().numpy() * 255).astype(np.uint8)
+        img_array = np.copy(
+            (prediction[0][0, 0, i, :, :].cpu().numpy() * 255).astype(np.uint8)
+        )
 
         if not non_zero or np.max(img_array) > 1e-4:
-            image = apply_transparency(img_array)
+            image = apply_transparency(img_array, color=(0, 255, 255))
             image.save(
                 os.path.join(
                     mask_sub_folder,
@@ -201,7 +208,9 @@ def auto_annotate() -> dict[str, object]:
 
     # Run inference
     trainer = Trainer()
-    _, prediction = trainer.run_inference("best_unet3d.pth", [sample])
+    prediction, _ = trainer.run_inference(
+        CONFIG["TRAINING_CONFIG"]["checkpoints"], [sample]
+    )
 
     # Save the auto masks
     save_auto_masks(data_id, mask_folder, map_slice_to_idx, prediction)
@@ -221,7 +230,10 @@ if __name__ == "__main__":
     sample = prepare_sample(img_np_3d, mask_np_3d)
 
     trainer = Trainer()
-    _, prediction = trainer.run_inference("best_unet3d.pth", [sample])
+
+    prediction, _ = trainer.run_inference(
+        CONFIG["TRAINING_CONFIG"]["checkpoints"], [sample]
+    )
 
     save_auto_masks(data_id, mask_folder, map_slice_to_idx, prediction)
 

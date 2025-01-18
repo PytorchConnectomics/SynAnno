@@ -126,13 +126,12 @@ def retrieve_instance_from_cv(
         (bound_target.maxpt * list(scale.values())).astype(int),
     )
 
-    with current_app.cloud_volume_download_lock:
-        cropped_img = source_cv.download(
-            bound_source, coord_resolution=coord_resolution_source, mip=0, parallel=True
-        )
-        cropped_gt = target_cv.download(
-            bound_target, coord_resolution=coord_resolution_target, mip=0, parallel=True
-        )
+    cropped_img = source_cv.download(
+        bound_source, coord_resolution=coord_resolution_source, mip=0, parallel=True
+    )
+    cropped_gt = target_cv.download(
+        bound_target, coord_resolution=coord_resolution_target, mip=0, parallel=True
+    )
 
     cropped_img = cropped_img.squeeze(axis=3)
     cropped_gt = cropped_gt.squeeze(axis=3)

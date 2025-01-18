@@ -43,7 +43,7 @@
         type="button"
         class="btn btn-light"
         value="{{grid_opacity or '0.5'}}"
-        >{{grid_opacity or 0.5}}</span
+        >{{grid_opacity or '0.5'}}</span
       >
       <button
         id="inc-opacity-grid"
@@ -69,7 +69,7 @@
             src="{{ url_for('static', filename=image.GT ~ '/' ~ image.Middle_Slice ~ '.png')}}"
             width="64px"
             height="64px"
-            style="position: absolute; opacity: grid_opacity if grid_opacity else '0.5';"
+            style="position: absolute; opacity: {{grid_opacity if grid_opacity else '0.5'}};"
           />
           <img
             id="imgGT-{{image.Image_Index}}"

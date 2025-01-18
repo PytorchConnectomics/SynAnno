@@ -384,20 +384,18 @@ def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) 
     )
 
     # retrieve the source and target images from the cloud volume
-    # Lock for cloud volume downloads
-    with current_app.cloud_volume_download_lock:
-        cropped_img = current_app.source_cv.download(
-            bound_source,
-            coord_resolution=current_app.coord_resolution_source,
-            mip=0,
-            parallel=True,
-        )
-        cropped_gt = current_app.target_cv.download(
-            bound_target,
-            coord_resolution=current_app.coord_resolution_target,
-            mip=0,
-            parallel=True,
-        )
+    cropped_img = current_app.source_cv.download(
+        bound_source,
+        coord_resolution=current_app.coord_resolution_source,
+        mip=0,
+        parallel=True,
+    )
+    cropped_gt = current_app.target_cv.download(
+        bound_target,
+        coord_resolution=current_app.coord_resolution_target,
+        mip=0,
+        parallel=True,
+    )
 
     # remove the singleton dimension, take care as the z dimension might be singleton
     cropped_img = cropped_img.squeeze(axis=3)
@@ -516,7 +514,7 @@ def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) 
         lab_c.save(os.path.join(syn_dir_instance, img_name), "PNG")
 
 
-def apply_transparency(image: np.ndarray) -> Image:
+def apply_transparency(image: np.ndarray, color: tuple = None) -> Image:
     """Reduce the opacity of all black pixels to zero in an RGBA image.
 
     Args:
@@ -525,13 +523,22 @@ def apply_transparency(image: np.ndarray) -> Image:
     Returns:
         The image with transparency applied to black pixels.
     """
-    image = Image.fromarray(image)
-    image = image.convert("RGBA")
-    image = np.asarray(image)
+    image = np.array(Image.fromarray(image).convert("RGBA"))
+
+    # the coloring function is so far only used for the auto segmentation results
+    # if color is not None:
+    #    image = np.copy(image)
+
     r, g, b, a = np.rollaxis(image, axis=-1)  # split into 4 n x m arrays
     r_m = r != 0  # binary mask for red channel, True for all non black values
     g_m = g != 0  # binary mask for green channel, True for all non black values
     b_m = b != 0  # binary mask for blue channel, True for all non black values
+
+    # apply color
+    if color is not None:
+        r[r_m] = color[0]
+        g[g_m] = color[1]
+        b[b_m] = color[2]
 
     # combine the three binary masks by multiplying them (1*1=1, 1*0=0, 0*1=0, 0*0=0)
     # multiply the combined binary mask with the alpha channel

@@ -24,9 +24,6 @@ def create_app():
     # attach a lock for the data frame access to the app instance
     app.df_metadata_lock = Lock()
 
-    # global lock for cloud volume download operations
-    app.cloud_volume_download_lock = Lock()
-
     return app
 
 

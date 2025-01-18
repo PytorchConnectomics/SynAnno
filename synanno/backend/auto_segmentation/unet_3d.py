@@ -1,7 +1,9 @@
 import torch
 import torch.nn as nn
 from torchsummary import summary
-from synanno.backend.auto_segmentation.config import UNET3D_CONFIG
+from synanno.backend.auto_segmentation.config import get_config
+
+CONFIG = get_config()
 
 
 class ConvBlock(nn.Module):
@@ -164,10 +166,10 @@ class UNet3D(nn.Module):
         Initialize the UNet3D model.
         """
         super(UNet3D, self).__init__()
-        in_channels = UNET3D_CONFIG["in_channels"]
-        out_channels = UNET3D_CONFIG["out_channels"]
-        bilinear = UNET3D_CONFIG["bilinear"]
-        features = UNET3D_CONFIG["features"]
+        in_channels = CONFIG["UNET3D_CONFIG"]["in_channels"]
+        out_channels = CONFIG["UNET3D_CONFIG"]["out_channels"]
+        bilinear = CONFIG["UNET3D_CONFIG"]["bilinear"]
+        features = CONFIG["UNET3D_CONFIG"]["features"]
 
         self.inc = ConvBlock(in_channels, features[0])
         self.down_blocks = nn.ModuleList(

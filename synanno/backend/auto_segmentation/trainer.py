@@ -7,7 +7,6 @@ from synanno.backend.auto_segmentation.dataset import SynapseDataset
 from synanno.backend.auto_segmentation.weighted_bce_with_logits_loss import (
     WeightedBCEWithLogitsLoss,
 )
-from synanno.backend.auto_segmentation.config import TRAINING_CONFIG
 import os
 import glob
 import sys
@@ -16,10 +15,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from synanno.backend.auto_segmentation.config import get_config
+
+CONFIG = get_config()
+
 
 class Trainer:
     def __init__(self):
-        self.checkpoint_dir = TRAINING_CONFIG["checkpoints"]
+        self.checkpoint_dir = CONFIG["TRAINING_CONFIG"]["checkpoints"]
 
         if not os.path.exists(self.checkpoint_dir):
             os.makedirs(self.checkpoint_dir)
@@ -39,7 +42,7 @@ class Trainer:
         model.to(device)
 
         logger.info("Checking for checkpoint...")
-        if model_path is None:
+        if os.path.isdir(model_path):
             model_files = sorted(
                 glob.glob(os.path.join(self.checkpoint_dir, "best_unet3d_tl_*.pth")),
                 key=lambda x: float(x.split("_vl_")[1].split(".pth")[0]),
@@ -53,7 +56,8 @@ class Trainer:
                     f"Loading best model based on validation loss: {model_path}"
                 )
 
-        if model_path and os.path.isfile(model_path):
+        if model_path is not None and os.path.isfile(model_path):
+            logger.info(f"Loading model: {model_path}")
             model.load_state_dict(torch.load(model_path, map_location=device))
 
         return model
@@ -106,42 +110,42 @@ class Trainer:
         """
         train_loader = DataLoader(
             train_dataset,
-            batch_size=TRAINING_CONFIG["batch_size"],
+            batch_size=CONFIG["TRAINING_CONFIG"]["batch_size"],
             shuffle=True,
-            num_workers=TRAINING_CONFIG["num_workers"],
+            num_workers=CONFIG["TRAINING_CONFIG"]["num_workers"],
         )
         val_loader = DataLoader(
             val_dataset,
-            batch_size=TRAINING_CONFIG["batch_size"],
+            batch_size=CONFIG["TRAINING_CONFIG"]["batch_size"],
             shuffle=False,
-            num_workers=TRAINING_CONFIG["num_workers"],
+            num_workers=CONFIG["TRAINING_CONFIG"]["num_workers"],
         )
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model = self.load_model()
 
         criterion = WeightedBCEWithLogitsLoss(
-            pos_weight=torch.tensor(TRAINING_CONFIG["pos_weight"]).to(device)
+            pos_weight=torch.tensor(CONFIG["TRAINING_CONFIG"]["pos_weight"]).to(device)
         )
         optimizer = torch.optim.Adam(
-            model.parameters(), lr=TRAINING_CONFIG["learning_rate"]
+            model.parameters(), lr=CONFIG["TRAINING_CONFIG"]["learning_rate"]
         )
 
         # Use ReduceLROnPlateau to reduce the learning rate if no improvement in validation loss
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             mode="min",
-            factor=TRAINING_CONFIG["scheduler_gamma"],
-            patience=TRAINING_CONFIG["scheduler_patience"],
-            threshold=TRAINING_CONFIG.get("scheduler_threshold", 1e-4),
+            factor=CONFIG["TRAINING_CONFIG"]["scheduler_gamma"],
+            patience=CONFIG["TRAINING_CONFIG"]["scheduler_patience"],
+            threshold=CONFIG["TRAINING_CONFIG"].get("scheduler_threshold", 1e-4),
             verbose=True,
         )
 
-        num_epochs = TRAINING_CONFIG["num_epochs"]
+        num_epochs = CONFIG["TRAINING_CONFIG"]["num_epochs"]
         best_val_loss = float("inf")
 
         # Trigger early stop if no improvement for #patience epochs
-        patience = TRAINING_CONFIG.get("patience", 5)
+        patience = CONFIG["TRAINING_CONFIG"].get("patience", 5)
         patience_counter = 0
 
         for epoch in range(num_epochs):
@@ -189,9 +193,9 @@ class Trainer:
         if isinstance(dataset, SynapseDataset):
             test_loader = DataLoader(
                 dataset,
-                batch_size=TRAINING_CONFIG["batch_size"],
+                batch_size=CONFIG["TRAINING_CONFIG"]["batch_size"],
                 shuffle=False,
-                num_workers=TRAINING_CONFIG["num_workers"],
+                num_workers=CONFIG["TRAINING_CONFIG"]["num_workers"],
             )
         else:
             # add a dummy target entry, if the provided list does not contain tuples of (input, target) pairs
@@ -203,8 +207,8 @@ class Trainer:
         model.to(device)
         model.eval()
 
-        targets = []
         predictions = []
+        targets = []
 
         with torch.no_grad():
             for inputs, target in tqdm(
@@ -217,10 +221,11 @@ class Trainer:
                 outputs = model(inputs)
                 outputs = torch.sigmoid(outputs)
                 binary_mask = (outputs > 0.5).float()
-                targets.append(target)
-                predictions.append(binary_mask)
 
-        return targets, predictions
+                predictions.append(binary_mask)
+                targets.append(target)
+
+        return predictions, targets
 
     def train(
         self,

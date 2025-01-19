@@ -166,9 +166,7 @@ def save_auto_masks(
         os.makedirs(mask_sub_folder)
 
     for i in range(prediction[0].shape[2]):
-        img_array = np.copy(
-            (prediction[0][0, 0, i, :, :].cpu().numpy() * 255).astype(np.uint8)
-        )
+        img_array = (prediction[0][0, 0, i, :, :].cpu().numpy() * 255).astype(np.uint8)
 
         if not non_zero or np.max(img_array) > 1e-4:
             image = apply_transparency(img_array, color=(0, 255, 255))

@@ -290,6 +290,8 @@ $(document).ready(function () {
 
   // activate event for splitting/erasing the curve
   $("#canvasButtonRevise").on("click", function () {
+    $("#canvasButtonFill").prop("disabled", true);
+    $("#canvasButtonRevise").prop("disabled", true);
     ctx_curve.save();
     ctx_curve.globalCompositeOperation = "destination-out";
     split_mask = true;
@@ -310,6 +312,7 @@ $(document).ready(function () {
 
   // save the current mask
   $("#canvasButtonSave").on("click", async function () {
+    split_mask = false
     save_canvas(canvas_curve, "curve");
   });
 
@@ -439,9 +442,9 @@ $(document).ready(function () {
         var y = pos.y;
         ctx_curve.strokeStyle = "#000";
         ctx_curve.beginPath();
-        ctx_curve.moveTo(x + thickness, y);
         ctx_curve.ellipse(x, y, thickness, Math.floor(thickness / 2), 0, 0, Math.PI * 2);
-        ctx_curve.fill();
+        ctx_curve.stroke(); // Draw the outline of the eraser
+        ctx_curve.fill(); // Fill the eraser to erase the mask
       }
     }
   });

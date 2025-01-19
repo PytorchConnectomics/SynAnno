@@ -15,10 +15,15 @@ $(document).ready(function () {
   });
 
   // annotation export
+  // show loading bar when loading json
   // enable the "start new process" button after json download
   $("#dl_annotate_json").click(function () {
+    $("#loading-bar").css('display', 'flex');
     if ($("#annotate_new_process").hasClass("disabled")) {
       $("#annotate_new_process").removeClass("disabled");
     }
+    $("#loading-bar").css('display', 'none');
   });
+
+
 });

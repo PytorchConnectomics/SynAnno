@@ -1,4 +1,10 @@
 $(document).ready(function () {
+
+  // show progress bar when scrolling pages
+  $(".nav-anno").click(function () {
+    $("#loading-bar").css('display', 'flex');
+    });
+
   // update the instance specific values
   $(".image-card-btn").on("click", function () {
     var data_id = $(this).attr("data_id");
@@ -65,18 +71,29 @@ $(document).ready(function () {
       data: { mode: mode, load: load, data_id: data_id, page: page },
     });
 
-    // update the modal
+
     await req_data.done(function (data) {
       data_json = JSON.parse(data.data);
-      $("#rangeSlices").attr("min", data.range_min);
-      $("#rangeSlices").attr("max", data.range_min + data.slices_len - 1);
-      $("#rangeSlices").val(data.halflen);
-      $("#rangeSlices").attr("data_id", data_id);
-      $("#rangeSlices").attr("page", page);
+      // enable the range slider if more than a single slice exists per instance
+      if (data.slices_len > 1){
+        $("#rangeSlices").removeClass("d-none");
+        $("#minSlice").removeClass("d-none");
+        $("#maxSlice").removeClass("d-none");
+        $("#rangeSlices").attr("min", data.range_min);
+        $("#rangeSlices").attr("max", data.range_min + data.slices_len - 1);
+        $("#rangeSlices").val(data.halflen);
+        $("#rangeSlices").attr("data_id", data_id);
+        $("#rangeSlices").attr("page", page);
 
-      $("#minSlice").html(0);
-      $("#maxSlice").html(data.slices_len - 1);
-
+        $("#minSlice").html(0);
+        $("#maxSlice").html(data.slices_len - 1);
+      }
+      else{
+        $("#rangeSlices").addClass("d-none");
+        $("#minSlice").addClass("d-none");
+        $("#maxSlice").addClass("d-none");
+      }
+      // load the current slice
       $("#imgDetails-EM").addClass(label.toLowerCase());
       $("#imgDetails-EM").attr(
         "src",
@@ -91,6 +108,7 @@ $(document).ready(function () {
       cz0 = data_json.cz0;
       cy0 = data_json.cy0;
       cx0 = data_json.cx0;
+
     });
 
     // retrieve the updated NG link
@@ -217,19 +235,5 @@ function check_gt() {
   } else {
     $("#imgDetails-GT").css("display", "block");
     $("#check-em").prop("disabled", false);
-  }
-}
-
-// toggle the image in the modal view
-function check_em() {
-  var checkbox = document.getElementById("check-em");
-  if (checkbox.checked == false) {
-    $("#imgDetails-GT").css("background-color", "black");
-    $("#imgDetails-GT").css("opacity", "1");
-    $("#check-gt").prop("disabled", true);
-  } else {
-    $("#imgDetails-GT").css("background-color", "transparent");
-    $("#imgDetails-GT").css("opacity", "1");
-    $("#check-gt").prop("disabled", false);
   }
 }

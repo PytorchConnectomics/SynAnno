@@ -133,9 +133,6 @@ def reset() -> Template:
         Renders the landing-page view.
     """
 
-    # reset progress bar
-    current_app.progress_bar_status = {"status": "Loading Source File", "percent": 0}
-
     # reset time
     current_app.proofread_time = dict.fromkeys(current_app.proofread_time, None)
 

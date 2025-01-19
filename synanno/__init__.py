@@ -62,7 +62,6 @@ def configure_app(app):
 
 def initialize_global_variables(app):
     """Set up the global variables for the app."""
-    app.progress_bar_status = {"status": "Loading Source File", "percent": 0}
     app.proofread_time = {
         "start_grid": None,
         "finish_grid": None,

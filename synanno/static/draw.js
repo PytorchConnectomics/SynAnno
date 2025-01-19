@@ -16,13 +16,13 @@ $(document).ready(function () {
   var rect_curve, rect_circle;
 
   // turn mask drawing and splitting off at the start
-  var draw_mask = false, split_mask = false;
+  let draw_mask = false, split_mask = false;
 
   // global buffer for the start, end, and control points of the spline
   var points = [], pointsQBez = [];
 
   // init thickness
-  var thickness = 20;
+  const thickness = 20;
 
   // define colors
   const pink = "rgba(255, 0, 255, 0.7)";
@@ -34,13 +34,13 @@ $(document).ready(function () {
   const base_mask_path = "/static/Images/Mask/";
 
   // init pre and post synaptic coordinates
-  var pre_CRD = false, post_CRD = false;
+  let pre_CRD = false, post_CRD = false;
 
   // make the last set coordinates globally available
-  var x_syn_crd = null, y_syn_crd = null;
+  let x_syn_crd = null, y_syn_crd = null;
 
   // the currently viewed image in the grid view
-  var pre_slice = null, post_slice = null;
+  let pre_slice = null, post_slice = null;
 
   // make sure that the modal is reset every time it gets closed
   $(".modal").on("hidden.bs.modal", function () {
@@ -122,7 +122,7 @@ $(document).ready(function () {
   $("#canvasButtonAuto").on("click", async function () {
     try {
       // Show the spinner
-      $("#progressModal").modal("show");
+      $("#loading-bar").css('display', 'flex');
 
       const image = imageData.find(img => img.Page == page && img.Image_Index == data_id);
       const middle_slice = image.Middle_Slice;
@@ -157,7 +157,7 @@ $(document).ready(function () {
       console.error("An error occurred during auto annotation:", error);
     } finally {
       // Hide the spinner
-      $("#progressModal").modal("hide");
+      $("#loading-bar").css('display', 'none');
     }
   });
 

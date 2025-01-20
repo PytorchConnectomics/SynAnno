@@ -41,6 +41,7 @@ import glob
 from flask import Blueprint
 from flask import current_app
 
+from synanno.backend.processing import _process_instance
 
 # define a Blueprint for manual_annotate routes
 blueprint = Blueprint("manual_annotate", __name__)
@@ -154,6 +155,75 @@ def save_canvas() -> Dict[str, object]:
     final_json = jsonify(data=data)
 
     return final_json
+
+
+@blueprint.route("/load_missing_slices", methods=["POST"])
+def load_missing_slices(necessary_slice_number: int = 16) -> Dict[str, str]:
+    """The auto segmentation view needs a set number of slices per instance (depth). Coming from the
+    Annotation view the user might use a different number of slices - most likely a single slice.
+    To enable the user to go through the individual slices, redraw the mask and auto generate the mask we thus
+    need to download the remaining slices.
+    """
+
+    # Retrieve the current meta data from current_app.df_metadata
+    # Identify the instance with a label incorrect or unsure
+    data = current_app.df_metadata.query(
+        "Label == 'Incorrect' or Label == 'Unsure'"
+    ).to_dict("records")
+
+    static_folder = os.path.join(
+        os.path.join(current_app.root_path, current_app.config["STATIC_FOLDER"]),
+    )
+    image_folder = os.path.join(static_folder, "Images")
+
+    syn_dir, img_dir = os.path.join(image_folder, "Syn"), os.path.join(
+        image_folder, "Img"
+    )
+
+    coord_order = list(current_app.coordinate_order.keys())
+
+    # Adjust the bounding box
+    for instance in data:
+        # retrieve the coordinate order of the cloud volume | xyz, xzy, yxz, yzx, zxy, zyx
+
+        og_bb = instance["Original_Bbox"]
+
+        z1 = og_bb[coord_order.index("z") * 2]
+        z2 = og_bb[coord_order.index("z") * 2 + 1]
+
+        nr_slices = z2 - z1
+
+        missing_nr_slices = necessary_slice_number - nr_slices
+
+        if missing_nr_slices < 0:
+            print("We already should have more slices than the model can handle.")
+            break
+
+        og_bb[coord_order.index("z") * 2] = z1 - missing_nr_slices // 2
+        og_bb[coord_order.index("z") * 2 + 1] = z2 + (missing_nr_slices + 1) // 2
+
+        assert (
+            og_bb[coord_order.index("z") * 2 + 1] - og_bb[coord_order.index("z") * 2]
+            == necessary_slice_number
+        )
+
+        instance["Adjusted_Bbox"], instance["Padding"] = calculate_crop_pad(
+            instance["Original_Bbox"], current_app.vol_dim, pad_z=True
+        )
+
+        _process_instance(
+            instance,
+            os.path.join(img_dir, str(instance["Image_Index"])),
+            os.path.join(syn_dir, str(instance["Image_Index"])),
+        )
+
+        # Convert the updated instance dictionary to a dataframe with a single row
+        instance_df = pd.DataFrame([instance])
+
+        # Update the dataframe with the modified instance
+        current_app.df_metadata.update(instance_df)
+
+    return jsonify({"result": "success"})
 
 
 @blueprint.route("/ng_bbox_fn", methods=["POST"])

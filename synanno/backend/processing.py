@@ -269,12 +269,12 @@ def retrieve_instance_metadata(
                 item["cz0"] - session["crop_size_z"] // 2,
                 item["cz0"]
                 + max(
-                    1, session["crop_size_z"] // 2
+                    1, (session["crop_size_z"] + 1) // 2
                 ),  # incase the depth was set to one.
                 item["cy0"] - session["crop_size_y"] // 2,
-                item["cy0"] + session["crop_size_y"] // 2,
+                item["cy0"] + (session["crop_size_y"] + 1) // 2,
                 item["cx0"] - session["crop_size_x"] // 2,
-                item["cx0"] + session["crop_size_x"] // 2,
+                item["cx0"] + (session["crop_size_x"] + 1) // 2,
             ]
 
             item["Original_Bbox"] = [

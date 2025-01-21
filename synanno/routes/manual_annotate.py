@@ -186,6 +186,7 @@ def load_missing_slices(necessary_slice_number: int = 16) -> Dict[str, str]:
     for instance in data:
         # retrieve the coordinate order of the cloud volume | xyz, xzy, yxz, yzx, zxy, zyx
 
+        instance["crop_size_z"] = necessary_slice_number
         og_bb = instance["Original_Bbox"]
 
         z1 = og_bb[coord_order.index("z") * 2]
@@ -217,11 +218,21 @@ def load_missing_slices(necessary_slice_number: int = 16) -> Dict[str, str]:
             os.path.join(syn_dir, str(instance["Image_Index"])),
         )
 
-        # Convert the updated instance dictionary to a dataframe with a single row
-        instance_df = pd.DataFrame([instance])
+        # Update the fields Adjusted_Bbox, Padding, crop_size_z, and Original_Bbox field by field
+        condition = (current_app.df_metadata["Page"] == instance["Page"]) & (
+            current_app.df_metadata["Image_Index"] == instance["Image_Index"]
+        )
 
-        # Update the dataframe with the modified instance
-        current_app.df_metadata.update(instance_df)
+        row_index = current_app.df_metadata.loc[condition].index[0]
+
+        current_app.df_metadata.at[row_index, "Adjusted_Bbox"] = instance[
+            "Adjusted_Bbox"
+        ]
+        current_app.df_metadata.at[row_index, "Padding"] = instance["Padding"]
+        current_app.df_metadata.at[row_index, "crop_size_z"] = instance["crop_size_z"]
+        current_app.df_metadata.at[row_index, "Original_Bbox"] = instance[
+            "Original_Bbox"
+        ]
 
     return jsonify({"result": "success"})
 

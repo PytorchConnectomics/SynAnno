@@ -125,7 +125,7 @@ class Trainer:
         )
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        model = self.load_model()
+        model = self.load_model(self.checkpoint_dir)
 
         criterion = WeightedBCEWithLogitsLoss(
             pos_weight=torch.tensor(CONFIG["TRAINING_CONFIG"]["pos_weight"]).to(device)

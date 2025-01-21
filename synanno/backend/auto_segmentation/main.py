@@ -73,6 +73,7 @@ if __name__ == "__main__":
             materialization_df,
             meta_data,
             CONFIG["TRAINING_CONFIG"]["train_range"],
+            CONFIG["TRAINING_CONFIG"]["select_nr_train_samples"],
             transform=data_transforms,
         )
 
@@ -81,6 +82,7 @@ if __name__ == "__main__":
             materialization_df,
             meta_data,
             CONFIG["TRAINING_CONFIG"]["val_range"],
+            CONFIG["TRAINING_CONFIG"]["select_nr_val_samples"],
             transform=data_transforms,
         )
 

@@ -258,6 +258,7 @@ class Trainer:
             dataloader, desc="Training", leave=False, disable=not sys.stdout.isatty()
         ):
             inputs, targets = inputs.to(device), targets.to(device)
+
             optimizer.zero_grad()
             outputs = model(inputs)
             loss = criterion(outputs, targets)

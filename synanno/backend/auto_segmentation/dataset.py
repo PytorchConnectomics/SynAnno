@@ -17,6 +17,8 @@ import threading
 
 from synanno.backend.auto_segmentation.config import get_config
 
+import torchvision.transforms as transforms
+
 CONFIG = get_config()
 
 # Retrieve logger
@@ -235,7 +237,25 @@ class SynapseDataset(Dataset):
         source[1] = binarize_tensor(source[1])  # Binarize the seed mask
         target = binarize_tensor(target)  # Binarize the target
 
+        if self.transform:
+            seed = (
+                torch.random.seed()
+            )  # Get a random seed to apply the same transformation to both inputs and targets
+            torch.random.manual_seed(seed)
+            source = self.transform(source)
+            torch.random.manual_seed(seed)
+            target = self.transform(target)
+
         return source, target
+
+
+class RandomRotation90:
+    def __call__(self, sample):
+        if torch.rand(1).item() > 0.75:  # Apply rotation 25% of the time
+            angles = [90, -90]
+            angle = np.random.choice(angles)
+            return torch.rot90(sample, k=angle // 90, dims=[-2, -1])
+        return sample
 
 
 if __name__ == "__main__":
@@ -271,7 +291,18 @@ if __name__ == "__main__":
         "vol_dim": vol_dim,
     }
 
-    train_dataset = SynapseDataset(materialization_df, meta_data, (0, 2))
+    # Define the transformations
+    data_transforms = transforms.Compose(
+        [
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomVerticalFlip(),
+            RandomRotation90(),
+        ]
+    )
+
+    train_dataset = SynapseDataset(
+        materialization_df, meta_data, (0, 2), transform=data_transforms
+    )
 
     # Retrieve a training sample
     sample = train_dataset[0]

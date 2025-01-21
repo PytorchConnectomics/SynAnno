@@ -42,23 +42,26 @@ class Trainer:
         model.to(device)
 
         logger.info("Checking for checkpoint...")
-        if os.path.isdir(model_path):
-            model_files = sorted(
-                glob.glob(os.path.join(self.checkpoint_dir, "best_unet3d_tl_*.pth")),
-                key=lambda x: float(x.split("_vl_")[1].split(".pth")[0]),
-            )
-
-            if model_files:
-                model_path = model_files[
-                    0
-                ]  # Load the model with the smallest validation loss
-                logger.info(
-                    f"Loading best model based on validation loss: {model_path}"
+        if model_path is not None:
+            if os.path.isdir(model_path):
+                model_files = sorted(
+                    glob.glob(
+                        os.path.join(self.checkpoint_dir, "best_unet3d_tl_*.pth")
+                    ),
+                    key=lambda x: float(x.split("_vl_")[1].split(".pth")[0]),
                 )
 
-        if model_path is not None and os.path.isfile(model_path):
-            logger.info(f"Loading model: {model_path}")
-            model.load_state_dict(torch.load(model_path, map_location=device))
+                if model_files:
+                    model_path = model_files[
+                        0
+                    ]  # Load the model with the smallest validation loss
+                    logger.info(
+                        f"Loading best model based on validation loss: {model_path}"
+                    )
+
+            if os.path.isfile(model_path):
+                logger.info(f"Loading model: {model_path}")
+                model.load_state_dict(torch.load(model_path, map_location=device))
 
         return model
 

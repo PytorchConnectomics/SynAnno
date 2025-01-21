@@ -79,18 +79,6 @@ class SynapseDataset(Dataset):
         self.transform = transform
         self.target_transform = target_transform
 
-        self.max_workers = CONFIG["DATASET_CONFIG"]["max_workers"]
-        self.timeout = CONFIG["DATASET_CONFIG"]["timeout"]
-        self.resize_depth = CONFIG["DATASET_CONFIG"]["resize_depth"]
-        self.resize_height = CONFIG["DATASET_CONFIG"]["resize_height"]
-        self.resize_width = CONFIG["DATASET_CONFIG"]["resize_width"]
-        self.crop_size_x = CONFIG["DATASET_CONFIG"]["crop_size_x"]
-        self.crop_size_y = CONFIG["DATASET_CONFIG"]["crop_size_y"]
-        self.crop_size_z = CONFIG["DATASET_CONFIG"]["crop_size_z"]
-        self.slices_to_generate = CONFIG["DATASET_CONFIG"]["slices_to_generate"]
-        self.target_range = CONFIG["DATASET_CONFIG"]["target_range"]
-        self.dataset = self._generate_dataset()
-
         # Randomly select a subset of the ids from the id range
         if select_nr_from_range > 0 and select_nr_from_range < len(
             synapse_id_range[1] - synapse_id_range[0]
@@ -103,6 +91,18 @@ class SynapseDataset(Dataset):
             self.dataset = [self.dataset[i] for i in self.selected_ids]
         else:
             self.selected_ids = range(synapse_id_range[0], synapse_id_range[1])
+
+        self.max_workers = CONFIG["DATASET_CONFIG"]["max_workers"]
+        self.timeout = CONFIG["DATASET_CONFIG"]["timeout"]
+        self.resize_depth = CONFIG["DATASET_CONFIG"]["resize_depth"]
+        self.resize_height = CONFIG["DATASET_CONFIG"]["resize_height"]
+        self.resize_width = CONFIG["DATASET_CONFIG"]["resize_width"]
+        self.crop_size_x = CONFIG["DATASET_CONFIG"]["crop_size_x"]
+        self.crop_size_y = CONFIG["DATASET_CONFIG"]["crop_size_y"]
+        self.crop_size_z = CONFIG["DATASET_CONFIG"]["crop_size_z"]
+        self.slices_to_generate = CONFIG["DATASET_CONFIG"]["slices_to_generate"]
+        self.target_range = CONFIG["DATASET_CONFIG"]["target_range"]
+        self.dataset = self._generate_dataset()
 
     def _generate_dataset(self) -> list[dict[str, Any]]:
         """

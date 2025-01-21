@@ -89,7 +89,6 @@ class SynapseDataset(Dataset):
                 select_nr_from_range,
                 replace=False,
             )
-            self.dataset = [self.dataset[i] for i in self.selected_ids]
         else:
             self.selected_ids = range(synapse_id_range[0], synapse_id_range[1])
 

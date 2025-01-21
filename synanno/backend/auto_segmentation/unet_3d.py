@@ -170,6 +170,7 @@ class UNet3D(nn.Module):
         out_channels = CONFIG["UNET3D_CONFIG"]["out_channels"]
         bilinear = CONFIG["UNET3D_CONFIG"]["bilinear"]
         features = CONFIG["UNET3D_CONFIG"]["features"]
+        dropout_prob = CONFIG["UNET3D_CONFIG"].get("dropout_prob", 0.2)
 
         self.inc = ConvBlock(in_channels, features[0])
         self.down_blocks = nn.ModuleList(
@@ -182,6 +183,7 @@ class UNet3D(nn.Module):
             ]
         )
         self.outc = OutputConv(features[0], out_channels)
+        self.dropout = nn.Dropout3d(p=dropout_prob)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -195,17 +197,22 @@ class UNet3D(nn.Module):
         """
         encoder_outputs = []
         x1 = self.inc(x)
+        x1 = self.dropout(x1)
         encoder_outputs.append(x1)
 
         for down in self.down_blocks:
             x1 = down(x1)
+            x1 = self.dropout(x1)
             encoder_outputs.append(x1)
 
         x1 = encoder_outputs.pop()
+
         for up in self.up_blocks:
             x1 = up(x1, encoder_outputs.pop())
+            x1 = self.dropout(x1)
 
-        return self.outc(x1)
+        x1 = self.outc(x1)
+        return x1
 
 
 if __name__ == "__main__":

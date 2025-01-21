@@ -80,8 +80,9 @@ class SynapseDataset(Dataset):
         self.target_transform = target_transform
 
         # Randomly select a subset of the ids from the id range
-        if select_nr_from_range > 0 and select_nr_from_range < len(
-            synapse_id_range[1] - synapse_id_range[0]
+        if (
+            select_nr_from_range > 0
+            and select_nr_from_range < synapse_id_range[1] - synapse_id_range[0]
         ):
             self.selected_ids = np.random.choice(
                 range(synapse_id_range[0], synapse_id_range[1]),

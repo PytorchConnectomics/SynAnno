@@ -41,7 +41,7 @@ import glob
 from flask import Blueprint
 from flask import current_app
 
-from synanno.backend.processing import _process_instance
+from synanno.backend.processing import process_instance, update_slice_number
 
 # define a Blueprint for manual_annotate routes
 blueprint = Blueprint("manual_annotate", __name__)
@@ -180,59 +180,21 @@ def load_missing_slices(necessary_slice_number: int = 16) -> Dict[str, str]:
         image_folder, "Img"
     )
 
-    coord_order = list(current_app.coordinate_order.keys())
+    # update the slice number of the instances
+    update_slice_number(data, necessary_slice_number)
 
-    # Adjust the bounding box
+    # retrieve the updated data
+    data = current_app.df_metadata.query(
+        "Label == 'Incorrect' or Label == 'Unsure'"
+    ).to_dict("records")
+
+    # load the remaining slices
     for instance in data:
-        # retrieve the coordinate order of the cloud volume | xyz, xzy, yxz, yzx, zxy, zyx
-
-        instance["crop_size_z"] = necessary_slice_number
-        og_bb = instance["Original_Bbox"]
-
-        z1 = og_bb[coord_order.index("z") * 2]
-        z2 = og_bb[coord_order.index("z") * 2 + 1]
-
-        nr_slices = z2 - z1
-
-        missing_nr_slices = necessary_slice_number - nr_slices
-
-        if missing_nr_slices < 0:
-            print("We already should have more slices than the model can handle.")
-            break
-
-        og_bb[coord_order.index("z") * 2] = z1 - missing_nr_slices // 2
-        og_bb[coord_order.index("z") * 2 + 1] = z2 + (missing_nr_slices + 1) // 2
-
-        assert (
-            og_bb[coord_order.index("z") * 2 + 1] - og_bb[coord_order.index("z") * 2]
-            == necessary_slice_number
-        )
-
-        instance["Adjusted_Bbox"], instance["Padding"] = calculate_crop_pad(
-            instance["Original_Bbox"], current_app.vol_dim, pad_z=True
-        )
-
-        _process_instance(
+        process_instance(
             instance,
             os.path.join(img_dir, str(instance["Image_Index"])),
             os.path.join(syn_dir, str(instance["Image_Index"])),
         )
-
-        # Update the fields Adjusted_Bbox, Padding, crop_size_z, and Original_Bbox field by field
-        condition = (current_app.df_metadata["Page"] == instance["Page"]) & (
-            current_app.df_metadata["Image_Index"] == instance["Image_Index"]
-        )
-
-        row_index = current_app.df_metadata.loc[condition].index[0]
-
-        current_app.df_metadata.at[row_index, "Adjusted_Bbox"] = instance[
-            "Adjusted_Bbox"
-        ]
-        current_app.df_metadata.at[row_index, "Padding"] = instance["Padding"]
-        current_app.df_metadata.at[row_index, "crop_size_z"] = instance["crop_size_z"]
-        current_app.df_metadata.at[row_index, "Original_Bbox"] = instance[
-            "Original_Bbox"
-        ]
 
     return jsonify({"result": "success"})
 

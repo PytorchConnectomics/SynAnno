@@ -192,6 +192,11 @@ def upload_file() -> Template:
             print(f"Extra columns: {extra_columns}")
             raise ValueError("The provided JSON does not match the expected format!")
 
+        # update the slice number with the cropped size for z
+        ip.update_slice_number(
+            current_app.df_metadata.to_dict("records"), int(session["crop_size_z"])
+        )
+
     # Convert coordinate resolution values to integers
     current_app.coord_resolution_source = np.array(
         [int(res[0]) for res in current_app.coordinate_order.values()]

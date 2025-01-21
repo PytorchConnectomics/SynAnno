@@ -312,7 +312,7 @@ def retrieve_instance_metadata(
             executor.submit(
                 run_with_app_context,
                 app,
-                _process_instance,
+                process_instance,
                 item,
                 create_dir(img_dir, str(item["Image_Index"])),
                 create_dir(syn_dir, str(item["Image_Index"])),
@@ -335,7 +335,67 @@ def retrieve_instance_metadata(
     logger.info("Completed processing for page %d.", page)
 
 
-def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) -> None:
+def update_slice_number(data: dict, slice_number: int) -> None:
+    """Update the slice number of the bounding box for the given instances.
+
+    Args:
+        data (dict): the dictionary containing the metadata of the instances.
+        slice_number (int): the new slice number.
+    """
+    # Adjust the bounding box
+    with current_app.df_metadata_lock:
+        coord_order = list(current_app.coordinate_order.keys())
+
+        for instance in data:
+            # retrieve the coordinate order of the cloud volume | xyz, xzy, yxz, yzx, zxy, zyx
+
+            instance["crop_size_z"] = slice_number
+            og_bb = instance["Original_Bbox"]
+
+            z1 = og_bb[coord_order.index("z") * 2]
+            z2 = og_bb[coord_order.index("z") * 2 + 1]
+
+            nr_slices = z2 - z1
+
+            missing_nr_slices = slice_number - nr_slices
+
+            if missing_nr_slices < 0:
+                print("We already should have more slices than the model can handle.")
+                break
+
+            og_bb[coord_order.index("z") * 2] = z1 - missing_nr_slices // 2
+            og_bb[coord_order.index("z") * 2 + 1] = z2 + (missing_nr_slices + 1) // 2
+
+            assert (
+                og_bb[coord_order.index("z") * 2 + 1]
+                - og_bb[coord_order.index("z") * 2]
+                == slice_number
+            )
+
+            instance["Adjusted_Bbox"], instance["Padding"] = calculate_crop_pad(
+                instance["Original_Bbox"], current_app.vol_dim, pad_z=True
+            )
+
+            # Update the fields Adjusted_Bbox, Padding, crop_size_z, and Original_Bbox field by field
+            condition = (current_app.df_metadata["Page"] == instance["Page"]) & (
+                current_app.df_metadata["Image_Index"] == instance["Image_Index"]
+            )
+
+            row_index = current_app.df_metadata.loc[condition].index[0]
+
+            current_app.df_metadata.at[row_index, "Adjusted_Bbox"] = instance[
+                "Adjusted_Bbox"
+            ]
+            current_app.df_metadata.at[row_index, "Padding"] = instance["Padding"]
+            current_app.df_metadata.at[row_index, "crop_size_z"] = instance[
+                "crop_size_z"
+            ]
+            current_app.df_metadata.at[row_index, "Original_Bbox"] = instance[
+                "Original_Bbox"
+            ]
+
+
+def process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) -> None:
     """Process the synapse and EM images for a single instance.
 
     Args:

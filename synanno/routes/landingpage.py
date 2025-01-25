@@ -16,3 +16,9 @@ blueprint = Blueprint("landingpage", __name__)
 def landing() -> Template:
     # render the template of the landing page
     return render_template("landingpage.html")
+
+
+@blueprint.route("/viewer")
+def shark_view() -> Template:
+    # render the template of the shark view
+    return render_template("viewer.html")

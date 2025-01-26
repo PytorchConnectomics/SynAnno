@@ -156,6 +156,33 @@
               />
               View Centric
             </label>
+
+            <label class="form-check-label">
+              <input
+                type="radio"
+                class="form-check-input"
+                id="neuron_centric_button"
+                name="view_style"
+                value="neuron"
+                {% if view_style=="neuron" %} checked {% endif %}
+              />
+              Neuron Centric
+            </label>
+            <label class="form-label">
+              <select id="coordinates" name="coordinates">
+                <option value="xyz" selected>XYZ</option>
+                <option value="xzy">XZY</option>
+                <option value="zyx">ZYX</option>
+                <option value="zxy">ZXY</option>
+                <option value="yxz">YXZ</option>
+                <option value="yzx">YZX</option>
+              </select>
+              Coordinate Order
+            </label>
+
+
+            <div class="mb-1"></div>
+
             <!-- Button to Open the Embedded Neuroglancer Modal -->
             <button
               id="openNeuronModalBtn"
@@ -167,41 +194,6 @@
             >
               Choose a Neuron
             </button>
-            <script>
-              document.getElementById('materialization_url').addEventListener('input', function() {
-              var materializationUrl = this.value.trim();
-              console.log("Materialization URL:", materializationUrl);
-              var openNeuronModalBtn = document.getElementById('openNeuronModalBtn');
-              if (materializationUrl) {
-                openNeuronModalBtn.removeAttribute('disabled');
-                fetch('/load_materialization', {
-                      method: 'POST',
-                      headers: {
-                          'Content-Type': 'application/json'
-                      },
-                      body: JSON.stringify({ materialization_url: materializationUrl })
-                  })
-                  .then(response => response.json())
-                  .then(data => {
-                      if (data.status === "success") {
-                          console.log("Materialization table loaded.");
-                          // Open the Neuroglancer modal after successful loading
-                          document.getElementById('neuroglancerIframe').src = "/launch_neuroglancer";
-                      } else {
-                          console.error("Error loading materialization table:", data.error);
-                          alert("Failed to load the materialization table.");
-                      }
-                  })
-                  .catch(error => {
-                      console.error("Error during fetch:", error);
-                      alert("Error occurred while loading the materialization table.");
-                  });
-              } else {
-                openNeuronModalBtn.setAttribute('disabled', 'disabled');
-              }
-              });
-
-            </script>
 
             <!-- Modal for Embedded Neuroglancer -->
             <div
@@ -244,30 +236,6 @@
                 </div>
               </div>
             </div>
-            <label class="form-check-label">
-              <input
-                type="radio"
-                class="form-check-input"
-                id="neuron_centric_button"
-                name="view_style"
-                value="neuron"
-                {% if view_style=="neuron" %} checked {% endif %}
-              />
-              Neuron Centric
-            </label>
-            <label class="form-label">
-              <select id="coordinates" name="coordinates">
-                <option value="xyz" selected>XYZ</option>
-                <option value="xzy">XZY</option>
-                <option value="zyx">ZYX</option>
-                <option value="zxy">ZXY</option>
-                <option value="yxz">YXZ</option>
-                <option value="yzx">YZX</option>
-              </select>
-              Coordinate Order
-            </label>
-
-            <div class="mb-1"></div>
 
             <div id="neuron-form" {% if view_style=="view" %} class="hidden-form" {% endif %}>
                 <input
@@ -286,20 +254,6 @@
                 />
               </div>
             </div>
-
-            <div id="view-form" {% if view_style=="neuron" %} class="hidden-form" {% endif %}>
-              <label for="coordinate-container-view" class="form-label">Slicing Indices for the Segmentation Volume (will be scaled for the image volume in case of a resolution mismatch)</label>
-              <div class="coordinate-container" id="coordinate-container-view">
-                <input class="coordinate-dims" type="number" id="x1" name="x1" placeholder="X1 - Default: 0" />
-                <input class="coordinate-dims" type="number" id="x2" name="x2" placeholder="X2 - Default: max(X)" />
-                <input class="coordinate-dims" type="number" id="y1" name="y1" placeholder="Y1 - Default: 0" />
-                <input class="coordinate-dims" type="number" id="y2" name="y2" placeholder="Y2 - Default: max(Y)" />
-                <input class="coordinate-dims" type="number" id="z1" name="z1" placeholder="Z1 - Default: 0" />
-                <input class="coordinate-dims" type="number" id="z2" name="z2" placeholder="Z2 - Default: max(Z)" />
-              </div>
-            </div>
-
-            <div class="mb-3"></div>
 
             <div>
               <label class="form-label" style="margin-right: 2px">Source Volume Resolution (in nm)</label>

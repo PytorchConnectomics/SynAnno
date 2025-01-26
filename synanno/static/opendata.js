@@ -94,7 +94,7 @@ $(document).ready(function () {
 
   updateSubmitButtonState();
 
-  // Enable the c3 neuron segmentation layer
+  // enable the c3 neuron segmentation layer
   function enableC3Layer() {
     fetch('/enable_c3_layer', { method: 'POST' })
         .then(response => response.json())
@@ -102,7 +102,7 @@ $(document).ready(function () {
         .catch(error => console.error('Error enabling c3 layer:', error));
   }
 
-  // Disable the c3 neuron segmentation layer
+  // disable the c3 neuron segmentation layer
   function disableC3Layer() {
     fetch('/disable_c3_layer', { method: 'POST' })
         .then(response => response.json())
@@ -110,7 +110,7 @@ $(document).ready(function () {
         .catch(error => console.error('Error disabling c3 layer:', error));
   }
 
-  // Enable the c3 layer when the modal opens
+  // enable the c3 layer when the modal opens
   $("#neuroglancerModal").on("show.bs.modal", function () {
     fetch('/launch_neuroglancer')
         .then(response => response.json())
@@ -121,8 +121,53 @@ $(document).ready(function () {
         .catch(error => console.error('Error launching Neuroglancer:', error));
   });
 
-  // Disable the c3 layer when the modal closes
+  // disable the c3 layer when the modal closes
   $("#neuroglancerModal").on("hidden.bs.modal", function () {
     fetch('/disable_c3_layer', { method: 'POST' });
+  });
+
+  document.getElementById('materialization_url').addEventListener('input', function() {
+    var materializationUrl = this.value.trim();
+    console.log("Materialization URL:", materializationUrl);
+    var openNeuronModalBtn = document.getElementById('openNeuronModalBtn');
+    if (materializationUrl) {
+      openNeuronModalBtn.removeAttribute('disabled');
+      fetch('/load_materialization', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ materialization_url: materializationUrl })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "success") {
+                console.log("Materialization table loaded.");
+                // Open the Neuroglancer modal after successful loading
+                document.getElementById('neuroglancerIframe').src = "/launch_neuroglancer";
+            } else {
+                console.error("Error loading materialization table:", data.error);
+                alert("Invalid materialization table.");
+            }
+        })
+        .catch(error => {
+            console.error("Error during fetch:", error);
+            alert("Error occurred while loading the materialization table.");
+        });
+    } else {
+      openNeuronModalBtn.setAttribute('disabled', 'disabled');
+    }
+  });
+
+  $('input[type="radio"][value="neuron"]').change(function () {
+    if ($(this).is(':checked')) {
+      $("#openNeuronModalBtn").hide();
+    }
+  });
+
+  $('input[type="radio"][value="view"]').change(function () {
+    if ($(this).is(':checked')) {
+      $("#openNeuronModalBtn").show();
+    }
   });
 });

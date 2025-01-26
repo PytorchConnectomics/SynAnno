@@ -209,11 +209,6 @@ def retrieve_instance_metadata(
     # retrieve the order of the coordinates (xyz, xzy, yxz, yzx, zxy, zyx)
     coordinate_order = list(current_app.coordinate_order.keys())
 
-    # set the progress bar to zero
-    if page != 0:
-        current_app.progress_bar_status["percent"] = 0
-        current_app.progress_bar_status["status"] = f"Loading page {str(page)}."
-
     # Safely create directories
     try:
         idx_dir = create_dir(
@@ -239,10 +234,6 @@ def retrieve_instance_metadata(
 
         instance_list = []
         for idx in bbox_dict.keys():
-            current_app.progress_bar_status[
-                "status"
-            ] = f"Inst.{idx}: Calculate bounding box."
-
             syn_dir_instance, img_dir_instance = create_dir(
                 syn_dir, str(idx)
             ), create_dir(img_dir, str(idx))
@@ -276,11 +267,14 @@ def retrieve_instance_metadata(
             # Calculate bounding boxes
             bbox_org = [
                 item["cz0"] - session["crop_size_z"] // 2,
-                item["cz0"] + session["crop_size_z"] // 2,
+                item["cz0"]
+                + max(
+                    1, (session["crop_size_z"] + 1) // 2
+                ),  # incase the depth was set to one.
                 item["cy0"] - session["crop_size_y"] // 2,
-                item["cy0"] + session["crop_size_y"] // 2,
+                item["cy0"] + (session["crop_size_y"] + 1) // 2,
                 item["cx0"] - session["crop_size_x"] // 2,
-                item["cx0"] + session["crop_size_x"] // 2,
+                item["cx0"] + (session["crop_size_x"] + 1) // 2,
             ]
 
             item["Original_Bbox"] = [
@@ -318,16 +312,13 @@ def retrieve_instance_metadata(
             executor.submit(
                 run_with_app_context,
                 app,
-                _process_instance,
+                process_instance,
                 item,
                 create_dir(img_dir, str(item["Image_Index"])),
                 create_dir(syn_dir, str(item["Image_Index"])),
             )
             for item in page_metadata
         ]
-
-        current_app.progress_bar_status["status"] = f"Pre-process sub-volume."
-        current_app.progress_bar_status["percent"] = 60
 
         for future in as_completed(futures):
             try:
@@ -341,11 +332,70 @@ def retrieve_instance_metadata(
                     logger.error("Retry failed: %s", exc_retry)
                     traceback.print_exc()
 
-    current_app.progress_bar_status["percent"] = 100
     logger.info("Completed processing for page %d.", page)
 
 
-def _process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) -> None:
+def update_slice_number(data: dict, slice_number: int) -> None:
+    """Update the slice number of the bounding box for the given instances.
+
+    Args:
+        data (dict): the dictionary containing the metadata of the instances.
+        slice_number (int): the new slice number.
+    """
+    # Adjust the bounding box
+    with current_app.df_metadata_lock:
+        coord_order = list(current_app.coordinate_order.keys())
+
+        for instance in data:
+            # retrieve the coordinate order of the cloud volume | xyz, xzy, yxz, yzx, zxy, zyx
+
+            instance["crop_size_z"] = slice_number
+            og_bb = instance["Original_Bbox"]
+
+            z1 = og_bb[coord_order.index("z") * 2]
+            z2 = og_bb[coord_order.index("z") * 2 + 1]
+
+            nr_slices = z2 - z1
+
+            missing_nr_slices = slice_number - nr_slices
+
+            if missing_nr_slices < 0:
+                print("We already should have more slices than the model can handle.")
+                break
+
+            og_bb[coord_order.index("z") * 2] = z1 - missing_nr_slices // 2
+            og_bb[coord_order.index("z") * 2 + 1] = z2 + (missing_nr_slices + 1) // 2
+
+            assert (
+                og_bb[coord_order.index("z") * 2 + 1]
+                - og_bb[coord_order.index("z") * 2]
+                == slice_number
+            )
+
+            instance["Adjusted_Bbox"], instance["Padding"] = calculate_crop_pad(
+                instance["Original_Bbox"], current_app.vol_dim, pad_z=True
+            )
+
+            # Update the fields Adjusted_Bbox, Padding, crop_size_z, and Original_Bbox field by field
+            condition = (current_app.df_metadata["Page"] == instance["Page"]) & (
+                current_app.df_metadata["Image_Index"] == instance["Image_Index"]
+            )
+
+            row_index = current_app.df_metadata.loc[condition].index[0]
+
+            current_app.df_metadata.at[row_index, "Adjusted_Bbox"] = instance[
+                "Adjusted_Bbox"
+            ]
+            current_app.df_metadata.at[row_index, "Padding"] = instance["Padding"]
+            current_app.df_metadata.at[row_index, "crop_size_z"] = instance[
+                "crop_size_z"
+            ]
+            current_app.df_metadata.at[row_index, "Original_Bbox"] = instance[
+                "Original_Bbox"
+            ]
+
+
+def process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) -> None:
     """Process the synapse and EM images for a single instance.
 
     Args:
@@ -578,7 +628,6 @@ def neuron_centric_3d_data_processing(
     coordinate_order = list(current_app.coordinate_order.keys())
 
     # load the cloud volumes
-    current_app.progress_bar_status["status"] = "Loading Cloud Volumes"
     current_app.source_cv = CloudVolume(
         source_url,
         secrets=bucket_secret_json,
@@ -619,9 +668,6 @@ def neuron_centric_3d_data_processing(
     current_app.vol_dim_scaled = tuple(
         int(a * b) for a, b in zip(vol_dim, current_app.scale.values())
     )
-
-    # read data as dict from path table_name
-    current_app.progress_bar_status["status"] = "Retrieving Materialization"
 
     # Read the CSV file
     df = pd.read_csv(table_name)

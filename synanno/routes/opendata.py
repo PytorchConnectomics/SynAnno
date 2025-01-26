@@ -90,7 +90,7 @@ def upload_file() -> Template:
 
     # set the number of cards in one page
     # this variable is, e.g., used by the preprocess script and the set_data function
-    session["per_page"] = 18
+    session["per_page"] = 24
 
     # init the number of pages to 0
     session["n_pages"] = 0
@@ -191,6 +191,11 @@ def upload_file() -> Template:
             print(f"Missing columns: {missing_columns}")
             print(f"Extra columns: {extra_columns}")
             raise ValueError("The provided JSON does not match the expected format!")
+
+        # update the slice number with the cropped size for z
+        ip.update_slice_number(
+            current_app.df_metadata.to_dict("records"), int(session["crop_size_z"])
+        )
 
     # Convert coordinate resolution values to integers
     current_app.coord_resolution_source = np.array(
@@ -373,10 +378,6 @@ def get_instance() -> Dict[str, object]:
     custom_mask_path_pre = None
     custom_mask_path_post = None
 
-    print(page)
-    print(index)
-    print(current_app.df_metadata)
-
     # when first opening an instance modal view
     if load == "full":
         with current_app.df_metadata_lock:
@@ -542,23 +543,6 @@ def get_instance() -> Dict[str, object]:
         )
 
     return final_json
-
-
-@blueprint.route("/progress", methods=["POST"])
-@cross_origin()
-def progress() -> Dict[str, object]:
-    """Serves an Ajax request from progressbar.js passing information about the loading
-    process to the frontend.
-
-    Return:
-        Passes progress status, in percentage, to the frontend as json.
-    """
-    return jsonify(
-        {
-            "status": current_app.progress_bar_status["status"],
-            "progress": current_app.progress_bar_status["percent"],
-        }
-    )
 
 
 @blueprint.route("/neuro", methods=["POST"])

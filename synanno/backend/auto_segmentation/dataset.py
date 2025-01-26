@@ -17,6 +17,8 @@ import threading
 
 from synanno.backend.auto_segmentation.config import get_config
 
+import torchvision.transforms as transforms
+
 CONFIG = get_config()
 
 # Retrieve logger
@@ -57,6 +59,7 @@ class SynapseDataset(Dataset):
         materialization_df: pd.DataFrame,
         meta_data: dict[str, Any],
         synapse_id_range: tuple[int, int],
+        select_nr_from_range: int = 0,
         transform: Any = None,
         target_transform: Any = None,
     ):
@@ -67,14 +70,27 @@ class SynapseDataset(Dataset):
             materialization_df (pd.DataFrame): DataFrame containing materialization data.
             meta_data (dict[str, Any]): Metadata dictionary.
             synapse_id_range (tuple[int, int]): Range of synapse IDs to include in the dataset.
+            select_nr_from_range (int, optional): Number of synapse IDs to select from the range. Defaults to 0.
             transform (Any, optional): Transform to apply to the source data. Defaults to None.
             target_transform (Any, optional): Transform to apply to the target data. Defaults to None.
         """
         self.materialization_df = materialization_df
         self.meta_data = meta_data
-        self.synapse_id_range = synapse_id_range
         self.transform = transform
         self.target_transform = target_transform
+
+        # Randomly select a subset of the ids from the id range
+        if (
+            select_nr_from_range > 0
+            and select_nr_from_range < synapse_id_range[1] - synapse_id_range[0]
+        ):
+            self.selected_ids = np.random.choice(
+                range(synapse_id_range[0], synapse_id_range[1]),
+                select_nr_from_range,
+                replace=False,
+            )
+        else:
+            self.selected_ids = range(synapse_id_range[0], synapse_id_range[1])
 
         self.max_workers = CONFIG["DATASET_CONFIG"]["max_workers"]
         self.timeout = CONFIG["DATASET_CONFIG"]["timeout"]
@@ -97,7 +113,7 @@ class SynapseDataset(Dataset):
         """
         instance_list = []
         for idx in tqdm(
-            range(self.synapse_id_range[0], self.synapse_id_range[1]),
+            self.selected_ids,
             desc="Metadata Retrieval",
         ):
             instance = retrieve_instance_metadata(
@@ -235,7 +251,25 @@ class SynapseDataset(Dataset):
         source[1] = binarize_tensor(source[1])  # Binarize the seed mask
         target = binarize_tensor(target)  # Binarize the target
 
+        if self.transform:
+            seed = (
+                torch.random.seed()
+            )  # Get a random seed to apply the same transformation to both inputs and targets
+            torch.random.manual_seed(seed)
+            source = self.transform(source)
+            torch.random.manual_seed(seed)
+            target = self.transform(target)
+
         return source, target
+
+
+class RandomRotation90:
+    def __call__(self, sample):
+        if torch.rand(1).item() > 0.75:  # Apply rotation 25% of the time
+            angles = [90, -90]
+            angle = np.random.choice(angles)
+            return torch.rot90(sample, k=angle // 90, dims=[-2, -1])
+        return sample
 
 
 if __name__ == "__main__":
@@ -271,7 +305,18 @@ if __name__ == "__main__":
         "vol_dim": vol_dim,
     }
 
-    train_dataset = SynapseDataset(materialization_df, meta_data, (0, 2))
+    # Define the transformations
+    data_transforms = transforms.Compose(
+        [
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomVerticalFlip(),
+            RandomRotation90(),
+        ]
+    )
+
+    train_dataset = SynapseDataset(
+        materialization_df, meta_data, (0, 2), transform=data_transforms
+    )
 
     # Retrieve a training sample
     sample = train_dataset[0]

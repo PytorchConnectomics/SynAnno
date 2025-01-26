@@ -62,7 +62,6 @@ def configure_app(app):
 
 def initialize_global_variables(app):
     """Set up the global variables for the app."""
-    app.progress_bar_status = {"status": "Loading Source File", "percent": 0}
     app.proofread_time = {
         "start_grid": None,
         "finish_grid": None,
@@ -109,7 +108,36 @@ def initialize_global_variables(app):
         "Padding",
     ]
 
-    app.df_metadata = pd.DataFrame(columns=app.columns)
+    dtypes = {
+        "Page": int,  # Example: 1
+        "Image_Index": int,  # Example: 0
+        "GT": int,  # Example: 1
+        "EM": str,  # Example: 'Images/Syn/1'
+        "Label": str,  # Example: 'Images/Img/1'
+        "Annotated": str,  # Example: 'Incorrect'
+        "Error_Description": str,  # Example: 'No'
+        "Y_Index": int,  # Example: None (can be float if numeric)
+        "X_Index": int,  # Example: 1
+        "Z_Index": int,  # Example: 0
+        "Middle_Slice": int,  # Example: 2
+        "Original_Bbox": int,  # Example: 256
+        "cz0": int,  # Example: 290204
+        "cy0": int,  # Example: 290460
+        "cx0": int,  # Example: 114415
+        "pre_pt_z": int,  # Example: 114671
+        "pre_pt_x": int,  # Example: 256
+        "pre_pt_y": int,  # Example: 257
+        "post_pt_y": int,  # Example: 114543
+        "post_pt_z": int,  # Example: 290332
+        "post_pt_x": int,  # Example: 256
+        "crop_size_x": int,  # Example: 290329
+        "crop_size_y": int,  # Example: 114538
+        "crop_size_z": int,  # Example: 114546
+        "Adjusted_Bbox": object,  # Example: [290204, 290460, 114415, 114671, 256, 257]
+        "Padding": object,  # Example: [[0, 0], [0, 0], [0, 0]]
+    }
+
+    app.df_metadata = pd.DataFrame(columns=app.columns).astype(dtypes)
     app.materialization = {}
 
     app.pre_id_color_main = (0, 255, 0)

@@ -19,7 +19,11 @@
     href="{{ url_for('finish.export_data',  data_type ='json')}}"
     >Download JSON</a
   >
-  <a type="button" class="btn btn-secondary ml-2" href="{{ url_for('manual_annotate.draw')}}"
+  <a
+    id="redraw_masks"
+    type="button"
+    class="btn btn-secondary ml-2"
+    href="{{ url_for('manual_annotate.draw')}}"
     >Redraw Masks</a
   >
   <a
@@ -30,6 +34,9 @@
     >Start New Process</a
   >
 </div>
+
+{% include "loading_bar.html" %}
+
 
 <script src="{{ url_for('static', filename='export.js') }}"></script>
 

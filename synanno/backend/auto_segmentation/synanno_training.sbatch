@@ -27,7 +27,7 @@ conda activate lauenbur_syn_anno
 
 # Define repository and branch information
 REPO_URL="https://github.com/PytorchConnectomics/SynAnno.git"
-BRANCH_NAME="leander/auto-seg-model"
+BRANCH_NAME="leander/single-annotation-slices"
 
 # Adjust to your preferred directory
 INSTALL_DIR="/mmfs1/data/lauenbur/SynAnno"

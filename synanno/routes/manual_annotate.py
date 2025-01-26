@@ -41,6 +41,7 @@ import glob
 from flask import Blueprint
 from flask import current_app
 
+from synanno.backend.processing import process_instance, update_slice_number
 
 # define a Blueprint for manual_annotate routes
 blueprint = Blueprint("manual_annotate", __name__)
@@ -154,6 +155,48 @@ def save_canvas() -> Dict[str, object]:
     final_json = jsonify(data=data)
 
     return final_json
+
+
+@blueprint.route("/load_missing_slices", methods=["POST"])
+def load_missing_slices(necessary_slice_number: int = 16) -> Dict[str, str]:
+    """The auto segmentation view needs a set number of slices per instance (depth). Coming from the
+    Annotation view the user might use a different number of slices - most likely a single slice.
+    To enable the user to go through the individual slices, redraw the mask and auto generate the mask we thus
+    need to download the remaining slices.
+    """
+
+    # Retrieve the current meta data from current_app.df_metadata
+    # Identify the instance with a label incorrect or unsure
+    data = current_app.df_metadata.query(
+        "Label == 'Incorrect' or Label == 'Unsure'"
+    ).to_dict("records")
+
+    static_folder = os.path.join(
+        os.path.join(current_app.root_path, current_app.config["STATIC_FOLDER"]),
+    )
+    image_folder = os.path.join(static_folder, "Images")
+
+    syn_dir, img_dir = os.path.join(image_folder, "Syn"), os.path.join(
+        image_folder, "Img"
+    )
+
+    # update the slice number of the instances
+    update_slice_number(data, necessary_slice_number)
+
+    # retrieve the updated data
+    data = current_app.df_metadata.query(
+        "Label == 'Incorrect' or Label == 'Unsure'"
+    ).to_dict("records")
+
+    # load the remaining slices
+    for instance in data:
+        process_instance(
+            instance,
+            os.path.join(img_dir, str(instance["Image_Index"])),
+            os.path.join(syn_dir, str(instance["Image_Index"])),
+        )
+
+    return jsonify({"result": "success"})
 
 
 @blueprint.route("/ng_bbox_fn", methods=["POST"])

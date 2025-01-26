@@ -247,6 +247,8 @@ $(document).ready(function () {
   });
 
   $("#save_bbox").click(function () {
+    // show loading-bar
+    $('#loading-bar').css('display', 'flex');
     // update the bb information with the manuel corrections and pass them to the backend
     // trigger the processing/save to the pandas df in the backend
     $.ajax({
@@ -261,6 +263,9 @@ $(document).ready(function () {
     }).done(function () {
       // hide modules
       $("#drawModalFNSave, #drawModalFN").modal("hide");
+
+      // Hide the loading bar after the operation completes
+      $('#loading-bar').css('display', 'none');
 
       // refresh page
       location.reload();

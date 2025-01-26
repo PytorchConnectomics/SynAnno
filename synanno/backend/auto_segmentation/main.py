@@ -1,5 +1,5 @@
 import pandas as pd
-from synanno.backend.auto_segmentation.dataset import SynapseDataset
+from synanno.backend.auto_segmentation.dataset import SynapseDataset, RandomRotation90
 from synanno.backend.auto_segmentation.match_source_and_target import (
     retrieve_smallest_volume_dim,
     compute_scale_factor,
@@ -12,6 +12,7 @@ from cloudvolume import CloudVolume
 from typing import Any
 import logging
 import os
+import torchvision.transforms as transforms
 
 # Initialize logger
 logging.basicConfig(level=logging.INFO)
@@ -57,15 +58,32 @@ if __name__ == "__main__":
     meta_data = prepare_metadata(source_cv, target_cv)
     trainer = Trainer()
 
+    # Define the transformations
+    data_transforms = transforms.Compose(
+        [
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomVerticalFlip(),
+            RandomRotation90(),
+        ]
+    )
+
     if os.environ["EXECUTION_ENV"] == "slurm":
         logger.info("Loading training dataset...")
         train_dataset = SynapseDataset(
-            materialization_df, meta_data, CONFIG["TRAINING_CONFIG"]["train_range"]
+            materialization_df,
+            meta_data,
+            CONFIG["TRAINING_CONFIG"]["train_range"],
+            CONFIG["TRAINING_CONFIG"]["select_nr_train_samples"],
+            transform=data_transforms,
         )
 
         logger.info("Loading validation dataset...")
         val_dataset = SynapseDataset(
-            materialization_df, meta_data, CONFIG["TRAINING_CONFIG"]["val_range"]
+            materialization_df,
+            meta_data,
+            CONFIG["TRAINING_CONFIG"]["val_range"],
+            CONFIG["TRAINING_CONFIG"]["select_nr_val_samples"],
+            transform=data_transforms,
         )
 
         logger.info("Running training process...")

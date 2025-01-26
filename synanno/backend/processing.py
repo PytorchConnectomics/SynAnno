@@ -610,26 +610,37 @@ def neuron_centric_3d_data_processing(
     df = pd.read_csv(table_name)
 
     if view_style == "view":
-        # should no cropping coordinates be provided, use the whole volume
-        if subvolume[coordinate_order[2] + "2"] == -1:
-            subvolume[coordinate_order[2] + "2"] = current_app.source_cv.info["scales"][
-                0
-            ]["size"][2]
+        # # should no cropping coordinates be provided, use the whole volume
+        # if subvolume[coordinate_order[2] + "2"] == -1:
+        #     subvolume[coordinate_order[2] + "2"] = current_app.source_cv.info["scales"][
+        #         0
+        #     ]["size"][2]
 
-        if subvolume[coordinate_order[1] + "2"] == -1:
-            subvolume[coordinate_order[1] + "2"] = current_app.source_cv.info["scales"][
-                0
-            ]["size"][1]
+        # if subvolume[coordinate_order[1] + "2"] == -1:
+        #     subvolume[coordinate_order[1] + "2"] = current_app.source_cv.info["scales"][
+        #         0
+        #     ]["size"][1]
 
-        if subvolume[coordinate_order[0] + "2"] == -1:
-            subvolume[coordinate_order[0] + "2"] = current_app.source_cv.info["scales"][
-                0
-            ]["size"][0]
+        # if subvolume[coordinate_order[0] + "2"] == -1:
+        #     subvolume[coordinate_order[0] + "2"] = current_app.source_cv.info["scales"][
+        #         0
+        #     ]["size"][0]
 
-        # query the dataframe for all instances with their coordinates x,y,z with in the range of the subvolume
-        df = df.query(
-            'x >= @subvolume["x1"] and x <= @subvolume["x2"] and y >= @subvolume["y1"] and y <= @subvolume["y2"] and z >= @subvolume["z1"] and z <= @subvolume["z2"]'
-        )
+        # # query the dataframe for all instances with their coordinates x,y,z with in the range of the subvolume
+        # df = df.query(
+        #     'x >= @subvolume["x1"] and x <= @subvolume["x2"] and y >= @subvolume["y1"] and y <= @subvolume["y2"] and z >= @subvolume["z1"] and z <= @subvolume["z2"]'
+        # )
+
+        neuron_id = int(current_app.selected_neuron_id)  # Get the selected neuron ID
+
+        if neuron_id is None:
+            print("No neuron selected.")
+            return
+
+        # filter the materialization DataFrame for matching pre/post neuron IDs
+        df = df.query("pre_neuron_id == @neuron_id or post_neuron_id == @neuron_id")
+
+        print(f"Found {len(df)} synapses connected to neuron ID {neuron_id}")
 
     if view_style == "neuron":
         # TODO: This is currently a dummy solution.

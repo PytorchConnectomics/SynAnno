@@ -642,3 +642,59 @@ def save_file(
     else:
         file.save(os.path.join(path, filename))
         return os.path.join(path, filename)
+
+
+@blueprint.route("/enable_c3_layer", methods=["POST"])
+def enable_c3_layer():
+    """Enable the c3 neuron segmentation layer in the global Neuroglancer."""
+    with current_app.ng_viewer.txn() as s:
+        s.layers["c3_neuron_segmentation"].selectedAlpha = 0.5
+        s.layers["c3_neuron_segmentation"].notSelectedAlpha = 0.1
+    return jsonify({"status": "c3 layer enabled"})
+
+
+@blueprint.route("/disable_c3_layer", methods=["POST"])
+def disable_c3_layer():
+    """Disable the c3 neuron segmentation layer in the global Neuroglancer."""
+    with current_app.ng_viewer.txn() as s:
+        s.layers["c3_neuron_segmentation"].selectedAlpha = 0.0
+        s.layers["c3_neuron_segmentation"].notSelectedAlpha = 0.0
+    return jsonify({"status": "c3 layer disabled"})
+
+
+@blueprint.route("/launch_neuroglancer")
+def launch_neuroglancer():
+    """Initialize and serve the Neuroglancer viewer."""
+
+    if not hasattr(current_app, "ng_viewer") or current_app.ng_viewer is None:
+        ng_util.setup_ng(
+            app=current_app._get_current_object(),
+            source="precomputed://gs://h01-release/data/20210601/4nm_raw",
+            target="gs://h01-release/data/20210729/c3/synapses/whole_ei_onlyvol",
+        )
+
+    print(current_app.ng_viewer)
+    ng_url = f"http://{current_app.config['NG_IP']}:{current_app.config['NG_PORT']}/v/{current_app.ng_viewer.token}/"
+    print(ng_url)
+    print(jsonify({"ng_url": ng_url}))
+    return jsonify({"ng_url": ng_url})
+
+
+@blueprint.route("/load_materialization", methods=["POST"])
+def load_materialization():
+    materialization_path = request.json.get("materialization_url")
+
+    if materialization_path is None or materialization_path == "":
+        return jsonify({"error": "Materialization path is missing."}), 400
+    try:
+        print("🔄 Loading the materialization table...")
+        path = materialization_path.replace("file://", "")
+        current_app.synapse_data = pd.read_csv(path)
+        print(current_app.synapse_data.head())
+
+        print("✅ Materialization table loaded successfully!")
+        return jsonify({"status": "success"}), 200
+
+    except Exception as e:
+        print(f"❌ Failed to load materialization table: {e}")
+        return jsonify({"error": str(e)}), 500

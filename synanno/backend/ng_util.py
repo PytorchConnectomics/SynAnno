@@ -90,7 +90,7 @@ def setup_ng(
             hideSegmentZero=True,
         )
 
-        # init the view position
+        # init the view position (arbitrary default in H01; change later)
         s.position = [711044, 315210, 2587]
 
         def get_hovered_neuron_id(s):

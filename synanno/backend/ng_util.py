@@ -122,27 +122,6 @@ def setup_ng(
             app.selected_neuron_id = neuron_id
             print(f"Selected Neuron ID: {neuron_id}")
 
-            # if voxel_coords is None:
-            #     print("Mouse is not hovering over any voxel.")
-            #     return
-
-            # print(type(s))
-
-            # # Access the segmentation layer
-            # segmentation_layer = s.viewer_state.layers["c3_neuron_segmentation"]
-
-            # if segmentation_layer is None:
-            #     print("Segmentation layer 'c3_neuron_segmentation' not found.")
-            #     return
-
-            # # Query the segment (neuron ID) at the current voxel
-            # neuron_id = segmentation_layer.segment_at_voxel(voxel_coords)
-
-            # if neuron_id:
-            #     print(f"Neuron ID at {voxel_coords}: {neuron_id}")
-            # else:
-            #     print("No neuron found at this voxel.")
-
         # Bind the action to a key, e.g., 'n'
         app.ng_viewer.actions.add("get_neuron_id", get_hovered_neuron_id)
 

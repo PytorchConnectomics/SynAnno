@@ -41,6 +41,7 @@ import glob
 from flask import Blueprint
 from flask import current_app
 
+from synanno.backend.processing import process_instance, update_slice_number
 
 # define a Blueprint for manual_annotate routes
 blueprint = Blueprint("manual_annotate", __name__)
@@ -77,7 +78,7 @@ def save_canvas() -> Dict[str, object]:
     image_data = re.sub("^data:image/.+;base64,", "", request.form["imageBase64"])
 
     # retrieve the instance specifiers
-    page = int(request.form["page"])
+    page = int(request.form["page"])  # required for pd query
     index = int(request.form["data_id"])
     viewed_instance_slice = int(request.form["viewed_instance_slice"])
     canvas_type = str(request.form["canvas_type"])
@@ -93,13 +94,20 @@ def save_canvas() -> Dict[str, object]:
     )
     im = im.resize((crop_axes[0], crop_axes[1]), Image.LANCZOS)
 
-    # create folder where to save the image
-    folder_path = os.path.join(
-        os.path.join(current_app.root_path, current_app.config["STATIC_FOLDER"]),
-        "custom_masks",
+    # create the base folder where to save all custom mask objects
+    static_folder = os.path.join(
+        current_app.root_path, current_app.config["STATIC_FOLDER"]
     )
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
+    mask_folder = os.path.join(static_folder, "Images/Mask")
+
+    if not os.path.exists(mask_folder):
+        os.makedirs(mask_folder)
+
+    # create the instance specific sub folder
+    instance_folder_path = os.path.join(mask_folder, str(index))
+
+    if not os.path.exists(instance_folder_path):
+        os.makedirs(instance_folder_path)
 
     # retrieve the instance specific information for naming the image
 
@@ -126,7 +134,7 @@ def save_canvas() -> Dict[str, object]:
         # if a file exist with path path= os.path.join(folder_path, canvas_type +'_idx_'+img_index)
         existing_path = glob.glob(
             os.path.join(
-                folder_path,
+                instance_folder_path,
                 canvas_type
                 + "_idx_"
                 + img_index
@@ -140,13 +148,55 @@ def save_canvas() -> Dict[str, object]:
             os.remove(existing_path[0])
 
     # save the mask
-    im.save(os.path.join(folder_path, img_name))
+    im.save(os.path.join(instance_folder_path, img_name))
 
     # send the instance specific information to draw.js
     data = json.dumps(data)
     final_json = jsonify(data=data)
 
     return final_json
+
+
+@blueprint.route("/load_missing_slices", methods=["POST"])
+def load_missing_slices(necessary_slice_number: int = 16) -> Dict[str, str]:
+    """The auto segmentation view needs a set number of slices per instance (depth). Coming from the
+    Annotation view the user might use a different number of slices - most likely a single slice.
+    To enable the user to go through the individual slices, redraw the mask and auto generate the mask we thus
+    need to download the remaining slices.
+    """
+
+    # Retrieve the current meta data from current_app.df_metadata
+    # Identify the instance with a label incorrect or unsure
+    data = current_app.df_metadata.query(
+        "Label == 'Incorrect' or Label == 'Unsure'"
+    ).to_dict("records")
+
+    static_folder = os.path.join(
+        os.path.join(current_app.root_path, current_app.config["STATIC_FOLDER"]),
+    )
+    image_folder = os.path.join(static_folder, "Images")
+
+    syn_dir, img_dir = os.path.join(image_folder, "Syn"), os.path.join(
+        image_folder, "Img"
+    )
+
+    # update the slice number of the instances
+    update_slice_number(data, necessary_slice_number)
+
+    # retrieve the updated data
+    data = current_app.df_metadata.query(
+        "Label == 'Incorrect' or Label == 'Unsure'"
+    ).to_dict("records")
+
+    # load the remaining slices
+    for instance in data:
+        process_instance(
+            instance,
+            os.path.join(img_dir, str(instance["Image_Index"])),
+            os.path.join(syn_dir, str(instance["Image_Index"])),
+        )
+
+    return jsonify({"result": "success"})
 
 
 @blueprint.route("/ng_bbox_fn", methods=["POST"])
@@ -338,11 +388,6 @@ def ng_bbox_fn_save() -> Dict[str, object]:
     # Retrieve the source and target images from the cloud volume
     cropped_img = current_app.source_cv.download(
         bound, coord_resolution=coord_resolution, mip=0
-    )
-
-    # save the cropped image
-    Image.fromarray(adjust_datatype(cropped_img.squeeze(axis=3)[:, :, 0])[0]).save(
-        os.path.join(img_all, "X.png"), "PNG"
     )
 
     # remove the singleton dimension, take care as the z dimension might be singleton

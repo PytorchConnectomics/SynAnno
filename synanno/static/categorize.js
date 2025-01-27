@@ -104,7 +104,7 @@ $(document).ready(function () {
 
     if (!fp_set) {
       // else show loading screen and process the data
-      $("#progressModal").modal("show");
+      $("#loading-bar").css('display', 'flex');
       submit_data(false);
     }
 
@@ -114,7 +114,7 @@ $(document).ready(function () {
   $("#dl_fn_yes").click(async function () {
     // show loading screen
     $("#categorizeModalFPSave").modal("hide");
-    $("#progressModal").modal("show");
+    $("#loading-bar").css('display', 'flex');
 
     submit_data(true);
   });
@@ -123,7 +123,7 @@ $(document).ready(function () {
   $("#dl_fn_no").click(async function () {
     // show loading screen
     $("#categorizeModalFPSave").modal("hide");
-    $("#progressModal").modal("show");
+    $("#loading-bar").css('display', 'flex');
 
     submit_data(false);
   });

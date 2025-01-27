@@ -33,6 +33,22 @@ $(document).ready(function () {
     });
   });
 
+  // Enable the c3 neuron segmentation layer
+function enableC3Layer() {
+  fetch('/enable_c3_layer', { method: 'POST' })
+      .then(response => response.json())
+      .then(data => console.log(data.status))
+      .catch(error => console.error('Error enabling c3 layer:', error));
+}
+
+// Disable the c3 neuron segmentation layer
+function disableC3Layer() {
+  fetch('/disable_c3_layer', { method: 'POST' })
+      .then(response => response.json())
+      .then(data => console.log(data.status))
+      .catch(error => console.error('Error disabling c3 layer:', error));
+}
+
   // link to the NG, edited when ever right clicking an instance in the grid view
   var ng_link;
 

@@ -156,6 +156,7 @@
               />
               View Centric
             </label>
+
             <label class="form-check-label">
               <input
                 type="radio"
@@ -179,7 +180,62 @@
               Coordinate Order
             </label>
 
+
             <div class="mb-1"></div>
+
+            <!-- Button to Open the Embedded Neuroglancer Modal -->
+            <button
+              id="openNeuronModalBtn"
+              type="button"
+              class="btn btn-primary"
+              data-bs-toggle="modal"
+              data-bs-target="#neuroglancerModal"
+              disabled
+            >
+              Choose a Neuron
+            </button>
+
+            <!-- Modal for Embedded Neuroglancer -->
+            <div
+              class="modal fade"
+              id="neuroglancerModal"
+              tabindex="-1"
+              aria-labelledby="neuroglancerModalLabel"
+              aria-hidden="true"
+            >
+              <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="neuroglancerModalLabel">Neuron-Centric View</h5>
+                    <button
+                      type="button"
+                      class="btn-close"
+                      data-bs-dismiss="modal"
+                      aria-label="Close"
+                    ></button>
+                  </div>
+                  <div class="modal-body">
+                    <!-- Embedded Neuroglancer Viewer -->
+                    <iframe
+                      id="neuroglancerIframe"
+                      src=""
+                      width="100%"
+                      height="700px"
+                      style="border: 1px solid #ccc;"
+                    ></iframe>
+                  </div>
+                  <div class="modal-footer">
+                    <button
+                      type="button"
+                      class="btn btn-secondary"
+                      data-bs-dismiss="modal"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <div id="neuron-form" {% if view_style=="view" %} class="hidden-form" {% endif %}>
                 <input
@@ -198,20 +254,6 @@
                 />
               </div>
             </div>
-
-            <div id="view-form" {% if view_style=="neuron" %} class="hidden-form" {% endif %}>
-              <label for="coordinate-container-view" class="form-label">Slicing Indices for the Segmentation Volume (will be scaled for the image volume in case of a resolution mismatch)</label>
-              <div class="coordinate-container" id="coordinate-container-view">
-                <input class="coordinate-dims" type="number" id="x1" name="x1" placeholder="X1 - Default: 0" />
-                <input class="coordinate-dims" type="number" id="x2" name="x2" placeholder="X2 - Default: max(X)" />
-                <input class="coordinate-dims" type="number" id="y1" name="y1" placeholder="Y1 - Default: 0" />
-                <input class="coordinate-dims" type="number" id="y2" name="y2" placeholder="Y2 - Default: max(Y)" />
-                <input class="coordinate-dims" type="number" id="z1" name="z1" placeholder="Z1 - Default: 0" />
-                <input class="coordinate-dims" type="number" id="z2" name="z2" placeholder="Z2 - Default: max(Z)" />
-              </div>
-            </div>
-
-            <div class="mb-3"></div>
 
             <div>
               <label class="form-label" style="margin-right: 2px">Source Volume Resolution (in nm)</label>

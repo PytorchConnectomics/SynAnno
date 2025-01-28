@@ -687,14 +687,14 @@ def load_materialization():
     if materialization_path is None or materialization_path == "":
         return jsonify({"error": "Materialization path is missing."}), 400
     try:
-        print("🔄 Loading the materialization table...")
+        print("Loading the materialization table...")
         path = materialization_path.replace("file://", "")
         current_app.synapse_data = pd.read_csv(path)
         print(current_app.synapse_data.head())
 
-        print("✅ Materialization table loaded successfully!")
+        print("Materialization table loaded successfully!")
         return jsonify({"status": "success"}), 200
 
     except Exception as e:
-        print(f"❌ Failed to load materialization table: {e}")
+        print(f"Failed to load materialization table: {e}")
         return jsonify({"error": str(e)}), 500

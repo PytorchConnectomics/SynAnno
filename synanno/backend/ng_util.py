@@ -55,7 +55,7 @@ def setup_ng(
             s.layers["image"] = neuroglancer.ImageLayer(source=source)
         elif isinstance(
             source, str
-        ):  # Assuming it's a string URL for the precomputed source
+        ):  # assuming it's a string URL for the precomputed source
             s.layers["image"] = neuroglancer.ImageLayer(source=source)
         else:
             raise ValueError("Unknown source type")
@@ -95,17 +95,17 @@ def setup_ng(
 
         def get_hovered_neuron_id(s):
             """Retrieve and print the neuron ID at the voxel under the mouse cursor."""
-            # Get the current mouse voxel coordinates
+            # get the current mouse voxel coordinates
             voxel_coords = s.mouse_voxel_coordinates
             print(f"Mouse Voxel Coordinates: {voxel_coords}")
 
-            # Retrieve the selected neuron ID from the segmentation layer
+            # retrieve the selected neuron ID from the segmentation layer
             neuron_info = s.selected_values["c3_neuron_segmentation"].value
             print(f"Raw Selected Neuron ID: {neuron_info}")
 
             neuron_id = None
 
-            # Handle different types of neuron_info
+            # handle different types of neuron_info
             if isinstance(
                 neuron_info, neuroglancer.viewer_config_state.SegmentIdMapEntry
             ):
@@ -118,11 +118,11 @@ def setup_ng(
                 print("No valid neuron ID found at this voxel.")
                 return
 
-            # Store the neuron ID globally in the app context
+            # store the neuron ID globally in the app context
             app.selected_neuron_id = neuron_id
             print(f"Selected Neuron ID: {neuron_id}")
 
-        # Bind the action to a key, e.g., 'n'
+        # bind the action to a key, e.g., 'n'
         app.ng_viewer.actions.add("get_neuron_id", get_hovered_neuron_id)
 
         with app.ng_viewer.config_state.txn() as s:

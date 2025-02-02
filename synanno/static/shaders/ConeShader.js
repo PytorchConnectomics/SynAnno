@@ -42,7 +42,6 @@ const ConeShader = {
 
         void main()
         {
-            vec3 blendedColor = mix(vColor, vec3(1.0, 1.0, 1.0), 0.15); // Add blending to make surfaces visible
             gl_FragColor = vec4(vColor, 1.0); // Ensure full alpha to render surface
         }
     `,

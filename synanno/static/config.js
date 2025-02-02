@@ -1,2 +1,2 @@
-export const nodes_array = [...Array(5000).keys()];
-export const edge_array = [...Array(15000).keys()];
+export const nodes_array = [...Array(500).keys()];
+export const edge_array = [...Array(500).keys()];

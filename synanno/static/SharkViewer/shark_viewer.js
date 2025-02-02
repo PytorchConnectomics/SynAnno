@@ -485,15 +485,15 @@ import {
 
       particleShader.uniforms["sphereTexture"].value = sphereImg;
       particleShader.uniforms["particleScale"].value = particleScale;
-      particleShader.uniforms["color"].value = new THREE.Color(color);
       particleShader.uniforms["abstraction_threshold"].value = threshold;
       particleShader.uniforms["grey_out"].value = 0;
 
       let material = new THREE.ShaderMaterial({
-        uniforms: particleShader.uniforms,
-        vertexShader: particleShader.vertexShader,
-        fragmentShader: particleShader.fragmentShader,
-        transparent: true,
+          uniforms: particleShader.uniforms,
+          vertexShader: particleShader.vertexShader,
+          fragmentShader: particleShader.fragmentShader,
+          transparent: true,
+          vertexColors: true,
       });
 
       let particleDepthShader = structuredClone(ParticleDepthShader);
@@ -723,18 +723,18 @@ import {
         let coneShader = structuredClone(ConeShader);
 
         coneShader.uniforms["sphereTexture"].value = sphereImg;
-        coneShader.uniforms["color"].value = new THREE.Color(color);
         coneShader.uniforms["abstraction_threshold"].value = threshold;
         coneShader.uniforms["grey_out"].value = 0;
 
         const coneMaterial = new THREE.ShaderMaterial({
-          uniforms: coneShader.uniforms,
-          vertexShader: coneShader.vertexShader,
-          fragmentShader: coneShader.fragmentShader,
-          transparent: true,
-          depthTest: true,
-          side: THREE.DoubleSide,
-          alphaTest: 0.5,
+            uniforms: coneShader.uniforms,
+            vertexShader: coneShader.vertexShader,
+            fragmentShader: coneShader.fragmentShader,
+            transparent: true,
+            depthTest: true,
+            side: THREE.DoubleSide,
+            alphaTest: 0.5,
+            vertexColors: true,
         });
 
         let coneDepthShader = structuredClone(ConeDepthShader);

@@ -195,52 +195,6 @@
               Choose a Neuron
             </button>
 
-            <!-- Modal for Embedded Neuroglancer -->
-            <div
-              class="modal fade"
-              id="neuroglancerModal"
-              tabindex="-1"
-              aria-labelledby="neuroglancerModalLabel"
-              aria-hidden="true"
-            >
-              <div class="modal-dialog modal-xl">
-              <div class="modal-content">
-              <div class="modal-header">
-              <h5 class="modal-title" id="neuroglancerModalLabel">Neuron-Centric View</h5>
-              <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="modal"
-                aria-label="Close"
-              ></button>
-              </div>
-              <div class="modal-body">
-              <!-- Embedded Neuroglancer Viewer -->
-              <iframe
-                id="neuroglancerIframe"
-                src=""
-                width="100%"
-                height="700px"
-                style="border: 1px solid #ccc;"
-              ></iframe>
-              </div>
-                <div class="modal-footer d-flex justify-content-between align-items-center">
-                <p class="text-muted mb-0">
-                  Press 'n' to select the neuron at your cursor.
-                </p>
-                <button
-                  type="button"
-                  class="btn btn-secondary"
-                  data-bs-dismiss="modal"
-                >
-                  Close
-                </button>
-                </div>
-              </div>
-              </div>
-              </div>
-            </div>
-
             <div id="neuron-form" {% if view_style=="view" %} class="hidden-form" {% endif %}>
                 <input
                   class="number-dims"
@@ -279,6 +233,51 @@
             <input type="number" id="cropsize_x" placeholder="256" name="crop_size_c0" value="256" />
             <input type="number" id="cropsize_y" placeholder="256" name="crop_size_c1" value="256" />
             <input type="number" id="cropsize_z" placeholder="16" name="crop_size_c2" value="16" />
+          </div>
+
+            <!-- Modal for Embedded Neuroglancer -->
+            <div
+            class="modal fade"
+            id="neuroglancerModal"
+            tabindex="-1"
+            aria-labelledby="neuroglancerModalLabel"
+            aria-hidden="true"
+          >
+            <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+            <div class="modal-header">
+            <h5 class="modal-title" id="neuroglancerModalLabel">Neuron-Centric View</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+            </div>
+            <div class="modal-body">
+            <!-- Embedded Neuroglancer Viewer -->
+            <iframe
+              id="neuroglancerIframe"
+              src=""
+              width="100%"
+              height="700px"
+              style="border: 1px solid #ccc;"
+            ></iframe>
+            </div>
+              <div class="modal-footer d-flex justify-content-between align-items-center">
+              <p class="text-muted mb-0">
+                Press 'n' to select the neuron at your cursor.
+              </p>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                data-bs-dismiss="modal"
+              >
+                Close
+              </button>
+              </div>
+            </div>
+            </div>
           </div>
         </div>
       </div>

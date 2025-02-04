@@ -6,11 +6,8 @@ import {
     Color,
   } from "./utils.js";
 
-  import { BokehShader } from "../shaders/BokehShader.js";
   import { ParticleShader } from "../shaders/ParticleShader.js";
   import { ConeShader } from "../shaders/ConeShader.js";
-  import { ParticleDepthShader } from "../shaders/ParticleDepthShader.js";
-  import { ConeDepthShader } from "../shaders/ConeDepthShader.js";
 
   import OrbitUnlimitedControls from "./OrbitUnlimitedControls.js";
 
@@ -275,31 +272,6 @@ import {
         window.innerHeight
       );
 
-      const bokeh_shader = BokehShader;
-
-      this.postprocessing.bokeh_uniforms = THREE.UniformsUtils.clone(
-        bokeh_shader.uniforms
-      );
-
-      this.postprocessing.bokeh_uniforms["tColor"].value =
-        this.postprocessing.rtTextureColor.texture;
-      this.postprocessing.bokeh_uniforms["tDepth"].value =
-        this.postprocessing.rtTextureDepth.texture;
-      this.postprocessing.bokeh_uniforms["textureWidth"].value =
-        window.innerWidth;
-      this.postprocessing.bokeh_uniforms["textureHeight"].value =
-        window.innerHeight;
-
-      this.postprocessing.materialBokeh = new THREE.ShaderMaterial({
-        uniforms: this.postprocessing.bokeh_uniforms,
-        vertexShader: bokeh_shader.vertexShader,
-        fragmentShader: bokeh_shader.fragmentShader,
-        defines: {
-          RINGS: this.shaderSettings.rings,
-          SAMPLES: this.shaderSettings.samples,
-        },
-      });
-
       this.postprocessing.quad = new THREE.Mesh(
         new THREE.PlaneGeometry(window.innerWidth, window.innerHeight),
         this.postprocessing.materialBokeh
@@ -494,19 +466,6 @@ import {
           fragmentShader: particleShader.fragmentShader,
           transparent: true,
           vertexColors: true,
-      });
-
-      let particleDepthShader = structuredClone(ParticleDepthShader);
-
-      particleDepthShader.uniforms.mNear.value = this.camera.near;
-      particleDepthShader.uniforms.mFar.value = this.camera.far;
-      particleDepthShader.uniforms.sphereTexture.value = sphereImg;
-      particleDepthShader.uniforms.particleScale.value = particleScale;
-
-      neuron.particleMaterialDepth = new THREE.ShaderMaterial({
-        uniforms: particleDepthShader.uniforms,
-        vertexShader: particleDepthShader.vertexShader,
-        fragmentShader: particleDepthShader.fragmentShader,
       });
 
       Object.keys(swcJSON).forEach((node) => {
@@ -723,7 +682,6 @@ import {
         let coneShader = structuredClone(ConeShader);
 
         coneShader.uniforms["sphereTexture"].value = sphereImg;
-        coneShader.uniforms["abstraction_threshold"].value = threshold;
         coneShader.uniforms["grey_out"].value = 0;
 
         const coneMaterial = new THREE.ShaderMaterial({
@@ -735,21 +693,6 @@ import {
             side: THREE.DoubleSide,
             alphaTest: 0.5,
             vertexColors: true,
-        });
-
-        let coneDepthShader = structuredClone(ConeDepthShader);
-        coneDepthShader.uniforms.mNear.value = this.camera.near;
-        coneDepthShader.uniforms.mFar.value = this.camera.far;
-        coneDepthShader.uniforms.sphereTexture.value = sphereImg;
-
-        neuron.coneMaterialDepth = new THREE.ShaderMaterial({
-          uniforms: coneDepthShader.uniforms,
-          vertexShader: coneDepthShader.vertexShader,
-          fragmentShader: coneDepthShader.fragmentShader,
-          transparent: true,
-          depthTest: true,
-          side: THREE.DoubleSide,
-          alphaTest: 0.5,
         });
 
         const coneMesh = new THREE.Mesh(coneGeom, coneMaterial);
@@ -945,28 +888,6 @@ import {
 
       this.effectController.dithering = 0.0001;
 
-      this.matChanger();
-      this.shaderUpdate();
-    }
-
-    shaderUpdate() {
-      this.postprocessing.materialBokeh.defines.RINGS = this.shaderSettings.rings;
-      this.postprocessing.materialBokeh.defines.SAMPLES =
-        this.shaderSettings.samples;
-      this.postprocessing.materialBokeh.needsUpdate = true;
-    }
-
-    matChanger() {
-      console.log("update params");
-      for (const e in this.effectController) {
-        if (e in this.postprocessing.bokeh_uniforms) {
-          this.postprocessing.bokeh_uniforms[e].value = this.effectController[e];
-        }
-      }
-      this.postprocessing.enabled = this.effectController.enabled;
-      this.postprocessing.bokeh_uniforms["znear"].value = this.camera.near;
-      this.postprocessing.bokeh_uniforms["zfar"].value = this.camera.far;
-      this.camera.setFocalLength(this.effectController.focalLength);
     }
 
     cameraCoords() {
@@ -1010,21 +931,6 @@ import {
       }
     }
 
-    updateDofEnabled(enabled) {
-      this.effectController.enabled = enabled;
-      this.matChanger();
-    }
-
-    updateDofFocus(focus) {
-      this.effectController.focalDepth = focus;
-      this.matChanger();
-    }
-
-    updateDofBlur(blur) {
-      this.effectController.maxblur = blur;
-      this.matChanger();
-    }
-
     // animation loop
     animate(timestamp = null) {
       requestAnimationFrame(this.animate.bind(this));
@@ -1042,13 +948,11 @@ import {
 
         this.scene.children.forEach((child, i) => {
           if (child.isNeuron) {
-            this.scene.overrideMaterial = child.particleMaterialDepth;
             this.renderer.setRenderTarget(this.postprocessing.rtTextureDepth);
             //this.renderer.setRenderTarget(null);
             this.renderer.clear();
             this.renderer.render(this.scene, this.camera);
             if (this.show_cones) {
-              this.scene.overrideMaterial = child.coneMaterialDepth;
               this.renderer.setRenderTarget(this.postprocessing.rtTextureDepth);
               this.renderer.clear();
               this.renderer.render(this.scene, this.camera);

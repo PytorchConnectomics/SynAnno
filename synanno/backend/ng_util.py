@@ -38,7 +38,10 @@ def setup_ng(
 
     # specify the NG coordinate space
     default_coordinate_order = {"x": (4, 4), "y": (4, 4), "z": (40, 40)}
-    coordinate_order = getattr(app, "coordinate_order", default_coordinate_order)
+    if hasattr(app, "coordinate_order") and app.coordinate_order:
+        coordinate_order = app.coordinate_order
+    else:
+        coordinate_order = default_coordinate_order
 
     # parse the coordinate space into neuroglancer
     coordinate_space = neuroglancer.CoordinateSpace(
@@ -110,40 +113,37 @@ def setup_ng(
                 hideSegmentZero=True,
             )
 
-        # additional layer that lets the user mark the center of FPs
-        s.layers.append(
-            name="center_dot",
-            layer=neuroglancer.LocalAnnotationLayer(
-                dimensions=coordinate_space,
-                annotation_properties=[
-                    neuroglancer.AnnotationPropertySpec(
-                        id="color",
-                        type="rgb",
-                        default="red",
-                    ),
-                    neuroglancer.AnnotationPropertySpec(
-                        id="size",
-                        type="float32",
-                        default=10,
-                    ),
-                    neuroglancer.AnnotationPropertySpec(
-                        id="p_int8",
-                        type="int8",
-                        default=10,
-                    ),
-                    neuroglancer.AnnotationPropertySpec(
-                        id="p_uint8",
-                        type="uint8",
-                        default=10,
-                    ),
-                ],
-                annotations=[],
-            ),
-        )
-
         # TODO: use dimensions from processing.py to determine good starting coordinates
         # init the view position (arbitrary default in H01 range; change later)
         s.position = [711044, 315210, 2587]
+
+        # additional layer that lets the user mark the center of FPs
+        s.layers["center_dot"] = neuroglancer.LocalAnnotationLayer(
+            dimensions=coordinate_space,
+            annotation_properties=[
+                neuroglancer.AnnotationPropertySpec(
+                    id="color",
+                    type="rgb",
+                    default="red",
+                ),
+                neuroglancer.AnnotationPropertySpec(
+                    id="size",
+                    type="float32",
+                    default=10,
+                ),
+                neuroglancer.AnnotationPropertySpec(
+                    id="p_int8",
+                    type="int8",
+                    default=10,
+                ),
+                neuroglancer.AnnotationPropertySpec(
+                    id="p_uint8",
+                    type="uint8",
+                    default=10,
+                ),
+            ],
+            annotations=[],
+        )
 
         def center_annotation(s):
             """Ng action function that enables the recording and depiction
@@ -153,9 +153,13 @@ def setup_ng(
             # record the current mouse position
             center = s.mouse_voxel_coordinates
 
+            # prevent crashes if off ng view
+            if center is None:
+                print("No mouse coordinates available.")
+                return
+
             center_coord = {
-                key: int(value)
-                for key, value in zip(list(app.coordinate_order.keys()), center)
+                key: int(value) for key, value in zip(coordinate_space.names, center)
             }
 
             # split the position and convert to int
@@ -163,7 +167,7 @@ def setup_ng(
             app.cy = int(center_coord["y"])
             app.cx = int(center_coord["x"])
 
-            # add a yellow dot at the recorded position with in the NG
+            # add a yellow dot at the recorded position within the NG
             with app.ng_viewer.txn() as l:
                 pt = neuroglancer.PointAnnotation(
                     point=[int(center[0]), int(center[1]), int(center[2])],
@@ -181,6 +185,12 @@ def setup_ng(
             """Retrieve and print the neuron ID at the voxel under the mouse cursor."""
             # get the current mouse voxel coordinates
             voxel_coords = s.mouse_voxel_coordinates
+
+            # prevent crashes if off ng view
+            if voxel_coords is None:
+                print("No mouse coordinates available.")
+                return
+
             print(f"Mouse Voxel Coordinates: {voxel_coords}")
 
             # retrieve the selected neuron ID from the segmentation layer

@@ -677,9 +677,9 @@ def disable_c3_layer():
 
 @blueprint.route("/launch_neuroglancer", methods=["GET", "POST"])
 def launch_neuroglancer():
-    source_url = request.args.get("source_url") or request.form.get("source_url")
-    target_url = request.args.get("target_url") or request.form.get("target_url")
-    neuropil_url = request.args.get("neuropil_url") or request.form.get("neuropil_url")
+    source_url = request.args.get("source_url")
+    target_url = request.args.get("target_url")
+    neuropil_url = request.args.get("neuropil_url")
 
     if not hasattr(current_app, "ng_viewer") or current_app.ng_viewer is None:
         ng_util.setup_ng(

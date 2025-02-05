@@ -1,7 +1,9 @@
+import os
 import fastavro
 import pandas as pd
 from tqdm import tqdm
 from typing import Optional, Any
+import argparse
 
 
 def safe_int(value: Optional[Any]) -> int:
@@ -127,11 +129,16 @@ def process_avro_files(avro_dir_path: str, output_csv_path: str):
 
 
 if __name__ == "__main__":
-    # Path to the folder containing Avro files
-    avro_dir_path = "PATH_TO_FOLDER"
-
-    # Path to the output CSV file
-    output_csv_path = "synapse-export_combined.csv"
-
-    # Process all Avro files
-    process_avro_files(avro_dir_path, output_csv_path)
+    parser = argparse.ArgumentParser(
+        description="Process Avro files into a CSV materialization table."
+    )
+    parser.add_argument(
+        "avro_dir_path", help="Path to the directory containing Avro files"
+    )
+    parser.add_argument(
+        "--output_csv_path",
+        default="synapse-export_combined.csv",
+        help="Path to the output CSV file (default: synapse-export_combined.csv)",
+    )
+    args = parser.parse_args()
+    process_avro_files(args.avro_dir_path, args.output_csv_path)

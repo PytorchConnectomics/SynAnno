@@ -112,7 +112,7 @@ $(document).ready(function () {
 
   // enable the c3 layer when the modal opens
   $("#neuroglancerModal").on("show.bs.modal", function () {
-    fetch('/launch_neuroglancer')
+    fetch('/launch_neuroglancer', { method: 'POST' })
         .then(response => response.json())
         .then(data => {
             $("#neuroglancerIframe").attr("src", data.ng_url);
@@ -141,14 +141,37 @@ $(document).ready(function () {
         })
         .then(response => response.json())
         .then(data => {
-            if (data.status === "success") {
-                console.log("Materialization table loaded.");
-                // Open the Neuroglancer modal after successful loading
-                document.getElementById('neuroglancerIframe').src = "/launch_neuroglancer";
-            } else {
-                console.error("Error loading materialization table:", data.error);
-                alert("Invalid materialization table.");
-            }
+          if (data.status === "success") {
+            console.log("Materialization table loaded.");
+
+            // Grab the form values (make sure these IDs match your HTML input fields!)
+            var source_url = document.getElementById('source_url').value.trim();
+            var target_url = document.getElementById('target_url').value.trim();
+            var neuropil_url = document.getElementById('neuropil_url').value.trim();
+
+            // Build the query string with proper URL encoding
+            var queryString = '?source_url=' + encodeURIComponent(source_url) +
+                              '&target_url=' + encodeURIComponent(target_url) +
+                              '&neuropil_url=' + encodeURIComponent(neuropil_url);
+
+            // Use a GET request to fetch the Neuroglancer URL with our form data in tow!
+            fetch('/launch_neuroglancer' + queryString, { method: 'GET' })
+                .then(response => response.json())
+                .then(ngData => {
+                    if (ngData.ng_url) {
+                        document.getElementById('neuroglancerIframe').src = ngData.ng_url;
+                        console.log("Neuroglancer URL set to:", ngData.ng_url);
+                    } else {
+                        console.error("No Neuroglancer URL received:", ngData.error);
+                    }
+                })
+                .catch(error => {
+                    console.error("Error launching Neuroglancer:", error);
+                });
+          } else {
+              console.error("Error loading materialization table:", data.error);
+              alert("Invalid materialization table.");
+          }
         })
         .catch(error => {
             console.error("Error during fetch:", error);

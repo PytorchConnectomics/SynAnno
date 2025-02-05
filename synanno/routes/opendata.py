@@ -263,6 +263,7 @@ def upload_file() -> Template:
                 current_app._get_current_object(),
                 source_url,
                 target_url,
+                neuropil_url,
                 materialization_url,
                 subvolume=subvolume,
                 bucket_secret_json=bucket_secret
@@ -285,6 +286,7 @@ def upload_file() -> Template:
                 current_app._get_current_object(),
                 source_url,
                 target_url,
+                neuropil_url,
                 materialization_url,
                 preid,
                 postid,
@@ -673,22 +675,21 @@ def disable_c3_layer():
     return jsonify({"status": "c3 layer disabled"})
 
 
-@blueprint.route("/launch_neuroglancer")
+@blueprint.route("/launch_neuroglancer", methods=["GET", "POST"])
 def launch_neuroglancer():
-    """Initialize and serve the Neuroglancer viewer."""
+    source_url = request.args.get("source_url") or request.form.get("source_url")
+    target_url = request.args.get("target_url") or request.form.get("target_url")
+    neuropil_url = request.args.get("neuropil_url") or request.form.get("neuropil_url")
 
     if not hasattr(current_app, "ng_viewer") or current_app.ng_viewer is None:
         ng_util.setup_ng(
             app=current_app._get_current_object(),
-            source="precomputed://gs://h01-release/data/20210601/4nm_raw",
-            target="gs://h01-release/data/20210729/c3/synapses/whole_ei_onlyvol",
-            neuropil="precomputed://gs://h01-release/data/20210601/c3",
+            source="precomputed://" + source_url,
+            target="precomputed://" + target_url,
+            neuropil="precomputed://" + neuropil_url,
         )
 
-    print(current_app.ng_viewer)
     ng_url = f"http://{current_app.config['NG_IP']}:{current_app.config['NG_PORT']}/v/{current_app.ng_viewer.token}/"
-    print(ng_url)
-    print(jsonify({"ng_url": ng_url}))
     return jsonify({"ng_url": ng_url})
 
 

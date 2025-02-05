@@ -346,6 +346,31 @@ In this view, you can download the JSON file containing the instances' metadata 
 
 [![Export Masks][12]][12]
 
+## Example Data [(H01)](https://h01-release.storage.googleapis.com/landing.html)
+
+To obtain some sample data from the [H01](https://h01-release.storage.googleapis.com/landing.html) dataset to use in a SynAnno materialization table, run the following on the command line:
+
+```bash
+gsutil cp gs://h01-release/data/20210729/c3/synapses/exported/\* [PATH_TO_FOLDER]
+```
+
+where [PATH_TO_FOLDER] is a directory on your machine to store raw data from [H01](https://h01-release.storage.googleapis.com/landing.html).
+
+Then, from your project folder run:
+
+```bash
+python ./backend/materialization_generation.py [PATH_TO_FOLDER] --output_csv_path [PATH_TO_STORE_MATERIALIZATION TABLE]
+```
+
+where [PATH_TO_FOLDER] is as before and [PATH_TO_STORE_MATERIALIZATION TABLE] is where you wish to store your materialization of the raw [H01](https://h01-release.storage.googleapis.com/landing.html) data.
+
+The file stored at [PATH_TO_STORE_MATERIALIZATION TABLE] is a valid materialization table to use with SynAnno. For an example run through of the app, use the following URLs on SynAnno's 'Open Data' view:
+
+- source: gs://h01-release/data/20210601/4nm_raw
+- target: gs://h01-release/data/20210729/c3/synapses/whole_ei_onlyvol
+- neuropil: gs://h01-release/data/20210729/c3/synapses/whole_ei_onlyvol
+- materialization: [PATH_TO_STORE_MATERIALIZATION TABLE]
+
 ## Contributing
 
 Pre-submission, we ask you to only create issues for bugs, feature requests, or questions about the code. After submission, we strongly encourage any kind of contribution, including bug fixes, additional features, and documentation improvements. If you're unsure about whether a contribution is appropriate, feel free to open an issue and ask.

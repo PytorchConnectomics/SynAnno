@@ -110,9 +110,72 @@ def setup_ng(
                 hideSegmentZero=True,
             )
 
+        # additional layer that lets the user mark the center of FPs
+        s.layers.append(
+            name="center_dot",
+            layer=neuroglancer.LocalAnnotationLayer(
+                dimensions=coordinate_space,
+                annotation_properties=[
+                    neuroglancer.AnnotationPropertySpec(
+                        id="color",
+                        type="rgb",
+                        default="red",
+                    ),
+                    neuroglancer.AnnotationPropertySpec(
+                        id="size",
+                        type="float32",
+                        default=10,
+                    ),
+                    neuroglancer.AnnotationPropertySpec(
+                        id="p_int8",
+                        type="int8",
+                        default=10,
+                    ),
+                    neuroglancer.AnnotationPropertySpec(
+                        id="p_uint8",
+                        type="uint8",
+                        default=10,
+                    ),
+                ],
+                annotations=[],
+            ),
+        )
+
         # TODO: use dimensions from processing.py to determine good starting coordinates
         # init the view position (arbitrary default in H01 range; change later)
         s.position = [711044, 315210, 2587]
+
+        def center_annotation(s):
+            """Ng action function that enables the recording and depiction
+            of center markers for newly identified FN instances.
+            """
+
+            # record the current mouse position
+            center = s.mouse_voxel_coordinates
+
+            center_coord = {
+                key: int(value)
+                for key, value in zip(list(app.coordinate_order.keys()), center)
+            }
+
+            # split the position and convert to int
+            app.cz = int(center_coord["z"])
+            app.cy = int(center_coord["y"])
+            app.cx = int(center_coord["x"])
+
+            # add a yellow dot at the recorded position with in the NG
+            with app.ng_viewer.txn() as l:
+                pt = neuroglancer.PointAnnotation(
+                    point=[int(center[0]), int(center[1]), int(center[2])],
+                    id=f"point{1}",
+                )
+                l.layers["center_dot"].annotations.append(pt)
+
+        # add the center dot as action
+        app.ng_viewer.actions.add("center", center_annotation)
+        with app.ng_viewer.config_state.txn() as s:
+            # set the trigger for the action to the key 'c'
+            s.input_event_bindings.viewer["keyc"] = "center"
 
         def get_hovered_neuron_id(s):
             """Retrieve and print the neuron ID at the voxel under the mouse cursor."""

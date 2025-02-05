@@ -216,15 +216,25 @@ def upload_file() -> Template:
         )
     }
 
-    # retrieve the urls for the source and target cloud volume buckets
+    # retrieve the urls for the source, target, and neuropil segmentation cloud volume buckets
     source_url = request.form.get("source_url")
     target_url = request.form.get("target_url")
+    neuropil_url = request.form.get("neuropil_url")
 
     # check if the provided urls are valid based on the cloud provider prefix
-    if any(
-        bucket in source_url for bucket in current_app.config["CLOUD_VOLUME_BUCKETS"]
-    ) and any(
-        bucket in target_url for bucket in current_app.config["CLOUD_VOLUME_BUCKETS"]
+    if (
+        any(
+            bucket in source_url
+            for bucket in current_app.config["CLOUD_VOLUME_BUCKETS"]
+        )
+        and any(
+            bucket in target_url
+            for bucket in current_app.config["CLOUD_VOLUME_BUCKETS"]
+        )
+        and any(
+            bucket in neuropil_url
+            for bucket in current_app.config["CLOUD_VOLUME_BUCKETS"]
+        )
     ):
         # retrieve the bucket secret if the user provided one
         if bucket_secret := request.files.get("secrets_file"):
@@ -300,6 +310,7 @@ def upload_file() -> Template:
             app=current_app._get_current_object(),
             source="precomputed://" + source_url,
             target="precomputed://" + target_url,
+            neuropil="precomputed://" + neuropil_url,
         )
 
     flash("Data ready!")
@@ -648,8 +659,8 @@ def save_file(
 def enable_c3_layer():
     """Enable the c3 neuron segmentation layer in the global Neuroglancer."""
     with current_app.ng_viewer.txn() as s:
-        s.layers["c3_neuron_segmentation"].selectedAlpha = 0.5
-        s.layers["c3_neuron_segmentation"].notSelectedAlpha = 0.1
+        s.layers["neuropil"].selectedAlpha = 0.5
+        s.layers["neuropil"].notSelectedAlpha = 0.1
     return jsonify({"status": "c3 layer enabled"})
 
 
@@ -657,8 +668,8 @@ def enable_c3_layer():
 def disable_c3_layer():
     """Disable the c3 neuron segmentation layer in the global Neuroglancer."""
     with current_app.ng_viewer.txn() as s:
-        s.layers["c3_neuron_segmentation"].selectedAlpha = 0.0
-        s.layers["c3_neuron_segmentation"].notSelectedAlpha = 0.0
+        s.layers["neuropil"].selectedAlpha = 0.0
+        s.layers["neuropil"].notSelectedAlpha = 0.0
     return jsonify({"status": "c3 layer disabled"})
 
 
@@ -671,6 +682,7 @@ def launch_neuroglancer():
             app=current_app._get_current_object(),
             source="precomputed://gs://h01-release/data/20210601/4nm_raw",
             target="gs://h01-release/data/20210729/c3/synapses/whole_ei_onlyvol",
+            neuropil="precomputed://gs://h01-release/data/20210601/c3",
         )
 
     print(current_app.ng_viewer)

@@ -534,6 +534,7 @@ def neuron_centric_3d_data_processing(
     app,
     source_url: str,
     target_url: str,
+    neuropil_url: str,
     table_name: str,
     preid: int = None,
     postid: int = None,
@@ -548,6 +549,7 @@ def neuron_centric_3d_data_processing(
         app (Flask): an handle to the application context
         source_url (str): the url to the source cloud volume (EM).
         target_url (str): the url to the target cloud volume (synapse).
+        neuropil_url (str): the url to the neuropil cloud volume (neuron segmentation).
         table_name (str): the path to the JSON file.
         preid (int): the id of the pre synaptic region.
         postid (int): the id of the post synaptic region.
@@ -578,8 +580,17 @@ def neuron_centric_3d_data_processing(
         progress=False,
         use_https=True,
     )
+    if neuropil_url is not None:
+        current_app.neuropil_cv = CloudVolume(
+            neuropil_url,
+            secrets=bucket_secret_json,
+            fill_missing=True,
+            parallel=True,
+            progress=False,
+            use_https=True,
+        )
 
-    # assert that both volumes have the same dimensions
+    # assert that both the source and target volumes have the same dimensions
     if list(current_app.source_cv.volume_size) == list(
         current_app.target_cv.volume_size
     ):

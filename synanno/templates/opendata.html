@@ -79,6 +79,20 @@
                 {% if mode == 'draw' or mode == 'annotate' %} data-required="true" {% endif %}
               />
             </p>
+            <label for="neuropil_url" class="form-label">
+              Neuropil Segmentation (precomputed: Neuroglancer's native format) - Required for View-Centric Analysis
+            </label>
+            <p>
+              <input
+                class="form-control"
+                type="url"
+                id="neuropil_url"
+                name="neuropil_url"
+                placeholder="Cloud Volume Bucket - file://<path_to_your_file>"
+                value="gs://h01-release/data/20210601/c3"
+                {% if mode == 'draw' or mode == 'annotate' %} data-required="true" {% endif %}
+              />
+            </p>
             <label for="materialization_url" class="form-label">
               Materialization (url/name of the table containing the ID association and bounding box information)
             </label>

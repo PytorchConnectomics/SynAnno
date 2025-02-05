@@ -12,15 +12,19 @@ from flask import Flask
 
 
 def setup_ng(
-    app: Flask, source: Union[npt.NDArray, str], target: Union[npt.NDArray, str]
+    app: Flask,
+    source: Union[npt.NDArray, str],
+    target: Union[npt.NDArray, str],
+    neuropil: Union[npt.NDArray, str],
 ) -> None:
     """Setup function for the Neuroglancer (ng) that enables the recording and depiction
     of center markers for newly identified FN instances.
 
     Args:
         app: a handle to the application context
-        source_img: The image volume depicted by the ng
-        target_seg: The target volume depicted by the ng
+        source: The image volume depicted by the ng
+        target: The target volume depicted by the ng
+        neuropil: Neuropil segmentation volume when undergoing view-centric analysis
     """
 
     # generate a version number
@@ -79,17 +83,34 @@ def setup_ng(
         s.selected_layer.visible = True
         s.show_slices = True
 
-        # c3 segmentation layer for neuron-centric synapse selection
-        s.layers["c3_neuron_segmentation"] = neuroglancer.SegmentationLayer(
-            source="precomputed://gs://h01-release/data/20210601/c3",
-            # disabled by default but enabled in neuon-centric mode
-            selectedAlpha=0.0,
-            notSelectedAlpha=0.0,
-            # optional niceties
-            hoverHighlight=True,
-            hideSegmentZero=True,
-        )
+        if isinstance(neuropil, np.ndarray):
+            neuropil = neuroglancer.LocalVolume(
+                data=neuropil,
+                dimensions=coordinate_space,
+                volume_type="segmentation",
+                voxel_offset=[0, 0, 0],
+            )
+            s.layers["neuropil"] = neuroglancer.SegmentationLayer(
+                source=neuropil,
+                # disabled by default but enabled in neuon-centric mode
+                selectedAlpha=0.0,
+                notSelectedAlpha=0.0,
+                # optional niceties
+                hoverHighlight=True,
+                hideSegmentZero=True,
+            )
+        elif isinstance(
+            neuropil, str
+        ):  # Assuming it's a string URL for the precomputed target
+            s.layers["neuropil"] = neuroglancer.SegmentationLayer(
+                source=neuropil,
+                selectedAlpha=0.0,
+                notSelectedAlpha=0.0,
+                hoverHighlight=True,
+                hideSegmentZero=True,
+            )
 
+        # TODO: use dimensions from processing.py to determine good starting coordinates
         # init the view position (arbitrary default in H01 range; change later)
         s.position = [711044, 315210, 2587]
 
@@ -100,7 +121,7 @@ def setup_ng(
             print(f"Mouse Voxel Coordinates: {voxel_coords}")
 
             # retrieve the selected neuron ID from the segmentation layer
-            neuron_info = s.selected_values["c3_neuron_segmentation"].value
+            neuron_info = s.selected_values["neuropil"].value
             print(f"Raw Selected Neuron ID: {neuron_info}")
 
             neuron_id = None
@@ -131,14 +152,14 @@ def setup_ng(
         def enable_c3_layer():
             """Enable the c3 neuron segmentation layer."""
             with app.ng_viewer.txn() as s:
-                s.layers["c3_neuron_segmentation"].selectedAlpha = 0.5
-                s.layers["c3_neuron_segmentation"].notSelectedAlpha = 0.1
+                s.layers["neuropil"].selectedAlpha = 0.5
+                s.layers["neuropil"].notSelectedAlpha = 0.1
 
         def disable_c3_layer():
             """Disable the c3 neuron segmentation layer."""
             with app.ng_viewer.txn() as s:
-                s.layers["c3_neuron_segmentation"].selectedAlpha = 0.0
-                s.layers["c3_neuron_segmentation"].notSelectedAlpha = 0.0
+                s.layers["neuropil"].selectedAlpha = 0.0
+                s.layers["neuropil"].notSelectedAlpha = 0.0
 
     print(
         f"Starting a Neuroglancer instance at {app.ng_viewer}, centered at x,y,x {0,0,0}"

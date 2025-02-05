@@ -36,8 +36,10 @@ def setup_ng(
     )
     app.ng_viewer = neuroglancer.Viewer(token=app.ng_version)
 
-    # specify the NG coordinate space
+    # default coordinate order to pass in if processing route not undergone
     default_coordinate_order = {"x": (4, 4), "y": (4, 4), "z": (40, 40)}
+
+    # specify the NG coordinate space
     if hasattr(app, "coordinate_order") and app.coordinate_order:
         coordinate_order = app.coordinate_order
     else:

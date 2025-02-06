@@ -657,22 +657,22 @@ def save_file(
         return os.path.join(path, filename)
 
 
-@blueprint.route("/enable_c3_layer", methods=["POST"])
-def enable_c3_layer():
-    """Enable the c3 neuron segmentation layer in the global Neuroglancer."""
+@blueprint.route("/enable_neuropil_layer", methods=["POST"])
+def enable_neuropil_layer():
+    """Enable the neuropil neuron segmentation layer in the global Neuroglancer."""
     with current_app.ng_viewer.txn() as s:
         s.layers["neuropil"].selectedAlpha = 0.5
         s.layers["neuropil"].notSelectedAlpha = 0.1
-    return jsonify({"status": "c3 layer enabled"})
+    return jsonify({"status": "neuropil layer enabled"})
 
 
-@blueprint.route("/disable_c3_layer", methods=["POST"])
-def disable_c3_layer():
-    """Disable the c3 neuron segmentation layer in the global Neuroglancer."""
+@blueprint.route("/disable_neuropil_layer", methods=["POST"])
+def disable_neuropil_layer():
+    """Disable the neuropil neuron segmentation layer in the global Neuroglancer."""
     with current_app.ng_viewer.txn() as s:
         s.layers["neuropil"].selectedAlpha = 0.0
         s.layers["neuropil"].notSelectedAlpha = 0.0
-    return jsonify({"status": "c3 layer disabled"})
+    return jsonify({"status": "neuropil layer disabled"})
 
 
 @blueprint.route("/launch_neuroglancer", methods=["GET", "POST"])

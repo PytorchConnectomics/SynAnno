@@ -224,14 +224,14 @@ def setup_ng(
         with app.ng_viewer.config_state.txn() as s:
             s.input_event_bindings.viewer["keyn"] = "get_neuron_id"
 
-        def enable_c3_layer():
-            """Enable the c3 neuron segmentation layer."""
+        def enable_neuropil_layer():
+            """Enable the neuropil neuron segmentation layer."""
             with app.ng_viewer.txn() as s:
                 s.layers["neuropil"].selectedAlpha = 0.5
                 s.layers["neuropil"].notSelectedAlpha = 0.1
 
-        def disable_c3_layer():
-            """Disable the c3 neuron segmentation layer."""
+        def disable_neuropil_layer():
+            """Disable the neuropil neuron segmentation layer."""
             with app.ng_viewer.txn() as s:
                 s.layers["neuropil"].selectedAlpha = 0.0
                 s.layers["neuropil"].notSelectedAlpha = 0.0

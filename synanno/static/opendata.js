@@ -94,36 +94,36 @@ $(document).ready(function () {
 
   updateSubmitButtonState();
 
-  // enable the c3 neuron segmentation layer
-  function enableC3Layer() {
-    fetch('/enable_c3_layer', { method: 'POST' })
+  // enable the neuropil neuron segmentation layer
+  function enableNeuropilLayer() {
+    fetch('/enable_neuropil_layer', { method: 'POST' })
         .then(response => response.json())
         .then(data => console.log(data.status))
-        .catch(error => console.error('Error enabling c3 layer:', error));
+        .catch(error => console.error('Error enabling neuropil layer:', error));
   }
 
-  // disable the c3 neuron segmentation layer
-  function disableC3Layer() {
-    fetch('/disable_c3_layer', { method: 'POST' })
+  // disable the neuropil neuron segmentation layer
+  function disableNeuropilLayer() {
+    fetch('/disable_neuropil_layer', { method: 'POST' })
         .then(response => response.json())
         .then(data => console.log(data.status))
-        .catch(error => console.error('Error disabling c3 layer:', error));
+        .catch(error => console.error('Error disabling neuropil layer:', error));
   }
 
-  // enable the c3 layer when the modal opens
+  // enable the neuropil layer when the modal opens
   $("#neuroglancerModal").on("show.bs.modal", function () {
     fetch('/launch_neuroglancer', { method: 'POST' })
         .then(response => response.json())
         .then(data => {
             $("#neuroglancerIframe").attr("src", data.ng_url);
-            fetch('/enable_c3_layer', { method: 'POST' });
+            fetch('/enable_neuropil_layer', { method: 'POST' });
         })
         .catch(error => console.error('Error launching Neuroglancer:', error));
   });
 
-  // disable the c3 layer when the modal closes
+  // disable the neuropil layer when the modal closes
   $("#neuroglancerModal").on("hidden.bs.modal", function () {
-    fetch('/disable_c3_layer', { method: 'POST' });
+    fetch('/disable_neuropil_layer', { method: 'POST' });
   });
 
   document.getElementById('materialization_url').addEventListener('input', function() {

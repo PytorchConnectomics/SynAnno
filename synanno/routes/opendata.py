@@ -259,19 +259,31 @@ def upload_file() -> Template:
                     else -1
                 )
 
-            ip.neuron_centric_3d_data_processing(
-                current_app._get_current_object(),
-                source_url,
-                target_url,
-                neuropil_url,
-                materialization_url,
-                subvolume=subvolume,
-                bucket_secret_json=bucket_secret
-                if bucket_secret
-                else "~/.cloudvolume/secrets",
-                mode=draw_or_annotate,
-                view_style=current_app.view_style,
-            )
+            try:
+                ip.neuron_centric_3d_data_processing(
+                    current_app._get_current_object(),
+                    source_url,
+                    target_url,
+                    neuropil_url,
+                    materialization_url,
+                    subvolume=subvolume,
+                    bucket_secret_json=bucket_secret
+                    if bucket_secret
+                    else "~/.cloudvolume/secrets",
+                    mode=draw_or_annotate,
+                    view_style=current_app.view_style,
+                )
+            except Exception as e:
+                flash(
+                    "Please select a neuron under 'Volume Parameters'",
+                    "error",
+                )
+                return render_template(
+                    "opendata.html",
+                    modenext="disabled",
+                    mode=draw_or_annotate,
+                    view_style="view",
+                )
         # if the user chose the neuron view_style mode, retrieve a list of all the synapses of the provided neuron ids and then process the data on synapse level
         elif current_app.view_style == "neuron":
             # if the user chose the neuron view_style mode retrieve the neuron ids

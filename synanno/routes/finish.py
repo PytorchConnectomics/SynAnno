@@ -142,6 +142,8 @@ def reset() -> Template:
     # reset time
     current_app.proofread_time = dict.fromkeys(current_app.proofread_time, None)
 
+    current_app.selected_neuron_id = None
+
     # pop all the session content.
     for key in list(session.keys()):
         session.pop(key)

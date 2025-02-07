@@ -1,48 +1,65 @@
-{% extends "templatebase.html" %}
-
-{% block help_content%}
+{% extends "templatebase.html" %} {% block help_content%}
 <p class="text-muted">
-
-SynANNO is a tool for proofreading and revising annotations for synaptic clefts. The tool lets you evaluate annotations by marking them as "Correct," "Incorrect," or "Unsure."  Subsequently, you will be able to specify the fault of the label as "False Positive," "Bad Fit," "Polarity Switch," or by assigning a custom tag. The provided information can be downloaded as a comprehensive JSON. Further, the tool enables you to manually correct the masks of the center slice of instance marked as "Incorrect" or "Unsure." Additionally, you will be able to add instances that were so far missed (false negatives) using an embedded Neuroglancer instance. Again you will be able to draw the mask for the center slice of those newly added instances. 
-
-We only require editing the center slice mask as our model will use it as seed segmentation and compute the volumetric segmentation automatically.
-
-In case you already possess the appropriate information in JSON format, you can directly start the mask editing by clicking on "Revise Data" and providing the source and target volume as well as the JSON.
+  SynAnno is a tool designed for proofreading and correcting synaptic polarity
+  annotation from electron microscopy (EM) volumes - specifically the H01
+  dataset. On this landing page you can choose between two workflows: "Revise
+  Dataset" and "Proofread Annotation". The former allows you to redraw
+  segmentation masks, assign pre-/post-synaptic IDs, and add missed false
+  negatives. The latter allows you to review existing segmentations and
+  pre-/post-synaptic IDs, mark incorrect instances, and assign error
+  descriptions to those instances. After categorizing all erroneous instances in
+  the "Proofread Annotation" workflow, you can automatically proceed with the
+  "Revise Dataset" workflow. Each page has three buttons: "Home", "Question
+  Mark", and "Menu". The first returns you to the landing page. The second
+  provides an explanation of the current view and its functionality. The third
+  provides general information and contact details.
 </p>
-{% endblock %}
+{% endblock %} {% block content %}
 
-{% block content %}
-
-<div class="container-fluid vh-100 w-75 ">
-    <div class="pt-5 text-center">
-        <h2 class="mb-2"> Welcome to SynAnno Annotation Tool</h2>
-        <p>Choose your path! Annotate a newly acquired dataset or proof read existing annotations... </p>
-    </div>
-    <div class="row justify-content-center h-50">
-        <div class="col my-auto">
-            <div class="card text-center border-primary">
-                <h4 class="card-title">Revise Dataset</h4>
-                <div class="card-body">
-                    <a type="button" class="btn" href="{{ url_for('open_data', task='draw') }}">
-                        <h2>
-                            <i class="fa fa-object-group fa-5x" style="color:rgb(80, 80, 80);"></i>
-                        </h2>
-                    </a>
-                </div>
-            </div>
+<div class="container-fluid vh-100 w-75">
+  <div class="pt-5 text-center">
+    <h2 class="mb-2">Welcome to SynAnno Annotation Tool</h2>
+    <p>
+      Choose your path! Annotate a newly acquired dataset or proof read existing
+      annotations...
+    </p>
+  </div>
+  <div class="row justify-content-center h-50">
+    <div class="col my-auto">
+      <div class="card text-center border-primary">
+        <h4 class="card-title">Revise Dataset</h4>
+        <div class="card-body">
+          <a
+            type="button"
+            class="btn"
+            href="{{ url_for('open_data.open_data_task', task='draw') }}"
+          >
+            <h2>
+              <i
+                class="fa fa-object-group fa-5x"
+                style="color: rgb(80, 80, 80)"
+              ></i>
+            </h2>
+          </a>
         </div>
-        <div class="col my-auto">
-            <div class="card text-center">
-                <h4 class="card-title">Proofread Annotations </h4>
-                <div class="card-body border-primary">
-                    <a type="button" class="btn" href="{{ url_for('open_data', task='annotate') }}">
-                        <h2>
-                            <i class="fa fa-arrows  fa-5x" style="color:rgb(80, 80, 80);"></i>
-                        </h2>
-                    </a>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
+    <div class="col my-auto">
+      <div class="card text-center">
+        <h4 class="card-title">Proofread Annotations</h4>
+        <div class="card-body border-primary">
+          <a
+            type="button"
+            class="btn"
+            href="{{ url_for('open_data.open_data_task', task='annotate') }}"
+          >
+            <h2>
+              <i class="fa fa-arrows fa-5x" style="color: rgb(80, 80, 80)"></i>
+            </h2>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

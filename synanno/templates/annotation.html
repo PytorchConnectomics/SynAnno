@@ -1,126 +1,151 @@
-{% extends "templatebase.html" %}
-
-{% block help_content %}
-<p class="text-muted">The status of an instance segmentation is indicated by the color surrounding the instance: correct
-    (green), incorrect (red), and uncertain (gray).
-    You can change the status by clicking on an instance. One click marks the instance as wrong (red color), two clicks
-    mark the instance as unsure (gray), three clicks and the data is again marked as right (green).
-    Should you be unsure for of an instance's mask, you can right-click the instance to enlarge the patch and navigate
-    surrounding slices. In this view, you can also click "View in NG" to view the instance in the Neuroglancer.
-    After evaluating the segmentation masks for all instances on the current page, click the "Next" button at the bottom
-    to evaluate the next set of segmentation masks.
-    When you are done proof reading all instances, click "Error Processing" at the bottom of the page (this button will
-    show on the last proofreading page).
+{% extends "templatebase.html" %} {% block help_content %}
+<p class="text-muted">
+  The annotation view depicts the instances of the current page in a grid view.
+  Instance status is indicated by color: correct (green), incorrect (red),
+  unsure (gray). Clicking on an instance changes its status: once for incorrect,
+  twice for unsure, three times for correct. To inspect an instance's mask,
+  right-click the instance to enlarge the patch and navigate through slices.
+  Click `View in NG` to view the instance in Neuroglancer. After evaluating the
+  segmentation masks, click `->` to load and evaluate the page. When done, click
+  `Error Processing` on the last proofreading page.
 </p>
-{% endblock %}
-
-{% block content %}
+{% endblock %} {% block content %}
 <div class="container-fluid content-row">
-    <div class="legend">
-        <div class="legend-item"> <strong>Legend:</strong></div>
-        <div class="legend-item"><span class="color-block" style="background-color: #abebc6;"></span>Correct</div>
-        <div class="legend-item"><span class="color-block" style="background-color: #f08080;"></span>Incorrect</div>
-        <div class="legend-item"><span class="color-block" style="background-color: #d7dbdd;"></span>Unsure</div>
-
-        <div class="btn-group btn-group-sm ms-auto" role="group" aria-label="Basic example">
-            <span style="margin-right: 8px; margin-top: 2px;">Label opacity: </span>
-            <button id="dec-opacity-grid" type="button" class="btn btn-primary rounded-start"
-                onclick="dec_opacity_grid()">-</button>
-            <span id="value-opacity-grid" type="button" class="btn btn-light"
-                value="{{grid_opacity or '0.5'}}">{{grid_opacity or 0.5}}</span>
-            <button id="inc-opacity-grid" type="button" class="btn btn-primary" onclick="add_opacity_grid()">+</button>
-        </div>
-
+  <div class="legend">
+    <div class="legend-item"><strong>Legend:</strong></div>
+    <div class="legend-item">
+      <span class="color-block" style="background-color: #abebc6"></span>Correct
     </div>
-    <div class="row justify-content-center card-group">
-        {% for image in images %}
-        <div class="annotate-item mb-3">
-            <div id="id{{image.Image_Index}}"
-                class="card border-0 p-2 {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}">
-                <div id="main-image" style="position: relative;">
-                    <img id="imgEM-GT-{{image.Image_Index}}" class="img_annotate"
-                        src="{{ image.GT ~ '/' ~ image.Middle_Slice ~ '.png'}}" width="64px" height="64px"
-                        style="position: absolute; opacity: {{grid_opacity or '0.5'}};">
-                    <img id="imgGT-{{image.Image_Index}}" class="img_annotate"
-                        src="{{ image.EM ~ '/' ~ image.Middle_Slice ~ '.png'}}" width="64px" height="64px"
-                        style="position: initial;">
-                </div>
-                <a id="id-a-{{image.Image_Index}}" class="stretched-link image-card-btn" page="{{page}}"
-                    data_id="{{ image.Image_Index }}"
-                    data_centric="{{ view_style }}"
-                    label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}"></a>
-            </div>
-            <span>{{image.Adjusted_Bbox[1] - image.Adjusted_Bbox[0] }} slices</span>
-        </div>
-        {% endfor %}
+    <div class="legend-item">
+      <span class="color-block" style="background-color: #f08080"></span
+      >Incorrect
     </div>
-</div>
-<nav aria-label="Page navigation mt-5">
-    <ul class="pagination justify-content-center">
-        {% if page > 0 %}
+    <div class="legend-item">
+      <span class="color-block" style="background-color: #d7dbdd"></span>Unsure
+    </div>
 
-        <li class="page-item">
-            <a type="button" class="page-link btn btn-primary nav-anno" href="{{ url_for('annotation', page=page-1, view_style=view_style) }}">
-                <i class="bi bi-arrow-left"></i>
-            </a>
-        </li>
-        {% else %}
-        <li class="page-item disabled">
-            <a type="button" class="page-link btn btn-primary">
-                <i class="bi bi-arrow-left"></i>
-            </a>
-        </li>
-
-        {% endif %}
-        <li style="padding: .375rem .75rem;">{{page+1}} / {{n_pages}} </li>
-        {% if page+1 < n_pages %} <li class="page-item">
-
-        <li class="page-item">
-            <a type="button" class="page-link btn btn-primary nav-anno" href="{{ url_for('annotation', page=page+1, view_style=view_style)}}">
-                <i class="bi bi-arrow-right"></i>
-            </a>
-        </li>
-
-        {% else %}
-        <li class="page-item"><a class="page-link" href="{{ url_for('categorize', view_style=view_style) }}">Error Processing</a></li>
-        {% endif %}
-    </ul>
-</nav>
-
-<!-- Modal with progress bar -->
-<div class="modal fade" id="progressModal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="exampleModalLabel"
-  aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-body">
-        <div class="spinner d-flex flex-column align-items-center justify-content-center">
-          <div class="row">
-            <div class="spinner-border" role="status">
-              <span class="sr-only">Loading...</span>
-            </div>
-          </div>
-          <div class="row" id="spinnerText">
-            <strong>Loading Source File</strong>
-          </div>
-        </div>
-        <div class="progress d-none">
-          <div id="progressBarProcess" class="progress-bar progress-bar-striped progress-bar-animated"
-            role="progressbar" aria-valuenow="0 " aria-valuemin="0" aria-valuemax="94"></div>
-          <div class="progress-bar-title" id="progressBarText"> </div>
-        </div>
-      </div>
+    <div
+      class="btn-group btn-group-sm ms-auto"
+      role="group"
+      aria-label="Basic example"
+    >
+      <span style="margin-right: 8px; margin-top: 2px">Label opacity: </span>
+      <button
+        id="dec-opacity-grid"
+        type="button"
+        class="btn btn-primary rounded-start"
+        onclick="dec_opacity_grid()"
+      >
+        -
+      </button>
+      <span
+        id="value-opacity-grid"
+        type="button"
+        class="btn btn-light"
+        value="{{grid_opacity or '0.5'}}"
+        >{{grid_opacity or '0.5'}}</span
+      >
+      <button
+        id="inc-opacity-grid"
+        type="button"
+        class="btn btn-primary"
+        onclick="add_opacity_grid()"
+      >
+        +
+      </button>
     </div>
   </div>
+  <div class="row justify-content-center card-group">
+    {% for image in images %}
+    <div class="annotate-item mb-3">
+      <div
+        id="id{{image.Image_Index}}"
+        class="card border-0 p-2 {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}"
+      >
+        <div id="main-image" style="position: relative">
+          <img
+            id="imgEM-GT-{{image.Image_Index}}"
+            class="img_annotate"
+            src="{{ url_for('static', filename=image.GT ~ '/' ~ image.Middle_Slice ~ '.png')}}"
+            style="position: absolute; opacity: {{grid_opacity if grid_opacity else '0.5'}};"
+          />
+          <img
+            id="imgGT-{{image.Image_Index}}"
+            class="img_annotate"
+            src="{{ url_for('static', filename= image.EM ~ '/' ~ image.Middle_Slice ~ '.png')}}"
+            style="position: initial"
+          />
+        </div>
+        <a
+          id="id-a-{{image.Image_Index}}"
+          class="stretched-link image-card-btn"
+          page="{{page}}"
+          data_id="{{ image.Image_Index }}"
+          label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}"
+        ></a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
 </div>
+
+<!-- Page Navigation -->
+<nav aria-label="Page navigation mt-5" class="position-fixed bottom-0 start-50 translate-middle-x mb-4">
+  <ul class="pagination justify-content-center">
+    {% if page > 0 %}
+    <li class="page-item">
+      <a
+        type="button"
+        class="page-link btn btn-primary nav-anno"
+        href="{{ url_for('annotation.annotation_page', page=page-1) }}"
+      >
+        <i class="bi bi-arrow-left"></i>
+      </a>
+    </li>
+    {% else %}
+    <li class="page-item disabled">
+      <a type="button" class="page-link btn btn-primary">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+    </li>
+    {% endif %}
+    <li style="padding: 0.375rem 0.75rem">{{page+1}} / {{n_pages}}</li>
+    {% if page+1 < n_pages %}
+    <li class="page-item"></li>
+    <li class="page-item">
+      <a
+        type="button"
+        class="page-link btn btn-primary nav-anno"
+        href="{{ url_for('annotation.annotation_page', page=page+1)}}"
+      >
+        <i class="bi bi-arrow-right"></i>
+      </a>
+    </li>
+    {% else %}
+    <li class="page-item disabled">
+      <a type="button" class="page-link btn btn-primary">
+        <i class="bi bi-arrow-right"></i>
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+
+<!--Error Processing Button Across Pages-->
+<div class="position-fixed bottom-0 end-0 m-4">
+  <a class="btn btn-primary" href="{{ url_for('categorize.categorize') }}">
+    Error Processing
+  </a>
+</div>
+
+<!-- Modal to indicating active loading -->
+{% include "loading_bar.html" %}
 
 <!-- Modal for synapse slice-->
 {% include "annotation_single.html" %}
 
 <!-- Modal for neuroglancer slice-->
 {% include "annotation_neuro.html" %}
-
-<!-- Script to update the progress bar -->
-<script src="{{ url_for('static', filename='progressbar.js') }}"></script>
 
 <!-- add js file to chang the card colors -->
 <script src="{{ url_for('static', filename='annotation.js') }}"></script>

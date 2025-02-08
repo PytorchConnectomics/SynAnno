@@ -126,25 +126,30 @@ $(document).ready(function () {
     fetch('/disable_neuropil_layer', { method: 'POST' });
   });
 
+  let debounceTimer;
+  const debounceDelay = 500;
+
   document.getElementById('materialization_url').addEventListener('input', function() {
-    var materializationUrl = this.value.trim();
-    console.log("Materialization URL:", materializationUrl);
-    var openNeuronModalBtn = document.getElementById('openNeuronModalBtn');
-    if (materializationUrl) {
-      openNeuronModalBtn.removeAttribute('disabled');
-      fetch('/load_materialization', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ materialization_url: materializationUrl })
+    clearTimeout(debounceTimer);
+    const self = this;
+    debounceTimer = setTimeout(function() {
+      var materializationUrl = self.value.trim();
+      console.log("Materialization URL:", materializationUrl);
+      var openNeuronModalBtn = document.getElementById('openNeuronModalBtn');
+      openNeuronModalBtn.setAttribute('disabled', 'disabled');
+      if (materializationUrl) {
+        fetch('/load_materialization', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ materialization_url: materializationUrl })
         })
         .then(response => response.json())
         .then(data => {
           if (data.status === "success") {
             console.log("Materialization table loaded.");
-
-            // Grab the form values (make sure these IDs match your HTML input fields!)
+            // Grab the form values
             var source_url = document.getElementById('source_url').value.trim();
             var target_url = document.getElementById('target_url').value.trim();
             var neuropil_url = document.getElementById('neuropil_url').value.trim();
@@ -156,30 +161,29 @@ $(document).ready(function () {
 
             // Use a GET request to fetch the Neuroglancer URL with our form data in tow!
             fetch('/launch_neuroglancer' + queryString, { method: 'GET' })
-                .then(response => response.json())
-                .then(ngData => {
-                    if (ngData.ng_url) {
-                        document.getElementById('neuroglancerIframe').src = ngData.ng_url;
-                        console.log("Neuroglancer URL set to:", ngData.ng_url);
-                    } else {
-                        console.error("No Neuroglancer URL received:", ngData.error);
-                    }
-                })
-                .catch(error => {
-                    console.error("Error launching Neuroglancer:", error);
-                });
+              .then(response => response.json())
+              .then(ngData => {
+                if (ngData.ng_url) {
+                  document.getElementById('neuroglancerIframe').src = ngData.ng_url;
+                  console.log("Neuroglancer URL set to:", ngData.ng_url);
+                  // Only enable the button upon successful processing without any alerts
+                  openNeuronModalBtn.removeAttribute('disabled');
+                } else {
+                  console.error("No Neuroglancer URL received:", ngData.error);
+                }
+              })
+              .catch(error => {
+                console.error("Error launching Neuroglancer:", error);
+              });
           } else {
-              console.error("Error loading materialization table:", data.error);
-              alert("Invalid materialization table.");
+            console.error("Error loading materialization table:", data.error);
           }
         })
         .catch(error => {
-            console.error("Error during fetch:", error);
-            alert("Error occurred while loading the materialization table.");
+          console.error("Error during fetch:", error);
         });
-    } else {
-      openNeuronModalBtn.setAttribute('disabled', 'disabled');
-    }
+      }
+    }, debounceDelay);
   });
 
   $('input[type="radio"][value="neuron"]').change(function () {

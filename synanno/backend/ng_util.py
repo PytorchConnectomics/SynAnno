@@ -116,9 +116,16 @@ def setup_ng(
                 hideSegmentZero=True,
             )
 
-        # TODO: use dimensions from processing.py to determine good starting coordinates
-        # init the view position (arbitrary default in H01 range; change later)
-        s.position = [711044, 315210, 2587]
+        # choose a random row, skipping the first row
+        random_row = app.synapse_data.iloc[1:].sample(n=1).iloc[0]
+
+        # extract xyz coordinates and set them as the starting position
+        new_position = [
+            int(random_row["x"] * 2),
+            int(random_row["y"] * 2),
+            int(random_row["z"]),
+        ]
+        s.position = new_position
 
         # additional layer that lets the user mark the center of FPs
         s.layers["center_dot"] = neuroglancer.LocalAnnotationLayer(

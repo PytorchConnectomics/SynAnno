@@ -246,19 +246,6 @@ def upload_file() -> Template:
 
         # if the user chose the view view_style mode load the bbox specific subvolume and then process the data like in the local case
         if current_app.view_style == "view":
-            subvolume = {}
-            for coord in coordinate_order:
-                subvolume[coord + "1"] = (
-                    int(request.form.get(coord + "1"))
-                    if request.form.get(coord + "1")
-                    else 0
-                )
-                subvolume[coord + "2"] = (
-                    int(request.form.get(coord + "2"))
-                    if request.form.get(coord + "2")
-                    else -1
-                )
-
             try:
                 ip.neuron_centric_3d_data_processing(
                     current_app._get_current_object(),
@@ -266,7 +253,6 @@ def upload_file() -> Template:
                     target_url,
                     neuropil_url,
                     materialization_url,
-                    subvolume=subvolume,
                     bucket_secret_json=bucket_secret
                     if bucket_secret
                     else "~/.cloudvolume/secrets",

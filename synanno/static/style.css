@@ -119,17 +119,6 @@
   }
 
 /* css for the open data form */
-  .coordinate-container{
-    display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
-  }
-  .coordinate-dims{
-    margin: 2px;
-    flex: 0.2;
-    width: 20%;
-  }
-
   .syn-id-container{
     display: flex;
     justify-content: center;

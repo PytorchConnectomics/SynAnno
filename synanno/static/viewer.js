@@ -1,5 +1,5 @@
 import SharkViewer, { swcParser, Color } from "./SharkViewer/shark_viewer.js";
-import { nodes_array, edge_array } from "./config.js";
+import { nodes_array } from "./config.js";
 
 window.onload = () => {
     document.getElementById("swc_input").addEventListener("change", readSwcFile, false);
@@ -66,7 +66,7 @@ function readSwcFile(e) {
 
             if (neuron) {
                 console.log("Neuron found! Proceeding with color update.");
-                updateNodeAndEdgeColors(s);
+                updateNodeAndEdgeColors(s, nodes_array, nodes_array);
                 adjustCameraForNeuron(s);
             } else {
                 console.warn("Neuron still not found in the scene.");
@@ -96,17 +96,19 @@ function readSwcFile(e) {
  * // Assuming viewer is a valid viewer object and neuron_section is defined
  * updateNodeAndEdgeColors(viewer, neuron_section, new THREE.Color(0x0000ff), new THREE.Color(0xff0000));
  */
-function updateNodeAndEdgeColors(viewer, color1 = Color.blue, color2 = Color.red) {
+function updateNodeAndEdgeColors(viewer, nodes_array, edge_array, sectionColors) {
     const neuron = viewer.scene.getObjectByName('neuron');
     if (!neuron) {
         console.error("Neuron object not found.");
         return;
     }
 
-    console.log("Neuron found! Proceeding with coloring.");
-    const nodes = new Set(nodes_array);
-    const edges = new Set(edge_array);
+    // Generate colors if not provided
+    if (!sectionColors) {
+        sectionColors = generateSectionColors(nodes_array.length);
+    }
 
+    console.log("Neuron found! Proceeding with coloring.");
     const skeletonVertex = neuron.children.find(child => child.name === "skeleton-vertex");
     const skeletonEdge = neuron.children.find(child => child.name === "skeleton-edge");
 
@@ -117,17 +119,17 @@ function updateNodeAndEdgeColors(viewer, color1 = Color.blue, color2 = Color.red
         const colors = new Float32Array(numVertices * 3);
         console.log("Number of numVertices:", numVertices);
 
+        nodes_array.forEach((nodeGroup, index) => {
+            const color = new THREE.Color(sectionColors[index] || 0xffffff); // Default to white if no color is provided
+            nodeGroup.forEach(nodeIndex => {
+                if (nodeIndex < numVertices) {
+                    colors.set([color.r, color.g, color.b], nodeIndex * 3);
+                }
+            });
+        });
 
-        for (let i = 0; i < numVertices; i++) {
-            const isHighlighted = nodes.has(i);
-            const color = isHighlighted ? new THREE.Color(color1) : new THREE.Color(color2);
-            colors.set([color.r, color.g, color.b], i * 3);
-        }
-
-        // Assign per-vertex colors
         skeletonVertex.geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
         skeletonVertex.geometry.attributes.color.needsUpdate = true;
-
         console.log("Node colors applied successfully.");
     } else {
         console.warn("skeleton-vertex not found or has no geometry.");
@@ -136,28 +138,28 @@ function updateNodeAndEdgeColors(viewer, color1 = Color.blue, color2 = Color.red
     // Update edge colors (skeleton-edge)
     if (skeletonEdge && skeletonEdge.geometry && skeletonEdge.geometry.attributes.position) {
         console.log("Updating edge colors...");
-        const numEdges = skeletonEdge.geometry.attributes.position.count / 2; // Each edge has two vertices
-        const colors = new Float32Array(numEdges * 6 * 3); // Six edges per node, three color components per vertex
-
+        const numEdges = skeletonEdge.geometry.attributes.position.count / 2;
+        const colors = new Float32Array(numEdges * 6 * 3);
         console.log("Number of edges:", numEdges);
-        for (let i = 0; i < numEdges; i++) {
-            const isHighlighted = edges.has(i);
-            const color = isHighlighted ? new THREE.Color(color1) : new THREE.Color(color2);
 
-            // Assign the same color to all six vertices of the edge
-            for (let j = 0; j < 6; j++) {
-                colors.set([color.r, color.g, color.b], (i * 6 + j) * 3);
-            }
-        }
+        edge_array.forEach((edgeGroup, index) => {
+            const color = new THREE.Color(sectionColors[index] || 0xffffff);
+            edgeGroup.forEach(edgeIndex => {
+                if (edgeIndex < numEdges) {
+                    for (let j = 0; j < 6; j++) {
+                        colors.set([color.r, color.g, color.b], (edgeIndex * 6 + j) * 3);
+                    }
+                }
+            });
+        });
 
-        // Assign per-edge colors
         skeletonEdge.geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
         skeletonEdge.geometry.attributes.color.needsUpdate = true;
-
         console.log("Edge colors applied successfully.");
     } else {
         console.warn("skeleton-edge not found or has no geometry.");
     }
+
     viewer.render();
 }
 
@@ -207,4 +209,21 @@ function addLights(scene) {
         directionalLight.name = "directional-light";
         scene.add(directionalLight);
     }
+}
+
+
+/**
+ * Generates an array of colors for a given number of sections.
+ * The colors are evenly distributed across the hue spectrum.
+ *
+ * @param {number} numSections - The number of sections to generate colors for.
+ * @returns {THREE.Color[]} An array of THREE.Color objects representing the colors for each section.
+ */
+function generateSectionColors(numSections) {
+    const colors = [];
+    for (let i = 0; i < numSections; i++) {
+        const hue = (i / numSections) * 0.8; // Spread hues evenly (0.8 avoids going full circle)
+        colors.push(new THREE.Color().setHSL(hue, 1.0, 0.5)); // Saturation = 1, Lightness = 0.5 for vivid colors
+    }
+    return colors;
 }

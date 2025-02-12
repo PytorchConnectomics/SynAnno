@@ -213,8 +213,8 @@ function addLights(scene) {
 
 
 /**
- * Generates an array of colors for a given number of sections.
- * The colors are evenly distributed across the hue spectrum.
+ * Generates an array of high-contrast colors for a given number of sections.
+ * The colors are spread across the full hue spectrum for better distinction.
  *
  * @param {number} numSections - The number of sections to generate colors for.
  * @returns {THREE.Color[]} An array of THREE.Color objects representing the colors for each section.
@@ -222,8 +222,10 @@ function addLights(scene) {
 function generateSectionColors(numSections) {
     const colors = [];
     for (let i = 0; i < numSections; i++) {
-        const hue = (i / numSections) * 0.8; // Spread hues evenly (0.8 avoids going full circle)
-        colors.push(new THREE.Color().setHSL(hue, 1.0, 0.5)); // Saturation = 1, Lightness = 0.5 for vivid colors
+        const hue = (i / numSections) * 1.0; // Use full hue range for maximum distinction
+        const saturation = 1.0; // Keep max saturation for vivid colors
+        const lightness = 0.4; // Slightly lower lightness for richer colors
+        colors.push(new THREE.Color().setHSL(hue, saturation, lightness));
     }
     return colors;
 }

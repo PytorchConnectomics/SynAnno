@@ -221,15 +221,25 @@ def upload_file() -> Template:
         )
     }
 
-    # retrieve the urls for the source and target cloud volume buckets
+    # retrieve the urls for the source, target, and neuropil segmentation cloud volume buckets
     source_url = request.form.get("source_url")
     target_url = request.form.get("target_url")
+    neuropil_url = request.form.get("neuropil_url")
 
     # check if the provided urls are valid based on the cloud provider prefix
-    if any(
-        bucket in source_url for bucket in current_app.config["CLOUD_VOLUME_BUCKETS"]
-    ) and any(
-        bucket in target_url for bucket in current_app.config["CLOUD_VOLUME_BUCKETS"]
+    if (
+        any(
+            bucket in source_url
+            for bucket in current_app.config["CLOUD_VOLUME_BUCKETS"]
+        )
+        and any(
+            bucket in target_url
+            for bucket in current_app.config["CLOUD_VOLUME_BUCKETS"]
+        )
+        and any(
+            bucket in neuropil_url
+            for bucket in current_app.config["CLOUD_VOLUME_BUCKETS"]
+        )
     ):
         # retrieve the bucket secret if the user provided one
         if bucket_secret := request.files.get("secrets_file"):
@@ -241,31 +251,30 @@ def upload_file() -> Template:
 
         # if the user chose the view view_style mode load the bbox specific subvolume and then process the data like in the local case
         if current_app.view_style == "view":
-            subvolume = {}
-            for coord in coordinate_order:
-                subvolume[coord + "1"] = (
-                    int(request.form.get(coord + "1"))
-                    if request.form.get(coord + "1")
-                    else 0
+            try:
+                ip.neuron_centric_3d_data_processing(
+                    current_app._get_current_object(),
+                    source_url,
+                    target_url,
+                    neuropil_url,
+                    materialization_url,
+                    bucket_secret_json=bucket_secret
+                    if bucket_secret
+                    else "~/.cloudvolume/secrets",
+                    mode=draw_or_annotate,
+                    view_style=current_app.view_style,
                 )
-                subvolume[coord + "2"] = (
-                    int(request.form.get(coord + "2"))
-                    if request.form.get(coord + "2")
-                    else -1
+            except Exception as e:
+                flash(
+                    "Please select a neuron under 'Volume Parameters'",
+                    "error",
                 )
-
-            ip.neuron_centric_3d_data_processing(
-                current_app._get_current_object(),
-                source_url,
-                target_url,
-                materialization_url,
-                subvolume=subvolume,
-                bucket_secret_json=bucket_secret
-                if bucket_secret
-                else "~/.cloudvolume/secrets",
-                mode=draw_or_annotate,
-                view_style=current_app.view_style,
-            )
+                return render_template(
+                    "opendata.html",
+                    modenext="disabled",
+                    mode=draw_or_annotate,
+                    view_style="view",
+                )
         # if the user chose the neuron view_style mode, retrieve a list of all the synapses of the provided neuron ids and then process the data on synapse level
         elif current_app.view_style == "neuron":
             # if the user chose the neuron view_style mode retrieve the neuron ids
@@ -280,6 +289,7 @@ def upload_file() -> Template:
                 current_app._get_current_object(),
                 source_url,
                 target_url,
+                neuropil_url,
                 materialization_url,
                 preid,
                 postid,
@@ -305,6 +315,7 @@ def upload_file() -> Template:
             app=current_app._get_current_object(),
             source="precomputed://" + source_url,
             target="precomputed://" + target_url,
+            neuropil="precomputed://" + neuropil_url,
         )
 
     flash("Data ready!")
@@ -641,3 +652,59 @@ def save_file(
     else:
         file.save(os.path.join(path, filename))
         return os.path.join(path, filename)
+
+
+@blueprint.route("/enable_neuropil_layer", methods=["POST"])
+def enable_neuropil_layer():
+    """Enable the neuropil neuron segmentation layer in the global Neuroglancer."""
+    with current_app.ng_viewer.txn() as s:
+        s.layers["neuropil"].selectedAlpha = 0.5
+        s.layers["neuropil"].notSelectedAlpha = 0.1
+    return jsonify({"status": "neuropil layer enabled"})
+
+
+@blueprint.route("/disable_neuropil_layer", methods=["POST"])
+def disable_neuropil_layer():
+    """Disable the neuropil neuron segmentation layer in the global Neuroglancer."""
+    with current_app.ng_viewer.txn() as s:
+        s.layers["neuropil"].selectedAlpha = 0.0
+        s.layers["neuropil"].notSelectedAlpha = 0.0
+    return jsonify({"status": "neuropil layer disabled"})
+
+
+@blueprint.route("/launch_neuroglancer", methods=["GET", "POST"])
+def launch_neuroglancer():
+    source_url = request.args.get("source_url")
+    target_url = request.args.get("target_url")
+    neuropil_url = request.args.get("neuropil_url")
+
+    if not hasattr(current_app, "ng_viewer") or current_app.ng_viewer is None:
+        ng_util.setup_ng(
+            app=current_app._get_current_object(),
+            source="precomputed://" + source_url,
+            target="precomputed://" + target_url,
+            neuropil="precomputed://" + neuropil_url,
+        )
+
+    ng_url = f"http://{current_app.config['NG_IP']}:{current_app.config['NG_PORT']}/v/{current_app.ng_viewer.token}/"
+    return jsonify({"ng_url": ng_url})
+
+
+@blueprint.route("/load_materialization", methods=["POST"])
+def load_materialization():
+    materialization_path = request.json.get("materialization_url")
+
+    if materialization_path is None or materialization_path == "":
+        return jsonify({"error": "Materialization path is missing."}), 400
+    try:
+        print("Loading the materialization table...")
+        path = materialization_path.replace("file://", "")
+        current_app.synapse_data = pd.read_csv(path)
+        print(current_app.synapse_data.head())
+
+        print("Materialization table loaded successfully!")
+        return jsonify({"status": "success"}), 200
+
+    except Exception as e:
+        print(f"Failed to load materialization table: {e}")
+        return jsonify({"error": str(e)}), 500

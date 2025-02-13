@@ -62,7 +62,6 @@ def configure_app(app):
 
 def initialize_global_variables(app):
     """Set up the global variables for the app."""
-    app.progress_bar_status = {"status": "Loading Source File", "percent": 0}
     app.proofread_time = {
         "start_grid": None,
         "finish_grid": None,
@@ -89,6 +88,9 @@ def initialize_global_variables(app):
         "Label",
         "Annotated",
         "Error_Description",
+        "Y_Index",
+        "X_Index",
+        "Z_Index",
         "Middle_Slice",
         "Original_Bbox",
         "cz0",
@@ -107,7 +109,36 @@ def initialize_global_variables(app):
         "Padding",
     ]
 
-    app.df_metadata = pd.DataFrame(columns=app.columns)
+    dtypes = {
+        "Page": int,  # Example: 1
+        "Image_Index": int,  # Example: 0
+        "GT": int,  # Example: 1
+        "EM": str,  # Example: 'Images/Syn/1'
+        "Label": str,  # Example: 'Images/Img/1'
+        "Annotated": str,  # Example: 'Incorrect'
+        "Error_Description": str,  # Example: 'No'
+        "Y_Index": int,  # Example: None (can be float if numeric)
+        "X_Index": int,  # Example: 1
+        "Z_Index": int,  # Example: 0
+        "Middle_Slice": int,  # Example: 2
+        "Original_Bbox": int,  # Example: 256
+        "cz0": int,  # Example: 290204
+        "cy0": int,  # Example: 290460
+        "cx0": int,  # Example: 114415
+        "pre_pt_z": int,  # Example: 114671
+        "pre_pt_x": int,  # Example: 256
+        "pre_pt_y": int,  # Example: 257
+        "post_pt_y": int,  # Example: 114543
+        "post_pt_z": int,  # Example: 290332
+        "post_pt_x": int,  # Example: 256
+        "crop_size_x": int,  # Example: 290329
+        "crop_size_y": int,  # Example: 114538
+        "crop_size_z": int,  # Example: 114546
+        "Adjusted_Bbox": object,  # Example: [290204, 290460, 114415, 114671, 256, 257]
+        "Padding": object,  # Example: [[0, 0], [0, 0], [0, 0]]
+    }
+
+    app.df_metadata = pd.DataFrame(columns=app.columns).astype(dtypes)
     app.materialization = {}
 
     app.pre_id_color_main = (0, 255, 0)
@@ -124,6 +155,7 @@ def register_routes(app):
     from synanno.routes.categorize import blueprint as categorize_blueprint
     from synanno.routes.landingpage import blueprint as landingpage_blueprint
     from synanno.routes.manual_annotate import blueprint as manual_annotate_blueprint
+    from synanno.routes.auto_annotate import blueprint as auto_annotate_blueprint
 
     # Register the Blueprints with the app object.
     app.register_blueprint(annotation_blueprint)
@@ -132,6 +164,7 @@ def register_routes(app):
     app.register_blueprint(categorize_blueprint)
     app.register_blueprint(landingpage_blueprint)
     app.register_blueprint(manual_annotate_blueprint)
+    app.register_blueprint(auto_annotate_blueprint)
 
 
 def setup_context_processors(app):

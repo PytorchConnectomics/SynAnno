@@ -1,4 +1,10 @@
 $(document).ready(function () {
+
+  // show progressbar when submitting the data
+  $("form").on("submit", function (event) {
+      $("#loading-bar").css('display', 'flex');
+  });
+
   // if data is already stored in the backend enable 'reset' button
   if ($("#resetButton").hasClass("d-inline")) {
     $(".form-control").each(function () {

@@ -39,6 +39,22 @@ $(document).ready(function () {
     });
   });
 
+  // Enable the neuropil neuron segmentation layer
+function enableNeuropilLayer() {
+  fetch('/enable_neuropil_layer', { method: 'POST' })
+      .then(response => response.json())
+      .then(data => console.log(data.status))
+      .catch(error => console.error('Error enabling neuropil layer:', error));
+}
+
+// Disable the neuropil neuron segmentation layer
+function disableNeuropilLayer() {
+  fetch('/disable_neuropil_layer', { method: 'POST' })
+      .then(response => response.json())
+      .then(data => console.log(data.status))
+      .catch(error => console.error('Error disabling neuropil layer:', error));
+}
+
   // link to the NG, edited when ever right clicking an instance in the grid view
   var ng_link;
 

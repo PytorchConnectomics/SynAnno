@@ -601,6 +601,7 @@ def neuron_centric_3d_data_processing(
     app,
     source_url: str,
     target_url: str,
+    neuropil_url: str,
     table_name: str,
     preid: int = None,
     postid: int = None,
@@ -615,6 +616,7 @@ def neuron_centric_3d_data_processing(
         app (Flask): an handle to the application context
         source_url (str): the url to the source cloud volume (EM).
         target_url (str): the url to the target cloud volume (synapse).
+        neuropil_url (str): the url to the neuropil cloud volume (neuron segmentation).
         table_name (str): the path to the JSON file.
         preid (int): the id of the pre synaptic region.
         postid (int): the id of the post synaptic region.
@@ -644,8 +646,17 @@ def neuron_centric_3d_data_processing(
         progress=False,
         use_https=True,
     )
+    if neuropil_url is not None:
+        current_app.neuropil_cv = CloudVolume(
+            neuropil_url,
+            secrets=bucket_secret_json,
+            fill_missing=True,
+            parallel=True,
+            progress=False,
+            use_https=True,
+        )
 
-    # assert that both volumes have the same dimensions
+    # assert that both the source and target volumes have the same dimensions
     if list(current_app.source_cv.volume_size) == list(
         current_app.target_cv.volume_size
     ):
@@ -673,26 +684,16 @@ def neuron_centric_3d_data_processing(
     df = pd.read_csv(table_name)
 
     if view_style == "view":
-        # should no cropping coordinates be provided, use the whole volume
-        if subvolume[coordinate_order[2] + "2"] == -1:
-            subvolume[coordinate_order[2] + "2"] = current_app.source_cv.info["scales"][
-                0
-            ]["size"][2]
+        neuron_id = int(current_app.selected_neuron_id)  # Get the selected neuron ID
 
-        if subvolume[coordinate_order[1] + "2"] == -1:
-            subvolume[coordinate_order[1] + "2"] = current_app.source_cv.info["scales"][
-                0
-            ]["size"][1]
+        if neuron_id is None:
+            print("No neuron selected.")
+            return
 
-        if subvolume[coordinate_order[0] + "2"] == -1:
-            subvolume[coordinate_order[0] + "2"] = current_app.source_cv.info["scales"][
-                0
-            ]["size"][0]
+        # filter the materialization DataFrame for matching pre/post neuron IDs
+        df = df.query("pre_neuron_id == @neuron_id or post_neuron_id == @neuron_id")
 
-        # query the dataframe for all instances with their coordinates x,y,z with in the range of the subvolume
-        df = df.query(
-            'x >= @subvolume["x1"] and x <= @subvolume["x2"] and y >= @subvolume["y1"] and y <= @subvolume["y2"] and z >= @subvolume["z1"] and z <= @subvolume["z2"]'
-        )
+        print(f"Found {len(df)} synapses connected to neuron ID {neuron_id}")
 
     if view_style == "neuron":
         # TODO: This is currently a dummy solution.

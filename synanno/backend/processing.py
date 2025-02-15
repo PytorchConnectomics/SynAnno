@@ -49,8 +49,12 @@ def process_syn(gt: np.ndarray) -> np.ndarray:
     # assign each synapse a unique index
     seg = label_cc(gt).astype(int)
     # identify the largest connected component in the center of the volume and mask out the rest
-    center_blob_value = get_center_blob_value_vectorized(seg, np.unique(seg)[1:])
-    seg *= seg == center_blob_value
+    unique, counts = np.unique(seg, return_counts=True)
+    if len(unique) > 1:
+        center_blob_value = get_center_blob_value_vectorized(seg, np.unique(seg)[1:])
+        seg *= seg == center_blob_value
+    else:
+        logger.warning("No synapse segmentation mask found in the volume.")
     return seg
 
 
@@ -223,6 +227,10 @@ def retrieve_instance_metadata(
     with current_app.df_metadata_lock:
         page_empty = current_app.df_metadata.query("Page == @page").empty
 
+    crop_size_x = (
+        session["crop_size_z"] if mode == "annotate" else current_app.crop_size_z_draw
+    )
+
     if page_empty and not (
         mode == "draw" and current_app.df_metadata.query('Label != "Correct"').empty
     ):
@@ -261,16 +269,16 @@ def retrieve_instance_metadata(
                 "post_pt_z": int(bbox_dict[idx]["post_pt_z"]),
                 "crop_size_x": session["crop_size_x"],
                 "crop_size_y": session["crop_size_y"],
-                "crop_size_z": session["crop_size_z"],
+                # The auto segmentation view needs a set number of slices per instance (depth)
+                # see process_instances.py::load_missing_slices for more details
+                "crop_size_z": crop_size_x,
             }
 
             # Calculate bounding boxes
             bbox_org = [
-                item["cz0"] - session["crop_size_z"] // 2,
+                item["cz0"] - crop_size_x // 2,
                 item["cz0"]
-                + max(
-                    1, (session["crop_size_z"] + 1) // 2
-                ),  # incase the depth was set to one.
+                + max(1, (crop_size_x + 1) // 2),  # incase the depth was set to one.
                 item["cy0"] - session["crop_size_y"] // 2,
                 item["cy0"] + (session["crop_size_y"] + 1) // 2,
                 item["cx0"] - session["crop_size_x"] // 2,
@@ -335,12 +343,11 @@ def retrieve_instance_metadata(
     logger.info("Completed processing for page %d.", page)
 
 
-def update_slice_number(data: dict, slice_number: int) -> None:
+def update_slice_number(data: dict) -> None:
     """Update the slice number of the bounding box for the given instances.
 
     Args:
         data (dict): the dictionary containing the metadata of the instances.
-        slice_number (int): the new slice number.
     """
     # Adjust the bounding box
     with current_app.df_metadata_lock:
@@ -349,7 +356,7 @@ def update_slice_number(data: dict, slice_number: int) -> None:
         for instance in data:
             # retrieve the coordinate order of the cloud volume | xyz, xzy, yxz, yzx, zxy, zyx
 
-            instance["crop_size_z"] = slice_number
+            instance["crop_size_z"] = current_app.crop_size_z_draw
             og_bb = instance["Original_Bbox"]
 
             z1 = og_bb[coord_order.index("z") * 2]
@@ -357,7 +364,7 @@ def update_slice_number(data: dict, slice_number: int) -> None:
 
             nr_slices = z2 - z1
 
-            missing_nr_slices = slice_number - nr_slices
+            missing_nr_slices = current_app.crop_size_z_draw - nr_slices
 
             if missing_nr_slices < 0:
                 print("We already should have more slices than the model can handle.")
@@ -369,7 +376,7 @@ def update_slice_number(data: dict, slice_number: int) -> None:
             assert (
                 og_bb[coord_order.index("z") * 2 + 1]
                 - og_bb[coord_order.index("z") * 2]
-                == slice_number
+                == current_app.crop_size_z_draw
             )
 
             instance["Adjusted_Bbox"], instance["Padding"] = calculate_crop_pad(

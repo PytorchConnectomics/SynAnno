@@ -612,7 +612,6 @@ def neuron_centric_3d_data_processing(
     table_name: str,
     preid: int = None,
     postid: int = None,
-    subvolume: dict = None,
     bucket_secret_json: json = "~/.cloudvolume/secrets",
     mode: str = "annotate",
     view_style: str = None,
@@ -690,7 +689,7 @@ def neuron_centric_3d_data_processing(
     # Read the CSV file
     df = pd.read_csv(table_name)
 
-    if view_style == "view":
+    if view_style == "neuron":
         neuron_id = int(current_app.selected_neuron_id)  # Get the selected neuron ID
 
         if neuron_id is None:
@@ -702,7 +701,7 @@ def neuron_centric_3d_data_processing(
 
         print(f"Found {len(df)} synapses connected to neuron ID {neuron_id}")
 
-    if view_style == "neuron":
+    if view_style == "synapse":
         # TODO: This is currently a dummy solution.
         # query the dataframe for all instances with an index between preid and postid
         if preid is None:

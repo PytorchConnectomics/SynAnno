@@ -88,13 +88,15 @@ $(document).ready(function () {
   });
 
   // toggle between view and neuron centric view
-  $('input[type="radio"]').change(function () {
-    if ($(this).val() === "view") {
-      $("#view-form").show();
-      $("#neuron-form").hide();
-    } else if ($(this).val() === "neuron") {
-      $("#view-form").hide();
+  $('#toggleSynapseSelection').change(function () {
+    if ($(this).is(':checked')) {
+      $("#synapse-id-form").hide();
       $("#neuron-form").show();
+      $("#view_style").val("neuron");
+    } else {
+      $("#synapse-id-form").show();
+      $("#neuron-form").hide();
+      $("#view_style").val("synapse");
     }
   });
 
@@ -190,17 +192,5 @@ $(document).ready(function () {
         });
       }
     }, debounceDelay);
-  });
-
-  $('input[type="radio"][value="neuron"]').change(function () {
-    if ($(this).is(':checked')) {
-      $("#openNeuronModalBtn").hide();
-    }
-  });
-
-  $('input[type="radio"][value="view"]').change(function () {
-    if ($(this).is(':checked')) {
-      $("#openNeuronModalBtn").show();
-    }
   });
 });

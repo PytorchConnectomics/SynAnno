@@ -69,10 +69,13 @@ def open_data(task: str) -> Template:
             modereset="inline",
             mode=draw_or_annotate,
             json_name=current_app.config["JSON"],
-            view_style="view",
+            view_style="synapse",
         )
     return render_template(
-        "opendata.html", modenext="disabled", mode=draw_or_annotate, view_style="view"
+        "opendata.html",
+        modenext="disabled",
+        mode=draw_or_annotate,
+        view_style="synapse",
     )
 
 
@@ -250,7 +253,7 @@ def upload_file() -> Template:
         materialization_url = request.form.get("materialization_url")
 
         # if the user chose the view view_style mode load the bbox specific subvolume and then process the data like in the local case
-        if current_app.view_style == "view":
+        if current_app.view_style == "neuron":
             try:
                 ip.neuron_centric_3d_data_processing(
                     current_app._get_current_object(),
@@ -273,10 +276,10 @@ def upload_file() -> Template:
                     "opendata.html",
                     modenext="disabled",
                     mode=draw_or_annotate,
-                    view_style="view",
+                    view_style="neuron",
                 )
         # if the user chose the neuron view_style mode, retrieve a list of all the synapses of the provided neuron ids and then process the data on synapse level
-        elif current_app.view_style == "neuron":
+        elif current_app.view_style == "synapse":
             # if the user chose the neuron view_style mode retrieve the neuron ids
             preid = (
                 int(request.form.get("preid")) if request.form.get("preid") else None

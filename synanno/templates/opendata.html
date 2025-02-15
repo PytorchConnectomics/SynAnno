@@ -111,8 +111,8 @@
       </div>
     </div>
 
-    <div class="accordion" id="accordionVolumeParameters">
-      <!-- Volume Parameters Section -->
+    <div class="accordion" id="accordionSynapseSelection">
+      <!-- Synapse Selection Section -->
       <div class="accordion-item">
         <h2 class="accordion-header" id="headingTwo">
           <button
@@ -125,67 +125,63 @@
             Synapse Selection
           </button>
         </h2>
-        <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionVolumeParameters">
+        <div id="collapseTwo" class="accordion-collapse collapse show" aria-labelledby="headingTwo" data-bs-parent="#accordionSynapseSelection">
           <div class="accordion-body">
-            <label class="form-check-label">
+            <div class="form-check form-switch">
               <input
-                type="radio"
                 class="form-check-input"
-                id="view_centric_button"
-                name="view_style"
-                value="view"
-                {% if view_style=="view" %} checked {% endif %}
+                type="checkbox"
+                id="toggleSynapseSelection"
+                {% if view_style == "neuron" %} checked {% endif %}
               />
-              View Centric
-            </label>
+              <label class="form-check-label" for="toggleSynapseSelection">
+                Toggle between Neuron Centric and Synapse IDs Range
+              </label>
+            </div>
 
-            <div class="mb-1"></div>
+            <input type="hidden" id="view_style" name="view_style" value="{{ view_style }}">
 
-            <!-- Button to Open the Embedded Neuroglancer Modal -->
-            <button
-              id="openNeuronModalBtn"
-              type="button"
-              class="btn btn-primary"
-              data-bs-toggle="modal"
-              data-bs-target="#neuroglancerModal"
-              disabled
-            >
-              Choose a Neuron
-            </button>
+            <div id="neuron-form" class="mt-3" {% if view_style == "synapse" %} style="display:none;" {% endif %}>
+              <!-- Button to Open the Embedded Neuroglancer Modal -->
+              <button
+                id="openNeuronModalBtn"
+                type="button"
+                class="btn btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#neuroglancerModal"
+                disabled
+              >
+                Choose a Neuron
+              </button>
+            </div>
 
-            <label class="form-check-label">
-              <input
-                type="radio"
-                class="form-check-input"
-                id="neuron_centric_button"
-                name="view_style"
-                value="neuron"
-                {% if view_style=="neuron" %} checked {% endif %}
-              />
-              Neuron Centric
-            </label>
-
-            <div id="neuron-form" {% if view_style=="view" %} class="hidden-form" {% endif %}>
-                <input
-                  class="number-dims"
-                  type="number"
-                  id="preid"
-                  name="preid"
-                  placeholder="Presynaptic ID"
-                />
-                <input
-                  class="number-dims"
-                  type="number"
-                  id="postid"
-                  name="postid"
-                  placeholder="Postsynaptic ID"
-                />
+            <div id="synapse-id-form" class="mt-3" {% if view_style == "neuron" %} style="display:none;" {% endif %}>
+              <div class="row">
+                <div class="col">
+                  <input
+                    class="form-control"
+                    type="number"
+                    id="preid"
+                    name="preid"
+                    placeholder="Presynaptic ID"
+                  />
+                </div>
+                <div class="col">
+                  <input
+                    class="form-control"
+                    type="number"
+                    id="postid"
+                    name="postid"
+                    placeholder="Postsynaptic ID"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="accordion" id="accordionSecretsConfig">
+      <div class="accordion" id="accordionConfigs">
         <!-- Secrets and Configurations Section -->
         <div class="accordion-item">
           <h2 class="accordion-header" id="headingThree">
@@ -193,7 +189,7 @@
               Configurations
             </button>
           </h2>
-          <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#accordionSecretsConfig">
+          <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#accordionConfigs">
             <div class="accordion-body">
               <label class="form-label">SynAnno JSON file</label>
               <p>

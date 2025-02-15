@@ -28,7 +28,7 @@ def setup_ng(
     """
 
     # generate a version number
-    app.ng_version = str(randint(0, 32e2))
+    app.ng_version = str(randint(0, 3200))
 
     # setup a Tornado web server and create viewer instance
     neuroglancer.set_server_bind_address(
@@ -50,7 +50,7 @@ def setup_ng(
     coordinate_space = neuroglancer.CoordinateSpace(
         names=list(coordinate_order.keys()),
         units=["nm", "nm", "nm"],
-        scales=np.array([int(res[0]) for res in coordinate_order.values()]).astype(int),
+        scales=np.array([int(res[0]) for res in coordinate_order.values()], dtype=int),
     )
 
     # config viewer: Add image layer, add segmentation mask layer, define position
@@ -65,7 +65,7 @@ def setup_ng(
             s.layers["image"] = neuroglancer.ImageLayer(source=source)
         elif isinstance(
             source, str
-        ):  # assuming it's a string URL for the precomputed source
+        ):  # Assuming the string is a URL for the precomputed source
             s.layers["image"] = neuroglancer.ImageLayer(source=source)
         else:
             raise ValueError("Unknown source type")
@@ -80,7 +80,7 @@ def setup_ng(
             s.layers["annotation"] = neuroglancer.SegmentationLayer(source=target)
         elif isinstance(
             target, str
-        ):  # Assuming it's a string URL for the precomputed target
+        ):  # Assuming it's a string URL for the precomputed neuropil
             s.layers["annotation"] = neuroglancer.SegmentationLayer(source=target)
         else:
             raise ValueError("Unknown annotation type")
@@ -121,8 +121,12 @@ def setup_ng(
 
         # extract xyz coordinates and set them as the starting position
         new_position = [
-            int(random_row["x"] * 2),
-            int(random_row["y"] * 2),
+            int(
+                random_row["x"] * 2
+            ),  # Multiplying by 2 to adjust for coordinate scaling
+            int(
+                random_row["y"] * 2
+            ),  # Multiplying by 2 to adjust for coordinate scaling
             int(random_row["z"]),
         ]
         s.position = new_position
@@ -245,5 +249,5 @@ def setup_ng(
                 s.layers["neuropil"].notSelectedAlpha = 0.0
 
     print(
-        f"Starting a Neuroglancer instance at {app.ng_viewer}, centered at x,y,x {0,0,0}"
+        f"Starting a Neuroglancer instance at {app.ng_viewer}, centered at x,y,z {0,0,0}"
     )

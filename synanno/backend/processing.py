@@ -59,16 +59,17 @@ def process_syn(gt: np.ndarray) -> np.ndarray:
 
 
 def get_center_blob_value_vectorized(
-    labeled_array: np.ndarray, blob_values: np.ndarray
+    labeled_array: np.ndarray, blob_values: np.ndarray, center_threshold: float = 0.25
 ) -> int:
     """Get the value of the non-zero blob closest to the center of the labeled array.
 
     Args:
         labeled_array (np.ndarray): 3D numpy array where different blobs are represented by different integers.
         blob_values (np.ndarray): Array of unique blob values in the labeled_array.
+        center_threshold (float): Threshold for the center blob.
 
     Returns:
-        center_blob_value (int): Value of the center blob.
+        center_blob_value (int): Value of the center blob or -1 if no blob is within 40% of the center.
     """
     # Calculate the center of the entire array
     array_center = np.array(labeled_array.shape) / 2.0
@@ -86,8 +87,23 @@ def get_center_blob_value_vectorized(
     # Find the index of the blob with the minimum distance
     center_blob_index = np.argmin(distances)
 
-    # Return the value of the blob with the minimum distance
-    return blob_values[center_blob_index]
+    logger.info(f"array_center value: {array_center}")
+    logger.info(f"Center blob value: {blob_centers[center_blob_index]}")
+    logger.info(f"0.4 * array_center[:2]: {0.4 * array_center[:2]}")
+    logger.info(
+        f"center_blob_index - array_center value: {np.abs(blob_centers[center_blob_index] - array_center)}"
+    )
+    # Check if the center blob is within 40% of the array center
+    if np.all(
+        np.abs(blob_centers[center_blob_index][:2] - array_center[:2])
+        <= center_threshold * array_center[:2]
+    ):
+        # Return the value of the blob with the minimum distance
+        return blob_values[center_blob_index]
+    else:
+        # Return 0 if no blob is within center_threshold% of the center
+        logger.warning(f"No blob is within {center_threshold} percent of the center.")
+        return -1
 
 
 def calculate_crop_pad(

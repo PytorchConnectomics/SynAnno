@@ -287,7 +287,7 @@ $(document).ready(function () {
         // retrieve the initial coordinates to check if they changed
         initialCoordinates = response;
         // start puling the coordinates every 500ms
-        checkCoordinatesInterval = setInterval(checkCoordinates, 500);
+        checkCoordinatesInterval = setInterval(checkCoordinates, 250);
       },
       error: function (error) {
         console.error('Error fetching initial coordinates:', error);

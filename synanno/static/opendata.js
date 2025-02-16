@@ -194,7 +194,7 @@ $(document).ready(function () {
         // retrieve the initial the neuron ID to check if it changed
         initialID = response.selected_neuron_id;
         // start puling the neuron ID every 300ms
-        checkSelectedNeuronIDHandle = setInterval(checkNeuronID, 500);
+        checkSelectedNeuronIDHandle = setInterval(checkNeuronID, 250);
       },
       error: function (error) {
         console.error('Error fetching initial the neuron ID:', error);

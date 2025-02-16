@@ -13,48 +13,8 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-body mx-auto">
-        <div class="d-flex align-items-center">
-          <div class="p-1">
-            <button
-              id="toggle-label"
-              class="btn btn-primary rounded-start"
-              onclick="check_gt();"
-            >
-              Label
-            </button>
-          </div>
-
-          <div class="p-1 ms-auto">
-            <div
-              class="btn-group btn-group-sm"
-              role="group"
-              aria-label="Basic example"
-            >
-              <button
-                id="dec-opacity"
-                type="button"
-                class="btn btn-primary rounded-start"
-                onclick="dec_opacity()"
-              >
-                -
-              </button>
-              <span
-                id="value-opacity"
-                type="button"
-                class="btn btn-light"
-                value="0.5"
-                >0.5</span
-              >
-              <button
-                id="inc-opacity"
-                type="button"
-                class="btn btn-primary"
-                onclick="add_opacity()"
-              >
-                +
-              </button>
-            </div>
-          </div>
+        <div class="card-header text-center">
+          Neuron ID: <span id="neuron-id"></span>
         </div>
         <div class="d-flex justify-content-center">
           <div id="cardDetails" class="card border-0 p-1">
@@ -94,11 +54,11 @@
             <div class="row">
               <div class="col-4 d-flex justify-content-start">
                 <button
-                  id="minSlice"
-                  type="button"
-                  class="btn btn-outline-secondary btn-sm disabled"
+                  id="toggle-label"
+                  class="btn btn-primary rounded-start"
+                  onclick="check_gt();"
                 >
-                  -15
+                  Label
                 </button>
               </div>
               <div class="col-4 d-flex justify-content-center">
@@ -114,13 +74,30 @@
                 </button>
               </div>
               <div class="col-4 d-flex justify-content-end">
-                <button
-                  id="maxSlice"
-                  type="button"
-                  class="btn btn-outline-secondary btn-sm disabled"
-                >
-                  +15
-                </button>
+                <div class="btn-group btn-group-sm" role="group" aria-label="Basic example">
+                  <button
+                    id="dec-opacity"
+                    type="button"
+                    class="btn btn-primary rounded-start"
+                    onclick="dec_opacity()"
+                  >
+                    -
+                  </button>
+                  <span
+                    id="value-opacity"
+                    type="button"
+                    class="btn btn-light"
+                    value="0.5"
+                  >0.5</span>
+                  <button
+                    id="inc-opacity"
+                    type="button"
+                    class="btn btn-primary"
+                    onclick="add_opacity()"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
             </div>
           </div>

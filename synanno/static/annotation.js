@@ -106,6 +106,9 @@ $(document).ready(function () {
     // the instance label
     var label = $(this).attr("label");
 
+    // the neuron ID
+    var neuronID = $(this).attr("neuronID");
+
     // we are currently in the annotation mode
     var mode = "annotate";
 
@@ -151,6 +154,7 @@ $(document).ready(function () {
         "src",
         staticBaseUrl + data_json.GT + "/" + data_json.Middle_Slice + ".png",
       );
+      $("#neuron-id").text(neuronID);
       $("#detailsModal").modal("show");
 
       // Open modal properly

@@ -1,3 +1,5 @@
+import showToast from "./utils/toast.js";
+
 $(document).ready(function () {
 
   // show progressbar when submitting the data
@@ -193,4 +195,49 @@ $(document).ready(function () {
       }
     }, debounceDelay);
   });
+
+  let checkSelectedNeuronIDHandle;
+  let initialID = null;
+
+  // Start checking the neuron ID when the ng modal is shown
+  $("#neuroglancerModal").on("shown.bs.modal", function () {
+    // Pull initial coordinates
+    $.ajax({
+      type: 'GET',
+      url: '/get_neuron_id',
+      success: function (response) {
+        // retrieve the initial the neuron ID to check if it changed
+        initialID = response.selected_neuron_id;
+        // start puling the neuron ID every 300ms
+        checkSelectedNeuronIDHandle = setInterval(checkNeuronID, 500);
+      },
+      error: function (error) {
+        console.error('Error fetching initial the neuron ID:', error);
+      }
+    });
+  });
+
+  // Stop checking the neuron ID when the modal is hidden
+  $("#neuroglancerModal").on("hidden.bs.modal", function () {
+    clearInterval(checkSelectedNeuronIDHandle);
+  });
+
+  // Function to check for changes in app.cz, app.cy, app.cx
+  function checkNeuronID() {
+    $.ajax({
+      type: 'GET',
+      url: '/get_neuron_id',
+      success: function (response) {
+        const selected_neuron_id = response.selected_neuron_id;
+        if (selected_neuron_id !== initialID) {
+          showToast(`Neuron ID: ${selected_neuron_id}`);
+          initialID = selected_neuron_id
+        }
+      },
+      error: function (error) {
+        console.error('Error fetching the neuron ID:', error);
+      }
+    });
+  }
+
 });

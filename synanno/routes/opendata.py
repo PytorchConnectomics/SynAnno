@@ -716,3 +716,9 @@ def load_materialization():
     except Exception as e:
         logging.info(f"Failed to load materialization table: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+@blueprint.route("/get_neuron_id", methods=["GET"])
+def get_neuron_id():
+    """Get the current coordinates of the Neuroglancer instance."""
+    return jsonify({"selected_neuron_id": current_app.selected_neuron_id})

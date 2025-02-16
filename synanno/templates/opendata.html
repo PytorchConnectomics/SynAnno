@@ -338,9 +338,9 @@
 
 <!-- Modal to indicating active loading -->
 {% include "loading_bar.html" %}
+{% include "toast_notification.html" %}
 
 <!-- add js file to disable the form on reset -->
-<script src="{{ url_for('static', filename='opendata.js') }}"></script>
-
+<script type="module" src="{{ url_for('static', filename='opendata.js') }}"></script>
 
 {% endblock %}

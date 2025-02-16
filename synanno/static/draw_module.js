@@ -1,3 +1,5 @@
+import showToast from "./utils/toast.js";
+
 $(document).ready(function () {
   // path where to save the custom masks
   const base_mask_path = "/static/Images/Mask/";
@@ -271,4 +273,48 @@ $(document).ready(function () {
       location.reload();
     });
   });
+
+  let checkCoordinatesInterval;
+  let initialCoordinates = { cz: null, cy: null, cx: null };
+
+  // Start checking coordinates when the ng modal is shown
+  $("#drawModalFN").on("shown.bs.modal", function () {
+    // Pull initial coordinates
+    $.ajax({
+      type: 'GET',
+      url: '/get_coordinates',
+      success: function (response) {
+        // retrieve the initial coordinates to check if they changed
+        initialCoordinates = response;
+        // start puling the coordinates every 500ms
+        checkCoordinatesInterval = setInterval(checkCoordinates, 500);
+      },
+      error: function (error) {
+        console.error('Error fetching initial coordinates:', error);
+      }
+    });
+  });
+
+  // Stop checking coordinates when the modal is hidden
+  $("#drawModalFN").on("hidden.bs.modal", function () {
+    clearInterval(checkCoordinatesInterval);
+  });
+
+  // Function to check for changes in app.cz, app.cy, app.cx
+  function checkCoordinates() {
+    $.ajax({
+      type: 'GET',
+      url: '/get_coordinates',
+      success: function (response) {
+        const { cz, cy, cx } = response;
+        if (cz !== initialCoordinates.cz || cy !== initialCoordinates.cy || cx !== initialCoordinates.cx) {
+          showToast(`Coordinates: cx=${cx}, cy=${cy}, cz=${cz}`);
+          initialCoordinates = { cz, cy, cx };
+        }
+      },
+      error: function (error) {
+        console.error('Error fetching coordinates:', error);
+      }
+    });
+  }
 });

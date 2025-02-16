@@ -669,3 +669,9 @@ def save_pre_post_coordinates() -> None:
         raise ValueError("id must be pre or post")
 
     return json.dumps({"success": True}), 200, {"ContentType": "application/json"}
+
+
+@blueprint.route("/get_coordinates", methods=["GET"])
+def get_coordinates():
+    """Get the current coordinates of the Neuroglancer instance."""
+    return jsonify({"cz": current_app.cz, "cy": current_app.cy, "cx": current_app.cx})

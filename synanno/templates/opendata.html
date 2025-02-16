@@ -24,15 +24,8 @@
   crossorigin="anonymous"
 ></script>
 
-<div class="px-4 py-3 my-3 text-center">
-  <h2 class="mb-3">Welcome to SynAnno Annotation Tool</h2>
-  <p>
-    {% if mode == 'draw'%}Select target, source and JSON to start annotating!{%
-    elif mode == 'annotate'%}Select some data and start proofreading!{% endif %}
-  </p>
-</div>
 
-<div class="mb-3">
+<div class="mb-3  my-3">
   <form
     method="POST"
     id="{{ modeform }}"
@@ -146,7 +139,7 @@
               <button
                 id="openNeuronModalBtn"
                 type="button"
-                class="btn btn-primary"
+                class="btn btn-secondary"
                 data-bs-toggle="modal"
                 data-bs-target="#neuroglancerModal"
                 disabled
@@ -310,7 +303,7 @@
       />
       <a
         type="button"
-        class="btn btn-primary {{ modenext }}"
+        class="btn btn-secondary {{ modenext }}"
         href="{{ url_for('open_data.set_data_task', task=mode) }}"
       >
         {% if mode == 'draw'%} Start Drawing {% elif mode == 'annotate'%}Start

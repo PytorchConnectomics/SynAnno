@@ -33,7 +33,7 @@
       <button
         id="dec-opacity-grid"
         type="button"
-        class="btn btn-primary rounded-start"
+        class="btn btn-secondary rounded-start"
         onclick="dec_opacity_grid()"
       >
         -
@@ -48,7 +48,7 @@
       <button
         id="inc-opacity-grid"
         type="button"
-        class="btn btn-primary"
+        class="btn btn-secondary"
         onclick="add_opacity_grid()"
       >
         +
@@ -97,7 +97,7 @@
     <li class="page-item">
       <a
         type="button"
-        class="page-link btn btn-primary nav-anno"
+        class="page-link btn btn-secondary nav-anno"
         href="{{ url_for('annotation.annotation_page', page=page-1) }}"
       >
         <i class="bi bi-arrow-left"></i>
@@ -105,7 +105,7 @@
     </li>
     {% else %}
     <li class="page-item disabled">
-      <a type="button" class="page-link btn btn-primary">
+      <a type="button" class="page-link btn btn-secondary">
         <i class="bi bi-arrow-left"></i>
       </a>
     </li>
@@ -116,7 +116,7 @@
     <li class="page-item">
       <a
         type="button"
-        class="page-link btn btn-primary nav-anno"
+        class="page-link btn btn-secondary nav-anno"
         href="{{ url_for('annotation.annotation_page', page=page+1)}}"
       >
         <i class="bi bi-arrow-right"></i>
@@ -124,7 +124,7 @@
     </li>
     {% else %}
     <li class="page-item disabled">
-      <a type="button" class="page-link btn btn-primary">
+      <a type="button" class="page-link btn btn-secondary">
         <i class="bi bi-arrow-right"></i>
       </a>
     </li>
@@ -134,7 +134,7 @@
 
 <!--Error Processing Button Across Pages-->
 <div class="position-fixed bottom-0 end-0 m-4">
-  <a class="btn btn-primary" href="{{ url_for('categorize.categorize') }}">
+  <a class="btn btn-secondary" href="{{ url_for('categorize.categorize') }}">
     Error Processing
   </a>
 </div>

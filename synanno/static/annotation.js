@@ -289,10 +289,10 @@ window.check_gt = function check_gt() {
   if (imgDetailsGT.style.display === "none") {
     imgDetailsGT.style.display = "block";
     toggleLabelButton.classList.remove("btn-secondary");
-    toggleLabelButton.classList.add("btn-primary");
+    toggleLabelButton.classList.add("btn-secondary");
   } else {
     imgDetailsGT.style.display = "none";
-    toggleLabelButton.classList.remove("btn-primary");
+    toggleLabelButton.classList.remove("btn-secondary");
     toggleLabelButton.classList.add("btn-secondary");
   }
 }

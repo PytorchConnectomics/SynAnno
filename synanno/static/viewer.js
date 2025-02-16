@@ -2,84 +2,99 @@ import SharkViewer, { swcParser, Color } from "./SharkViewer/shark_viewer.js";
 import { nodes_array } from "./config.js";
 
 window.onload = () => {
-    document.getElementById("swc_input").addEventListener("change", readSwcFile, false);
+    const neuronPath = $("script[src*='viewer.js']").data("neuron-path");
+    const neuronSection = $("script[src*='viewer.js']").data("neuron-section");
 
     try {
         window.s = new SharkViewer({
             mode: 'particle',
-            dom_element: document.getElementById('container'),
+            dom_element: document.getElementById('shark_container'),
         });
+        console.log("Viewer initialized successfully.");
         s.init();
         s.animate();
+
+        if (neuronPath) {
+            loadSwcFile(neuronPath, neuronSection);
+        } else {
+            console.error("No neuron path provided.");
+        }
+
+        // Make the viewer reactive to window resizing events
+        window.addEventListener('resize', onWindowResize, false);
+
+        // Force a resize event to ensure the viewer renders correctly
+        setTimeout(() => {
+            onWindowResize();
+            s.render(); // Force a re-render
+        }, 100); // Delay to allow layout updates
     } catch (error) {
         console.error("Error initializing viewer:", error);
     }
 };
 
 /**
- * Reads and processes an SWC file selected by the user.
+ * Loads and processes an SWC file from the given path.
  *
- * @param {Event} e - The event triggered by the file input change.
+ * @param {string} swcPath - The path to the SWC file.
+ * @param {Array} neuronSection - The neuron sections to be highlighted.
  * @returns {void}
  *
  * @description
- * This function reads an SWC file using a FileReader, parses the file content,
+ * This function fetches an SWC file from the given path, parses the file content,
  * and processes the parsed SWC data. It adds the neuron object to the scene,
  * updates node and edge colors, adjusts the camera, and adds lights to the scene.
  * If any error occurs during the process, an alert is shown to the user.
  *
  * @throws {Error} If there is an error during the SWC file processing.
  */
-function readSwcFile(e) {
-    const file = e.target.files[0];
+function loadSwcFile(swcPath, neuronSection) {
+    fetch(swcPath)
+        .then(response => response.text())
+        .then(swcTxt => {
+            try {
+                let swc = swcParser(swcTxt);
 
-    if (!file) {
-        alert("No file selected. Please choose an SWC file.");
-        return;
-    }
+                if (!swc || Object.keys(swc).length === 0) {
+                    console.error("SWC parsing failed. The SWC object is empty.");
+                    return;
+                }
 
-    const reader = new FileReader();
-    reader.onload = (e2) => {
-        try {
-            const swcTxt = e2.target.result;
-            let swc = swcParser(swcTxt);
+                console.log("Parsed SWC data:", swc);
+                s.swc = swc;
 
-            if (!swc || Object.keys(swc).length === 0) {
-                console.error("SWC parsing failed. The SWC object is empty.");
-                return;
+                const neuronData = s.loadNeuron('neuron', 'red', swc, true, false, true);
+                const neuronObject = neuronData[0];
+
+                if (neuronObject && neuronObject.isObject3D) {
+                    s.scene.add(neuronObject);
+                    console.log("Neuron object successfully added to the scene.");
+                } else {
+                    console.warn("Neuron object is missing or invalid.");
+                }
+
+                const neuron = s.scene.getObjectByName('neuron');
+
+                if (neuron) {
+                    console.log("Neuron found! Proceeding with color update.");
+                    updateNodeAndEdgeColors(s, neuronSection, neuronSection);
+                    adjustCameraForNeuron(s);
+
+                } else {
+                    console.warn("Neuron still not found in the scene.");
+                }
+
+                addLights(s.scene);
+                s.render();
+            } catch (error) {
+                console.error("Error parsing SWC file:", error);
+                alert("An error occurred while processing the SWC file.");
             }
-
-            console.log("Parsed SWC data:", swc);
-            s.swc = swc;
-
-            const neuronData = s.loadNeuron('neuron', 'red', swc, true, false, true);
-            const neuronObject = neuronData[0];
-
-            if (neuronObject && neuronObject.isObject3D) {
-                s.scene.add(neuronObject);
-                console.log("Neuron object successfully added to the scene.");
-            } else {
-                console.warn("Neuron object is missing or invalid.");
-            }
-
-            const neuron = s.scene.getObjectByName('neuron');
-
-            if (neuron) {
-                console.log("Neuron found! Proceeding with color update.");
-                updateNodeAndEdgeColors(s, nodes_array, nodes_array);
-                adjustCameraForNeuron(s);
-            } else {
-                console.warn("Neuron still not found in the scene.");
-            }
-
-            addLights(s.scene);
-            s.render();
-        } catch (error) {
-            console.error("Error parsing SWC file:", error);
-            alert("An error occurred while processing the SWC file.");
-        }
-    };
-    reader.readAsText(file);
+        })
+        .catch(error => {
+            console.error("Error fetching SWC file:", error);
+            alert("An error occurred while fetching the SWC file.");
+        });
 }
 
 /**
@@ -186,7 +201,7 @@ function adjustCameraForNeuron(viewer) {
     const fov = viewer.camera.fov * (Math.PI / 180);
     const distance = (maxDim / 2) / Math.tan(fov / 2);
 
-    viewer.camera.position.set(center.x, center.y, center.z + distance * 0.3);
+    viewer.camera.position.set(center.x, center.y, center.z + distance * 1.0);
     viewer.camera.lookAt(center);
     viewer.camera.near = distance / 10;
     viewer.camera.far = distance * 10;
@@ -228,4 +243,24 @@ function generateSectionColors(numSections) {
         colors.push(new THREE.Color().setHSL(hue, saturation, lightness));
     }
     return colors;
+}
+
+/**
+ * Handles window resize events to adjust the viewer's size and camera aspect ratio.
+ */
+function onWindowResize() {
+    const container = document.getElementById('shark_container');('#shark_container');
+
+    if (!container) {
+        console.error("Shark container not found.");
+        return;
+    }
+
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+    console.log("Resizing viewer to:", width, "x", height);
+
+    s.camera.aspect = width / height;
+    s.camera.updateProjectionMatrix();
+    s.renderer.setSize(width, height);
 }

@@ -321,10 +321,27 @@
   </form>
 </div>
 
+<!-- Modal to indicate submission is done -->
+<div class="modal fade" id="submissionDoneModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-body d-flex flex-column">
+        <div id="shark_container"
+             class="flex-grow-1 w-100"
+             style="border: 1px solid #ccc; height: 70vh; max-height: 700px;">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <!-- Modal to indicating active loading -->
 {% include "loading_bar.html" %}
 
 <!-- add js file to disable the form on reset -->
-<script type="module" src="{{ url_for('static', filename='opendata.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='opendata.js') }}" data-neuron-ready="{{ neuronReady }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='SharkViewer/three.min.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='viewer.js') }}" data-neuron-ready="{{ neuronReady }}" data-neuron-path="{{ neuronPath }}" data-neuron-section="{{ neuronSection }}"></script>
 
 {% endblock %}

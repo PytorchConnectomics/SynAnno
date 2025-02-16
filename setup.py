@@ -25,6 +25,8 @@ setup(
         "tifffile>=2023.4.12",
         "fpzip==1.2.4",
         "python-dotenv==1.0.1",
+        "navis==1.10.0",
+        "networkx==3.1",
     ],
     extras_require={
         "dev": [

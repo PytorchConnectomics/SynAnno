@@ -87,12 +87,6 @@ def get_center_blob_value_vectorized(
     # Find the index of the blob with the minimum distance
     center_blob_index = np.argmin(distances)
 
-    logger.info(f"array_center value: {array_center}")
-    logger.info(f"Center blob value: {blob_centers[center_blob_index]}")
-    logger.info(f"0.4 * array_center[:2]: {0.4 * array_center[:2]}")
-    logger.info(
-        f"center_blob_index - array_center value: {np.abs(blob_centers[center_blob_index] - array_center)}"
-    )
     # Check if the center blob is within 40% of the array center
     if np.all(
         np.abs(blob_centers[center_blob_index][:2] - array_center[:2])

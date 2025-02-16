@@ -1,6 +1,17 @@
 import {enableNeuropilLayer, disableNeuropilLayer} from "./utils/ng_util.js";
 
 $(document).ready(function () {
+  // Get the neuronReady value from the data attribute and convert it to a boolean
+  const neuronReady = $("script[src*='opendata.js']").data("neuron-ready") === true;
+
+  console.log("Neuron Ready:", neuronReady); // Debugging step
+
+  // Show the submission done modal if neuronReady is true
+  if (neuronReady) {
+    console.log("Showing submission done modal"); // Debugging step
+    var submissionDoneModal = new bootstrap.Modal(document.getElementById('submissionDoneModal'));
+    submissionDoneModal.show();
+  }
 
   // show progressbar when submitting the data
   $("form").on("submit", function (event) {

@@ -6,6 +6,11 @@ from flask_cors import cross_origin
 
 # backend package
 import synanno.backend.processing as ip
+from synanno.backend.neuron_processing.load_neuron import (
+    load_neuron_skeleton,
+    navis_neuron,
+    compute_sections,
+)
 
 # load existing json
 import json
@@ -74,12 +79,14 @@ def open_data(task: str) -> Template:
             mode=draw_or_annotate,
             json_name=current_app.config["JSON"],
             view_style="synapse",
+            neuronReady="false",
         )
     return render_template(
         "opendata.html",
         modenext="disabled",
         mode=draw_or_annotate,
         view_style="synapse",
+        neuronReady="false",
     )
 
 
@@ -282,6 +289,7 @@ def upload_file() -> Template:
                     modenext="disabled",
                     mode=draw_or_annotate,
                     view_style="neuron",
+                    neuronReady="false",
                 )
         # if the user chose the neuron view_style mode, retrieve a list of all the synapses of the provided neuron ids and then process the data on synapse level
         elif current_app.view_style == "synapse":
@@ -314,7 +322,10 @@ def upload_file() -> Template:
             "error",
         )
         return render_template(
-            "opendata.html", modenext="disabled", mode=draw_or_annotate
+            "opendata.html",
+            modenext="disabled",
+            mode=draw_or_annotate,
+            neuronReady="false",
         )
 
     # if the NG version number is None setup a new NG viewer
@@ -326,6 +337,24 @@ def upload_file() -> Template:
             neuropil="precomputed://" + neuropil_url,
         )
 
+    # if neuron mode load and partition neuron
+    swc_static_file_path = None
+    sections = None
+    if current_app.view_style == "neuron":
+        static_folder = os.path.join(
+            current_app.root_path, current_app.config["STATIC_FOLDER"]
+        )
+        swc_path = os.path.join(static_folder, "swc")
+        swc_file = load_neuron_skeleton(
+            neuropil_url, current_app.selected_neuron_id, swc_path
+        )
+        pruned_swc_file = navis_neuron(swc_file)
+        sections = compute_sections(pruned_swc_file)
+        swc_static_file_path = os.path.join(
+            os.path.join(current_app.config["STATIC_FOLDER"], "swc"),
+            os.path.basename(pruned_swc_file),
+        )
+
     flash("Data ready!")
     return render_template(
         "opendata.html",
@@ -333,6 +362,9 @@ def upload_file() -> Template:
         modeform="formFileDisabled",
         view_style=current_app.view_style,
         mode=draw_or_annotate,
+        neuronReady="true" if current_app.view_style == "neuron" else "false",
+        neuronPath=swc_static_file_path if current_app.view_style == "neuron" else None,
+        neuronSection=sections if current_app.view_style == "neuron" else None,
     )
 
 
@@ -655,7 +687,12 @@ def save_file(
     file_ext = os.path.splitext(filename)[1]
     if file_ext not in current_app.config["UPLOAD_EXTENSIONS"]:
         flash("Incorrect file format! Load again.", "error")
-        render_template("opendata.html", modenext="disabled", mode=draw_or_annotate)
+        render_template(
+            "opendata.html",
+            modenext="disabled",
+            mode=draw_or_annotate,
+            neuronReady="false",
+        )
         return None
     else:
         file.save(os.path.join(path, filename))

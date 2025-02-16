@@ -8,35 +8,20 @@
   id="detailsModal"
   tabindex="-1"
   aria-labelledby="modalToggleLabel1"
-  aria-hidden="true"
+  inert
 >
   <div class="modal-dialog">
     <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title pe-5" id="modalToggleLabel1">Synapse details</h5>
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Close"
-        ></button>
-      </div>
       <div class="modal-body mx-auto">
         <div class="d-flex align-items-center">
           <div class="p-1">
-            <div class="form-check pe-4">
-              <input
-                id="check-gt"
-                class="form-check-input"
-                type="checkbox"
-                value=""
-                onclick="check_gt();"
-                checked
-              />
-              <label class="form-check-label" for="flexCheckChecked">
-                Label
-              </label>
-            </div>
+            <button
+              id="toggle-label"
+              class="btn btn-primary rounded-start"
+              onclick="check_gt();"
+            >
+              Label
+            </button>
           </div>
 
           <div class="p-1 ms-auto">
@@ -45,9 +30,6 @@
               role="group"
               aria-label="Basic example"
             >
-              <span style="margin-right: 8px; margin-top: 2px"
-                >Label opacity:
-              </span>
               <button
                 id="dec-opacity"
                 type="button"
@@ -110,16 +92,16 @@
           />
           <div class="container">
             <div class="row">
-              <div class="col justify-content-center">
+              <div class="col-4 d-flex justify-content-start">
                 <button
                   id="minSlice"
                   type="button"
-                  class="btn btn-outline-secondary btn-sm disabled float-start"
+                  class="btn btn-outline-secondary btn-sm disabled"
                 >
                   -15
                 </button>
               </div>
-              <div class="col justify-content-center">
+              <div class="col-4 d-flex justify-content-center">
                 <button
                   class="btn btn-primary"
                   id="ng-link"
@@ -131,11 +113,11 @@
                   View in NG
                 </button>
               </div>
-              <div class="col justify-content-center">
+              <div class="col-4 d-flex justify-content-end">
                 <button
                   id="maxSlice"
                   type="button"
-                  class="btn btn-outline-secondary btn-sm disabled float-end"
+                  class="btn btn-outline-secondary btn-sm disabled"
                 >
                   +15
                 </button>

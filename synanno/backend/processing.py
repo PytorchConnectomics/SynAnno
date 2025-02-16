@@ -269,6 +269,9 @@ def retrieve_instance_metadata(
                 "EM": "/".join(img_dir_instance.strip(".\\").split("/")[-3:]),
                 "Label": "Correct",
                 "Annotated": "No",
+                "Neuron_ID": "None"
+                if current_app.selected_neuron_id is None
+                else current_app.selected_neuron_id,
                 "Error_Description": "None",
                 "X_Index": coordinate_order.index("x"),
                 "Y_Index": coordinate_order.index("y"),

@@ -1,4 +1,5 @@
 import showToast from "./utils/toast.js";
+import {enableNeuropilLayer, disableNeuropilLayer} from "./utils/ng_util.js";
 
 $(document).ready(function () {
 
@@ -103,22 +104,6 @@ $(document).ready(function () {
   });
 
   updateSubmitButtonState();
-
-  // enable the neuropil neuron segmentation layer
-  function enableNeuropilLayer() {
-    fetch('/enable_neuropil_layer', { method: 'POST' })
-        .then(response => response.json())
-        .then(data => console.log(data.status))
-        .catch(error => console.error('Error enabling neuropil layer:', error));
-  }
-
-  // disable the neuropil neuron segmentation layer
-  function disableNeuropilLayer() {
-    fetch('/disable_neuropil_layer', { method: 'POST' })
-        .then(response => response.json())
-        .then(data => console.log(data.status))
-        .catch(error => console.error('Error disabling neuropil layer:', error));
-  }
 
   // enable the neuropil layer when the modal opens
   $("#neuroglancerModal").on("show.bs.modal", function () {

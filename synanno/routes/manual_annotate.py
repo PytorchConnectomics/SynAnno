@@ -289,6 +289,7 @@ def ng_bbox_fn_save() -> Dict[str, object]:
 
     item["Label"] = "Incorrect"
     item["Annotated"] = "No"
+    item["Neuron_ID"] = "None"
     item["Error_Description"] = "False Negatives"
     item["X_Index"] = coordinate_order.index("x")
     item["Y_Index"] = coordinate_order.index("y")

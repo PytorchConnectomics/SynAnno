@@ -251,20 +251,12 @@
             class="modal fade"
             id="neuroglancerModal"
             tabindex="-1"
-            aria-labelledby="neuroglancerModalLabel"
-            aria-hidden="true"
           >
             <div class="modal-dialog modal-xl">
             <div class="modal-content">
-            <div class="modal-header">
-            <h5 class="modal-title" id="neuroglancerModalLabel">Neuron-Centric View</h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
-            </div>
+              <div class="card-header text-center">
+                Neuron ID: <span id="neuron-id-open"></span>
+              </div>
             <div class="modal-body">
             <!-- Embedded Neuroglancer Viewer -->
             <iframe
@@ -331,7 +323,6 @@
 
 <!-- Modal to indicating active loading -->
 {% include "loading_bar.html" %}
-{% include "toast_notification.html" %}
 
 <!-- add js file to disable the form on reset -->
 <script type="module" src="{{ url_for('static', filename='opendata.js') }}"></script>

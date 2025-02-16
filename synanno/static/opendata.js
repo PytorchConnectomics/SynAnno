@@ -1,4 +1,3 @@
-import showToast from "./utils/toast.js";
 import {enableNeuropilLayer, disableNeuropilLayer} from "./utils/ng_util.js";
 
 $(document).ready(function () {
@@ -103,6 +102,18 @@ $(document).ready(function () {
     }
   });
 
+  $("#neuroglancerModal").on("shown.bs.modal", function () {
+    $(this).removeAttr("aria-hidden"); // Make modal accessible
+    $(this).removeAttr('inert'); // Make modal interactive
+    $("#neuroglancerIframe").focus(); // Move focus inside the modal
+  });
+
+  $("#neuroglancerModal").on("hidden.bs.modal", function () {
+    $(this).attr("aria-hidden", "true"); // Restore aria-hidden when closed
+    $(this).attr("inert", "true"); // Prevent interactions
+    $("#openNeuronModalBtn").focus();
+  });
+
   updateSubmitButtonState();
 
   // enable the neuropil layer when the modal opens
@@ -191,9 +202,7 @@ $(document).ready(function () {
       type: 'GET',
       url: '/get_neuron_id',
       success: function (response) {
-        // retrieve the initial the neuron ID to check if it changed
-        initialID = response.selected_neuron_id;
-        // start puling the neuron ID every 300ms
+        // start puling the neuron ID every 250ms
         checkSelectedNeuronIDHandle = setInterval(checkNeuronID, 250);
       },
       error: function (error) {
@@ -214,8 +223,10 @@ $(document).ready(function () {
       url: '/get_neuron_id',
       success: function (response) {
         const selected_neuron_id = response.selected_neuron_id;
+        console.log('Selected Neuron ID:', selected_neuron_id);
         if (selected_neuron_id !== initialID) {
-          showToast(`Neuron ID: ${selected_neuron_id}`);
+          console.log('Neuron ID changed:', selected_neuron_id);
+          $("#neuron-id-open").text(selected_neuron_id);
           initialID = selected_neuron_id
         }
       },

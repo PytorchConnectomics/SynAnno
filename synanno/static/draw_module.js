@@ -1,5 +1,3 @@
-import showToast from "./utils/toast.js";
-
 $(document).ready(function () {
   // path where to save the custom masks
   const base_mask_path = "/static/Images/Mask/";
@@ -284,8 +282,6 @@ $(document).ready(function () {
       type: 'GET',
       url: '/get_coordinates',
       success: function (response) {
-        // retrieve the initial coordinates to check if they changed
-        initialCoordinates = response;
         // start puling the coordinates every 500ms
         checkCoordinatesInterval = setInterval(checkCoordinates, 250);
       },
@@ -308,7 +304,7 @@ $(document).ready(function () {
       success: function (response) {
         const { cz, cy, cx } = response;
         if (cz !== initialCoordinates.cz || cy !== initialCoordinates.cy || cx !== initialCoordinates.cx) {
-          showToast(`Coordinates: cx=${cx}, cy=${cy}, cz=${cz}`);
+          $('#neuron-id-draw').text(`cx: ${cx}, cy: ${cy}, cz: ${cz}`);
           initialCoordinates = { cz, cy, cx };
         }
       },

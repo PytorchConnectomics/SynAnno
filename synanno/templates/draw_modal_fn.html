@@ -4,21 +4,12 @@
   class="modal fade"
   id="drawModalFN"
   tabindex="-1"
-  aria-labelledby="drawModalFN"
-  aria-hidden="true"
 >
   <div class="modal-dialog modal-dialog-centered modal-xl">
     <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="modalToggleLabel2">Neuroglancer</h5>
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Close"
-        ></button>
+      <div class="card-header text-center">
+        <span id="neuron-id-draw"></span>
       </div>
-
       <div class="modal-body">
         <div class="row">
           <iframe
@@ -64,5 +55,3 @@
 
 <!-- Modal for saving the bounding box of the false positve synapses -->
 {% include "draw_modal_fn_save.html" %}
-
-{% include "toast_notification.html" %}

@@ -271,4 +271,46 @@ $(document).ready(function () {
       location.reload();
     });
   });
+
+  let checkCoordinatesInterval;
+  let initialCoordinates = { cz: null, cy: null, cx: null };
+
+  // Start checking coordinates when the ng modal is shown
+  $("#drawModalFN").on("shown.bs.modal", function () {
+    // Pull initial coordinates
+    $.ajax({
+      type: 'GET',
+      url: '/get_coordinates',
+      success: function (response) {
+        // start puling the coordinates every 500ms
+        checkCoordinatesInterval = setInterval(checkCoordinates, 250);
+      },
+      error: function (error) {
+        console.error('Error fetching initial coordinates:', error);
+      }
+    });
+  });
+
+  // Stop checking coordinates when the modal is hidden
+  $("#drawModalFN").on("hidden.bs.modal", function () {
+    clearInterval(checkCoordinatesInterval);
+  });
+
+  // Function to check for changes in app.cz, app.cy, app.cx
+  function checkCoordinates() {
+    $.ajax({
+      type: 'GET',
+      url: '/get_coordinates',
+      success: function (response) {
+        const { cz, cy, cx } = response;
+        if (cz !== initialCoordinates.cz || cy !== initialCoordinates.cy || cx !== initialCoordinates.cx) {
+          $('#neuron-id-draw').text(`cx: ${cx}, cy: ${cy}, cz: ${cz}`);
+          initialCoordinates = { cz, cy, cx };
+        }
+      },
+      error: function (error) {
+        console.error('Error fetching coordinates:', error);
+      }
+    });
+  }
 });

@@ -49,22 +49,27 @@ def process_syn(gt: np.ndarray) -> np.ndarray:
     # assign each synapse a unique index
     seg = label_cc(gt).astype(int)
     # identify the largest connected component in the center of the volume and mask out the rest
-    center_blob_value = get_center_blob_value_vectorized(seg, np.unique(seg)[1:])
-    seg *= seg == center_blob_value
+    unique, counts = np.unique(seg, return_counts=True)
+    if len(unique) > 1:
+        center_blob_value = get_center_blob_value_vectorized(seg, np.unique(seg)[1:])
+        seg *= seg == center_blob_value
+    else:
+        logger.warning("No synapse segmentation mask found in the volume.")
     return seg
 
 
 def get_center_blob_value_vectorized(
-    labeled_array: np.ndarray, blob_values: np.ndarray
+    labeled_array: np.ndarray, blob_values: np.ndarray, center_threshold: float = 0.25
 ) -> int:
     """Get the value of the non-zero blob closest to the center of the labeled array.
 
     Args:
         labeled_array (np.ndarray): 3D numpy array where different blobs are represented by different integers.
         blob_values (np.ndarray): Array of unique blob values in the labeled_array.
+        center_threshold (float): Threshold for the center blob.
 
     Returns:
-        center_blob_value (int): Value of the center blob.
+        center_blob_value (int): Value of the center blob or -1 if no blob is within 40% of the center.
     """
     # Calculate the center of the entire array
     array_center = np.array(labeled_array.shape) / 2.0
@@ -82,8 +87,17 @@ def get_center_blob_value_vectorized(
     # Find the index of the blob with the minimum distance
     center_blob_index = np.argmin(distances)
 
-    # Return the value of the blob with the minimum distance
-    return blob_values[center_blob_index]
+    # Check if the center blob is within 40% of the array center
+    if np.all(
+        np.abs(blob_centers[center_blob_index][:2] - array_center[:2])
+        <= center_threshold * array_center[:2]
+    ):
+        # Return the value of the blob with the minimum distance
+        return blob_values[center_blob_index]
+    else:
+        # Return 0 if no blob is within center_threshold% of the center
+        logger.warning(f"No blob is within {center_threshold} percent of the center.")
+        return -1
 
 
 def calculate_crop_pad(
@@ -223,6 +237,10 @@ def retrieve_instance_metadata(
     with current_app.df_metadata_lock:
         page_empty = current_app.df_metadata.query("Page == @page").empty
 
+    crop_size_x = (
+        session["crop_size_z"] if mode == "annotate" else current_app.crop_size_z_draw
+    )
+
     if page_empty and not (
         mode == "draw" and current_app.df_metadata.query('Label != "Correct"').empty
     ):
@@ -245,6 +263,9 @@ def retrieve_instance_metadata(
                 "EM": "/".join(img_dir_instance.strip(".\\").split("/")[-3:]),
                 "Label": "Correct",
                 "Annotated": "No",
+                "Neuron_ID": "None"
+                if current_app.selected_neuron_id is None
+                else current_app.selected_neuron_id,
                 "Error_Description": "None",
                 "X_Index": coordinate_order.index("x"),
                 "Y_Index": coordinate_order.index("y"),
@@ -261,16 +282,16 @@ def retrieve_instance_metadata(
                 "post_pt_z": int(bbox_dict[idx]["post_pt_z"]),
                 "crop_size_x": session["crop_size_x"],
                 "crop_size_y": session["crop_size_y"],
-                "crop_size_z": session["crop_size_z"],
+                # The auto segmentation view needs a set number of slices per instance (depth)
+                # see process_instances.py::load_missing_slices for more details
+                "crop_size_z": crop_size_x,
             }
 
             # Calculate bounding boxes
             bbox_org = [
-                item["cz0"] - session["crop_size_z"] // 2,
+                item["cz0"] - crop_size_x // 2,
                 item["cz0"]
-                + max(
-                    1, (session["crop_size_z"] + 1) // 2
-                ),  # incase the depth was set to one.
+                + max(1, (crop_size_x + 1) // 2),  # incase the depth was set to one.
                 item["cy0"] - session["crop_size_y"] // 2,
                 item["cy0"] + (session["crop_size_y"] + 1) // 2,
                 item["cx0"] - session["crop_size_x"] // 2,
@@ -335,12 +356,11 @@ def retrieve_instance_metadata(
     logger.info("Completed processing for page %d.", page)
 
 
-def update_slice_number(data: dict, slice_number: int) -> None:
+def update_slice_number(data: dict) -> None:
     """Update the slice number of the bounding box for the given instances.
 
     Args:
         data (dict): the dictionary containing the metadata of the instances.
-        slice_number (int): the new slice number.
     """
     # Adjust the bounding box
     with current_app.df_metadata_lock:
@@ -349,7 +369,7 @@ def update_slice_number(data: dict, slice_number: int) -> None:
         for instance in data:
             # retrieve the coordinate order of the cloud volume | xyz, xzy, yxz, yzx, zxy, zyx
 
-            instance["crop_size_z"] = slice_number
+            instance["crop_size_z"] = current_app.crop_size_z_draw
             og_bb = instance["Original_Bbox"]
 
             z1 = og_bb[coord_order.index("z") * 2]
@@ -357,7 +377,7 @@ def update_slice_number(data: dict, slice_number: int) -> None:
 
             nr_slices = z2 - z1
 
-            missing_nr_slices = slice_number - nr_slices
+            missing_nr_slices = current_app.crop_size_z_draw - nr_slices
 
             if missing_nr_slices < 0:
                 print("We already should have more slices than the model can handle.")
@@ -369,7 +389,7 @@ def update_slice_number(data: dict, slice_number: int) -> None:
             assert (
                 og_bb[coord_order.index("z") * 2 + 1]
                 - og_bb[coord_order.index("z") * 2]
-                == slice_number
+                == current_app.crop_size_z_draw
             )
 
             instance["Adjusted_Bbox"], instance["Padding"] = calculate_crop_pad(
@@ -601,10 +621,10 @@ def neuron_centric_3d_data_processing(
     app,
     source_url: str,
     target_url: str,
+    neuropil_url: str,
     table_name: str,
     preid: int = None,
     postid: int = None,
-    subvolume: dict = None,
     bucket_secret_json: json = "~/.cloudvolume/secrets",
     mode: str = "annotate",
     view_style: str = None,
@@ -615,6 +635,7 @@ def neuron_centric_3d_data_processing(
         app (Flask): an handle to the application context
         source_url (str): the url to the source cloud volume (EM).
         target_url (str): the url to the target cloud volume (synapse).
+        neuropil_url (str): the url to the neuropil cloud volume (neuron segmentation).
         table_name (str): the path to the JSON file.
         preid (int): the id of the pre synaptic region.
         postid (int): the id of the post synaptic region.
@@ -644,8 +665,17 @@ def neuron_centric_3d_data_processing(
         progress=False,
         use_https=True,
     )
+    if neuropil_url is not None:
+        current_app.neuropil_cv = CloudVolume(
+            neuropil_url,
+            secrets=bucket_secret_json,
+            fill_missing=True,
+            parallel=True,
+            progress=False,
+            use_https=True,
+        )
 
-    # assert that both volumes have the same dimensions
+    # assert that both the source and target volumes have the same dimensions
     if list(current_app.source_cv.volume_size) == list(
         current_app.target_cv.volume_size
     ):
@@ -672,29 +702,19 @@ def neuron_centric_3d_data_processing(
     # Read the CSV file
     df = pd.read_csv(table_name)
 
-    if view_style == "view":
-        # should no cropping coordinates be provided, use the whole volume
-        if subvolume[coordinate_order[2] + "2"] == -1:
-            subvolume[coordinate_order[2] + "2"] = current_app.source_cv.info["scales"][
-                0
-            ]["size"][2]
-
-        if subvolume[coordinate_order[1] + "2"] == -1:
-            subvolume[coordinate_order[1] + "2"] = current_app.source_cv.info["scales"][
-                0
-            ]["size"][1]
-
-        if subvolume[coordinate_order[0] + "2"] == -1:
-            subvolume[coordinate_order[0] + "2"] = current_app.source_cv.info["scales"][
-                0
-            ]["size"][0]
-
-        # query the dataframe for all instances with their coordinates x,y,z with in the range of the subvolume
-        df = df.query(
-            'x >= @subvolume["x1"] and x <= @subvolume["x2"] and y >= @subvolume["y1"] and y <= @subvolume["y2"] and z >= @subvolume["z1"] and z <= @subvolume["z2"]'
-        )
-
     if view_style == "neuron":
+        neuron_id = int(current_app.selected_neuron_id)  # Get the selected neuron ID
+
+        if neuron_id is None:
+            print("No neuron selected.")
+            return
+
+        # filter the materialization DataFrame for matching pre/post neuron IDs
+        df = df.query("pre_neuron_id == @neuron_id or post_neuron_id == @neuron_id")
+
+        print(f"Found {len(df)} synapses connected to neuron ID {neuron_id}")
+
+    if view_style == "synapse":
         # TODO: This is currently a dummy solution.
         # query the dataframe for all instances with an index between preid and postid
         if preid is None:

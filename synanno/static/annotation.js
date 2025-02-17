@@ -1,3 +1,5 @@
+import {enableNeuropilLayer, disableNeuropilLayer} from "./utils/ng_util.js";
+
 $(document).ready(function () {
 
   // show progress bar when scrolling pages
@@ -12,14 +14,14 @@ $(document).ready(function () {
     var label = $(this).attr("label");
 
     // update the label in the backend
-    req = $.ajax({
+   let req_label = $.ajax({
       url: "/update-card",
       type: "POST",
       data: { data_id: data_id, page: page, label: label },
     });
 
     // update the label in the frontend
-    req.done(function (data) {
+    req_label.done(function (data) {
       if (label === "Unsure") {
         $("#id" + data_id)
           .removeClass("unsure")
@@ -47,6 +49,52 @@ $(document).ready(function () {
   var cy0;
   var cx0;
 
+  // Ensure inert is removed when showing the modal
+  $('#detailsModal').on('show.bs.modal', function () {
+    $(this).removeAttr('inert'); // Make modal interactive
+    $('#toggle-label').focus(); // Move focus inside the modal
+  });
+
+  // Apply inert when hiding the modal
+  $('#detailsModal').on('hide.bs.modal', function () {
+    $(this).attr('inert', ''); // Disable interaction
+    $('.image-card-btn').first().focus(); // Return focus to trigger button
+  });
+
+  // Prevent focus issues when closing the modal via backdrop click
+  $('#detailsModal').on('hidden.bs.modal', function () {
+    $('.image-card-btn').first().focus(); // Move focus back to trigger button
+  });
+
+  // Ensure inert is removed when showing the Neuroglancer modal
+  $('#neuroModel').on('show.bs.modal', function () {
+    $(this).removeAttr('inert'); // Enable interaction
+    $('#ng-iframe').focus(); // Move focus inside the modal (to the iframe)
+  });
+
+  // Apply inert when hiding the Neuroglancer modal
+  $('#neuroModel').on('hide.bs.modal', function () {
+    $(this).attr('inert', ''); // Disable interaction
+    $('#detailsModal').removeAttr('inert'); // Ensure 2D modal regains interaction if switching
+  });
+
+  // Move focus back to the button that opened the modal
+  $('#neuroModel').on('hidden.bs.modal', function () {
+    $('.image-card-btn').first().focus(); // Return focus to the trigger button
+  });
+
+  // Ensure `neuroModel` modal is properly toggled from `detailsModal`
+  $('[data-bs-target="#neuroModel"]').on('click', function () {
+    $('#detailsModal').attr('inert', ''); // Disable the 2D modal while viewing Neuroglancer
+    $('#neuroModel').modal('show').removeAttr('inert');
+  });
+
+  // Handle switching back to `detailsModal`
+  $('[data-bs-target="#detailsModal"]').on('click', function () {
+    $('#neuroModel').attr('inert', ''); // Disable Neuroglancer modal
+    $('#detailsModal').modal('show').removeAttr('inert');
+  });
+
   // retrieve and set the information for the modal instance view
   $(".image-card-btn").bind("contextmenu", async function (e) {
     e.preventDefault();
@@ -58,6 +106,9 @@ $(document).ready(function () {
     // the instance label
     var label = $(this).attr("label");
 
+    // the neuron ID
+    var neuronID = $(this).attr("neuronID");
+
     // we are currently in the annotation mode
     var mode = "annotate";
 
@@ -65,7 +116,7 @@ $(document).ready(function () {
     var load = "full";
 
     // retrieve the info from the backend
-    req_data = $.ajax({
+    let req_data = $.ajax({
       url: "/get_instance",
       type: "POST",
       data: { mode: mode, load: load, data_id: data_id, page: page },
@@ -73,7 +124,7 @@ $(document).ready(function () {
 
 
     await req_data.done(function (data) {
-      data_json = JSON.parse(data.data);
+      let data_json = JSON.parse(data.data);
       // enable the range slider if more than a single slice exists per instance
       if (data.slices_len > 1){
         $("#rangeSlices").removeClass("d-none");
@@ -103,7 +154,11 @@ $(document).ready(function () {
         "src",
         staticBaseUrl + data_json.GT + "/" + data_json.Middle_Slice + ".png",
       );
+      $("#neuron-id").text(neuronID);
       $("#detailsModal").modal("show");
+
+      // Open modal properly
+      $('#detailsModal').modal("show").removeAttr("inert");
 
       cz0 = data_json.cz0;
       cy0 = data_json.cy0;
@@ -112,7 +167,7 @@ $(document).ready(function () {
     });
 
     // retrieve the updated NG link
-    req_ng = $.ajax({
+    let req_ng = $.ajax({
       url: "/neuro",
       type: "POST",
       data: { cz0: cz0, cy0: cy0, cx0: cx0, mode: "annotate" },
@@ -145,23 +200,23 @@ $(document).ready(function () {
     var load = "single";
 
     // retrieve the information from the backend
-    req = $.ajax({
+    let req_slice = $.ajax({
       url: "/get_instance",
       type: "POST",
       data: { mode: mode, load: load, data_id: data_id, page: page },
     });
 
     // update the slice and GT that is depicted
-    req.done(function (data) {
+    req_slice.done(function (data) {
       data_json = JSON.parse(data.data);
       $("#imgDetails-EM").attr("src", staticBaseUrl + data_json.EM + "/" + rangeValue + ".png");
       $("#imgDetails-GT").attr("src", staticBaseUrl + data_json.GT + "/" + rangeValue + ".png");
     });
   });
-});
+
 
 // modal view: decrease the opacity of the GT mask
-function dec_opacity() {
+window.dec_opacity =  function dec_opacity() {
   var value = $("#value-opacity").attr("value");
   var new_value = value - 0.1;
   if (new_value < 0) {
@@ -173,7 +228,7 @@ function dec_opacity() {
 }
 
 // modal view: increase the opacity of the GT mask
-function add_opacity() {
+window.add_opacity =  function add_opacity() {
   var value = $("#value-opacity").attr("value");
   var new_value = parseFloat(value) + 0.1;
   if (new_value >= 1) {
@@ -185,7 +240,7 @@ function add_opacity() {
 }
 
 // grid view: decrease the opacity of the GT masks
-function dec_opacity_grid() {
+window.dec_opacity_grid =  function dec_opacity_grid() {
   var value = $("#value-opacity-grid").attr("value");
   var new_value = value - 0.1;
   if (new_value < 0) {
@@ -198,7 +253,7 @@ function dec_opacity_grid() {
   });
 
   // ajax sending the new grid opacity to the backend
-  req = $.ajax({
+ let req_desc_opacity = $.ajax({
     url: "/set_grid_opacity",
     type: "POST",
     data: { grid_opacity: new_value },
@@ -206,7 +261,7 @@ function dec_opacity_grid() {
 }
 
 // grid view: increase the opacity of the GT masks
-function add_opacity_grid() {
+window.add_opacity_grid = function add_opacity_grid() {
   var value = $("#value-opacity-grid").attr("value");
   var new_value = parseFloat(value) + 0.1;
   if (new_value >= 1) {
@@ -219,7 +274,7 @@ function add_opacity_grid() {
   });
 
   // ajax sending the new grid opacity to the backend
-  req = $.ajax({
+  let req_dasc_opacity = $.ajax({
     url: "/set_grid_opacity",
     type: "POST",
     data: { grid_opacity: new_value },
@@ -227,13 +282,19 @@ function add_opacity_grid() {
 }
 
 // toggle the GT mask in the modal view
-function check_gt() {
-  var checkbox = document.getElementById("check-gt");
-  if (checkbox.checked == false) {
-    $("#imgDetails-GT").css("display", "none");
-    $("#check-em").prop("disabled", true);
+window.check_gt = function check_gt() {
+  const imgDetailsGT = document.getElementById("imgDetails-GT");
+  const toggleLabelButton = document.getElementById("toggle-label");
+
+  if (imgDetailsGT.style.display === "none") {
+    imgDetailsGT.style.display = "block";
+    toggleLabelButton.classList.remove("btn-secondary");
+    toggleLabelButton.classList.add("btn-secondary");
   } else {
-    $("#imgDetails-GT").css("display", "block");
-    $("#check-em").prop("disabled", false);
+    imgDetailsGT.style.display = "none";
+    toggleLabelButton.classList.remove("btn-secondary");
+    toggleLabelButton.classList.add("btn-secondary");
   }
 }
+
+});

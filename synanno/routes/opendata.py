@@ -6,6 +6,14 @@ from flask_cors import cross_origin
 
 # backend package
 import synanno.backend.processing as ip
+from synanno.backend.neuron_processing.load_neuron import (
+    load_neuron_skeleton,
+    navis_neuron,
+    compute_sections,
+)
+from synanno.backend.neuron_processing.load_synapse_point_cloud import (
+    load_synapse_point_cloud,
+)
 
 # load existing json
 import json
@@ -27,7 +35,11 @@ import numpy as np
 
 from flask import Blueprint
 from flask import current_app
+import logging
 
+# setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # define a Blueprint for opendata routes
 blueprint = Blueprint("open_data", __name__)
@@ -69,10 +81,15 @@ def open_data(task: str) -> Template:
             modereset="inline",
             mode=draw_or_annotate,
             json_name=current_app.config["JSON"],
-            view_style="view",
+            view_style="synapse",
+            neuronReady="false",
         )
     return render_template(
-        "opendata.html", modenext="disabled", mode=draw_or_annotate, view_style="view"
+        "opendata.html",
+        modenext="disabled",
+        mode=draw_or_annotate,
+        view_style="synapse",
+        neuronReady="false",
     )
 
 
@@ -182,14 +199,14 @@ def upload_file() -> Template:
 
         # Check if the expected columns match the actual ones
         if expected_columns == actual_columns:
-            print("All columns are present.")
+            logging.info("All columns are present.")
             # sort the dataframe by page and image_index
             current_app.df_metadata.sort_values(["Page", "Image_Index"], inplace=True)
         else:
             missing_columns = expected_columns - actual_columns
             extra_columns = actual_columns - expected_columns
-            print(f"Missing columns: {missing_columns}")
-            print(f"Extra columns: {extra_columns}")
+            logging.info(f"Missing columns: {missing_columns}")
+            logging.info(f"Extra columns: {extra_columns}")
             raise ValueError("The provided JSON does not match the expected format!")
 
         # update the slice number with the cropped size for z
@@ -221,15 +238,25 @@ def upload_file() -> Template:
         )
     }
 
-    # retrieve the urls for the source and target cloud volume buckets
+    # retrieve the urls for the source, target, and neuropil segmentation cloud volume buckets
     source_url = request.form.get("source_url")
     target_url = request.form.get("target_url")
+    neuropil_url = request.form.get("neuropil_url")
 
     # check if the provided urls are valid based on the cloud provider prefix
-    if any(
-        bucket in source_url for bucket in current_app.config["CLOUD_VOLUME_BUCKETS"]
-    ) and any(
-        bucket in target_url for bucket in current_app.config["CLOUD_VOLUME_BUCKETS"]
+    if (
+        any(
+            bucket in source_url
+            for bucket in current_app.config["CLOUD_VOLUME_BUCKETS"]
+        )
+        and any(
+            bucket in target_url
+            for bucket in current_app.config["CLOUD_VOLUME_BUCKETS"]
+        )
+        and any(
+            bucket in neuropil_url
+            for bucket in current_app.config["CLOUD_VOLUME_BUCKETS"]
+        )
     ):
         # retrieve the bucket secret if the user provided one
         if bucket_secret := request.files.get("secrets_file"):
@@ -240,34 +267,35 @@ def upload_file() -> Template:
         materialization_url = request.form.get("materialization_url")
 
         # if the user chose the view view_style mode load the bbox specific subvolume and then process the data like in the local case
-        if current_app.view_style == "view":
-            subvolume = {}
-            for coord in coordinate_order:
-                subvolume[coord + "1"] = (
-                    int(request.form.get(coord + "1"))
-                    if request.form.get(coord + "1")
-                    else 0
+        if current_app.view_style == "neuron":
+            try:
+                ip.neuron_centric_3d_data_processing(
+                    current_app._get_current_object(),
+                    source_url,
+                    target_url,
+                    neuropil_url,
+                    materialization_url,
+                    bucket_secret_json=bucket_secret
+                    if bucket_secret
+                    else "~/.cloudvolume/secrets",
+                    mode=draw_or_annotate,
+                    view_style=current_app.view_style,
                 )
-                subvolume[coord + "2"] = (
-                    int(request.form.get(coord + "2"))
-                    if request.form.get(coord + "2")
-                    else -1
+            except Exception as e:
+                flash(
+                    "Please select a neuron under 'Volume Parameters'",
+                    "error",
                 )
-
-            ip.neuron_centric_3d_data_processing(
-                current_app._get_current_object(),
-                source_url,
-                target_url,
-                materialization_url,
-                subvolume=subvolume,
-                bucket_secret_json=bucket_secret
-                if bucket_secret
-                else "~/.cloudvolume/secrets",
-                mode=draw_or_annotate,
-                view_style=current_app.view_style,
-            )
+                logging.error(f"Error: {e}")
+                return render_template(
+                    "opendata.html",
+                    modenext="disabled",
+                    mode=draw_or_annotate,
+                    view_style="neuron",
+                    neuronReady="false",
+                )
         # if the user chose the neuron view_style mode, retrieve a list of all the synapses of the provided neuron ids and then process the data on synapse level
-        elif current_app.view_style == "neuron":
+        elif current_app.view_style == "synapse":
             # if the user chose the neuron view_style mode retrieve the neuron ids
             preid = (
                 int(request.form.get("preid")) if request.form.get("preid") else None
@@ -280,6 +308,7 @@ def upload_file() -> Template:
                 current_app._get_current_object(),
                 source_url,
                 target_url,
+                neuropil_url,
                 materialization_url,
                 preid,
                 postid,
@@ -296,7 +325,10 @@ def upload_file() -> Template:
             "error",
         )
         return render_template(
-            "opendata.html", modenext="disabled", mode=draw_or_annotate
+            "opendata.html",
+            modenext="disabled",
+            mode=draw_or_annotate,
+            neuronReady="false",
         )
 
     # if the NG version number is None setup a new NG viewer
@@ -305,6 +337,36 @@ def upload_file() -> Template:
             app=current_app._get_current_object(),
             source="precomputed://" + source_url,
             target="precomputed://" + target_url,
+            neuropil="precomputed://" + neuropil_url,
+        )
+
+    # if neuron mode load and partition neuron
+    swc_static_file_path = None
+    sections = None
+    if current_app.view_style == "neuron":
+        static_folder = os.path.join(
+            current_app.root_path, current_app.config["STATIC_FOLDER"]
+        )
+        swc_path = os.path.join(static_folder, "swc")
+        swc_file = load_neuron_skeleton(
+            neuropil_url, current_app.selected_neuron_id, swc_path
+        )
+        neuron_pruned, pruned_swc_file = navis_neuron(swc_file)
+        sections = compute_sections(pruned_swc_file)
+        swc_static_file_path = os.path.join(
+            os.path.join(current_app.config["STATIC_FOLDER"], "swc"),
+            os.path.basename(pruned_swc_file),
+        )
+        # load the synapse point cloud
+        _, snapped_points_json_path = load_synapse_point_cloud(
+            current_app.selected_neuron_id,
+            neuron_pruned,
+            current_app.synapse_data,
+            swc_path,
+        )
+        snapped_points_json_static_file_path = os.path.join(
+            os.path.join(current_app.config["STATIC_FOLDER"], "swc"),
+            os.path.basename(snapped_points_json_path),
         )
 
     flash("Data ready!")
@@ -314,6 +376,12 @@ def upload_file() -> Template:
         modeform="formFileDisabled",
         view_style=current_app.view_style,
         mode=draw_or_annotate,
+        neuronReady="true" if current_app.view_style == "neuron" else "false",
+        neuronPath=swc_static_file_path if current_app.view_style == "neuron" else None,
+        neuronSection=sections if current_app.view_style == "neuron" else None,
+        synapseCloudPath=snapped_points_json_static_file_path
+        if current_app.view_style == "neuron"
+        else None,
     )
 
 
@@ -590,7 +658,7 @@ def neuro() -> Dict[str, object]:
     else:
         raise Exception("No NG instance running")
 
-    print(
+    logging.info(
         f"Neuroglancer instance running at {current_app.ng_viewer}, centered at {coordinate_order[0]},{coordinate_order[1]},{coordinate_order[2]}: {center[coordinate_order[0]], center[coordinate_order[1]], center[coordinate_order[2]]}"
     )
 
@@ -636,8 +704,75 @@ def save_file(
     file_ext = os.path.splitext(filename)[1]
     if file_ext not in current_app.config["UPLOAD_EXTENSIONS"]:
         flash("Incorrect file format! Load again.", "error")
-        render_template("opendata.html", modenext="disabled", mode=draw_or_annotate)
+        render_template(
+            "opendata.html",
+            modenext="disabled",
+            mode=draw_or_annotate,
+            neuronReady="false",
+        )
         return None
     else:
         file.save(os.path.join(path, filename))
         return os.path.join(path, filename)
+
+
+@blueprint.route("/enable_neuropil_layer", methods=["POST"])
+def enable_neuropil_layer():
+    """Enable the neuropil neuron segmentation layer in the global Neuroglancer."""
+    with current_app.ng_viewer.txn() as s:
+        s.layers["neuropil"].selectedAlpha = 0.5
+        s.layers["neuropil"].notSelectedAlpha = 0.1
+    return jsonify({"status": "neuropil layer enabled"})
+
+
+@blueprint.route("/disable_neuropil_layer", methods=["POST"])
+def disable_neuropil_layer():
+    """Disable the neuropil neuron segmentation layer in the global Neuroglancer."""
+    with current_app.ng_viewer.txn() as s:
+        s.layers["neuropil"].selectedAlpha = 0.0
+        s.layers["neuropil"].notSelectedAlpha = 0.0
+    return jsonify({"status": "neuropil layer disabled"})
+
+
+@blueprint.route("/launch_neuroglancer", methods=["GET", "POST"])
+def launch_neuroglancer():
+    source_url = request.args.get("source_url")
+    target_url = request.args.get("target_url")
+    neuropil_url = request.args.get("neuropil_url")
+
+    if not hasattr(current_app, "ng_viewer") or current_app.ng_viewer is None:
+        ng_util.setup_ng(
+            app=current_app._get_current_object(),
+            source="precomputed://" + source_url,
+            target="precomputed://" + target_url,
+            neuropil="precomputed://" + neuropil_url,
+        )
+
+    ng_url = f"http://{current_app.config['NG_IP']}:{current_app.config['NG_PORT']}/v/{current_app.ng_viewer.token}/"
+    return jsonify({"ng_url": ng_url})
+
+
+@blueprint.route("/load_materialization", methods=["POST"])
+def load_materialization():
+    materialization_path = request.json.get("materialization_url")
+
+    if materialization_path is None or materialization_path == "":
+        return jsonify({"error": "Materialization path is missing."}), 400
+    try:
+        logging.info("Loading the materialization table...")
+        path = materialization_path.replace("file://", "")
+        current_app.synapse_data = pd.read_csv(path)
+        logging.info(current_app.synapse_data.head())
+
+        logging.info("Materialization table loaded successfully!")
+        return jsonify({"status": "success"}), 200
+
+    except Exception as e:
+        logging.info(f"Failed to load materialization table: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@blueprint.route("/get_neuron_id", methods=["GET"])
+def get_neuron_id():
+    """Get the current coordinates of the Neuroglancer instance."""
+    return jsonify({"selected_neuron_id": current_app.selected_neuron_id})

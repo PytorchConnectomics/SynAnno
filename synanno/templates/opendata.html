@@ -24,24 +24,17 @@
   crossorigin="anonymous"
 ></script>
 
-<div class="px-4 py-3 my-3 text-center">
-  <h2 class="mb-3">Welcome to SynAnno Annotation Tool</h2>
-  <p>
-    {% if mode == 'draw'%}Select target, source and JSON to start annotating!{%
-    elif mode == 'annotate'%}Select some data and start proofreading!{% endif %}
-  </p>
-</div>
 
-<div class="mb-3">
+<div class="mb-3  my-3">
   <form
     method="POST"
-    for="{{ modeform }}"
+    id="{{ modeform }}"
     action="{{ url_for('open_data.upload_file') }}"
     enctype="multipart/form-data"
   >
     <div class="mb-1"></div>
 
-    <div class="accordion">
+    <div class="accordion" id="accordionDataSources">
       <!-- Data Sources Section -->
       <div class="accordion-item">
         <h2 class="accordion-header" id="headingOne">
@@ -49,7 +42,7 @@
             Data Sources
           </button>
         </h2>
-        <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
+        <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#accordionDataSources">
           <div class="accordion-body">
             <label for="source_url" class="form-label">
               Source bucket (precomputed: Neuroglancer's native format) - Required
@@ -79,6 +72,20 @@
                 {% if mode == 'draw' or mode == 'annotate' %} data-required="true" {% endif %}
               />
             </p>
+            <label for="neuropil_url" class="form-label">
+              Neuropil Segmentation (precomputed: Neuroglancer's native format) - Required for View-Centric Analysis
+            </label>
+            <p>
+              <input
+                class="form-control"
+                type="url"
+                id="neuropil_url"
+                name="neuropil_url"
+                placeholder="Cloud Volume Bucket - file://<path_to_your_file>"
+                value="gs://h01-release/data/20210601/proofread_104"
+                {% if mode == 'draw' or mode == 'annotate' %} data-required="true" {% endif %}
+              />
+            </p>
             <label for="materialization_url" class="form-label">
               Materialization (url/name of the table containing the ID association and bounding box information)
             </label>
@@ -97,142 +104,183 @@
       </div>
     </div>
 
-    <div class="accordion" id="accordionExample">
-      <!-- Secrets and Configurations Section -->
+    <div class="accordion" id="accordionSynapseSelection">
+      <!-- Synapse Selection Section -->
       <div class="accordion-item">
         <h2 class="accordion-header" id="headingTwo">
-          <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-            Secrets and Configurations
-          </button>
-        </h2>
-        <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
-          <div class="accordion-body">
-            <label for="secrets_file" class="form-label">Secrets (File containing the bucket secrets, defaults to looking in ~/.cloudvolume/secrets)</label>
-            <p>
-              <input
-                class="form-control"
-                type="file"
-                id="secrets_file"
-                name="secrets_file"
-              />
-            </p>
-            <label class="form-label">SynAnno JSON file</label>
-            <p>
-              <input
-                class="form-control {{mode}}"
-                type="file"
-                id="formFile"
-                name="file_json"
-              />
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Volume Parameters Section -->
-      <div class="accordion-item">
-        <h2 class="accordion-header" id="headingThree">
           <button
             class="accordion-button"
             type="button"
             data-bs-toggle="collapse"
-            data-bs-target="#collapseThree"
+            data-bs-target="#collapseTwo"
             aria-expanded="true"
-            aria-controls="collapseThree">
-            Volume Parameters
+            aria-controls="collapseTwo">
+            Synapse Selection
           </button>
         </h2>
-        <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#accordionExample">
+        <div id="collapseTwo" class="accordion-collapse collapse show" aria-labelledby="headingTwo" data-bs-parent="#accordionSynapseSelection">
           <div class="accordion-body">
-            <label class="form-check-label">
+            <div class="form-check form-switch">
               <input
-                type="radio"
                 class="form-check-input"
-                id="view_centric_button"
-                name="view_style"
-                value="view"
-                {% if view_style=="view" %} checked {% endif %}
+                type="checkbox"
+                id="toggleSynapseSelection"
+                {% if view_style == "neuron" %} checked {% endif %}
               />
-              View Centric
-            </label>
-            <label class="form-check-label">
-              <input
-                type="radio"
-                class="form-check-input"
-                id="neuron_centric_button"
-                name="view_style"
-                value="neuron"
-                {% if view_style=="neuron" %} checked {% endif %}
-              />
-              Neuron Centric
-            </label>
-            <label class="form-label">
-              <select id="coordinates" name="coordinates">
+              <label class="form-check-label" for="toggleSynapseSelection">
+                Toggle between Neuron Centric and Synapse IDs Range
+              </label>
+            </div>
+
+            <input type="hidden" id="view_style" name="view_style" value="{{ view_style }}">
+
+            <div id="neuron-form" class="mt-3" {% if view_style == "synapse" %} style="display:none;" {% endif %}>
+              <!-- Button to Open the Embedded Neuroglancer Modal -->
+              <button
+                id="openNeuronModalBtn"
+                type="button"
+                class="btn btn-secondary"
+                data-bs-toggle="modal"
+                data-bs-target="#neuroglancerModal"
+                disabled
+              >
+                Choose a Neuron
+              </button>
+            </div>
+
+            <div id="synapse-id-form" class="mt-3" {% if view_style == "neuron" %} style="display:none;" {% endif %}>
+              <div class="row">
+                <div class="col">
+                  <input
+                    class="form-control"
+                    type="number"
+                    id="preid"
+                    name="preid"
+                    placeholder="Presynaptic ID"
+                  />
+                </div>
+                <div class="col">
+                  <input
+                    class="form-control"
+                    type="number"
+                    id="postid"
+                    name="postid"
+                    placeholder="Postsynaptic ID"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion" id="accordionConfigs">
+        <!-- Secrets and Configurations Section -->
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="headingThree">
+            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+              Configurations
+            </button>
+          </h2>
+          <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#accordionConfigs">
+            <div class="accordion-body">
+              <label class="form-label">SynAnno JSON file</label>
+              <p>
+                <input
+                  class="form-control {{mode}}"
+                  type="file"
+                  id="formFile"
+                  name="file_json"
+                />
+              </p>
+
+              <label for="secrets_file" class="form-label">Secrets (File containing the bucket secrets, defaults to looking in ~/.cloudvolume/secrets)</label>
+              <p>
+                <input
+                  class="form-control"
+                  type="file"
+                  id="secrets_file"
+                  name="secrets_file"
+                />
+              </p>
+
+
+              <div class="mb-1"></div>
+
+                <label class="form-label" style="margin-right: 121px; display: inline-block;">
+                Coordinate Order
+                </label>
+                <select id="coordinates" name="coordinates" class="form-select" style="width: auto; display: inline-block;">
                 <option value="xyz" selected>XYZ</option>
                 <option value="xzy">XZY</option>
                 <option value="zyx">ZYX</option>
                 <option value="zxy">ZXY</option>
                 <option value="yxz">YXZ</option>
                 <option value="yzx">YZX</option>
-              </select>
-              Coordinate Order
-            </label>
+                </select>
 
-            <div class="mb-1"></div>
+                <div class="mb-1"></div>
 
-            <div id="neuron-form" {% if view_style=="view" %} class="hidden-form" {% endif %}>
-                <input
-                  class="number-dims"
-                  type="number"
-                  id="preid"
-                  name="preid"
-                  placeholder="Presynaptic ID"
-                />
-                <input
-                  class="number-dims"
-                  type="number"
-                  id="postid"
-                  name="postid"
-                  placeholder="Postsynaptic ID"
-                />
+                <label for="formGroupExampleInput" class="form-label" style="margin-right: 50px; display: inline-block;">Instance crop size (in pixel)</label>
+                <input class="form-control" type="number" id="cropsize_x" placeholder="256" name="crop_size_c0" value="256" style="width: auto; display: inline-block;" />
+                <input class="form-control" type="number" id="cropsize_y" placeholder="256" name="crop_size_c1" value="256" style="width: auto; display: inline-block;"/>
+                <input class="form-control" type="number" id="cropsize_z" placeholder="16" name="crop_size_c2" value="{{ '16' if mode == 'draw' else '1' }}" style="width: auto; display: inline-block;" />
+                <div class="mb-1"></div>
+
+                <div>
+                <label class="form-label" style="margin-right: 2px; display: inline-block;">Source Volume Resolution (in nm)</label>
+                <input class="form-control" type="number" id="res-source-1" name="res-source-1" placeholder="Default: 4" value="4" style="width: auto; display: inline-block;" />
+                <input class="form-control" type="number" id="res-source-2" name="res-source-2" placeholder="Default: 4" value="4" style="width: auto; display: inline-block;" />
+                <input class="form-control" type="number" id="res-source-3" name="res-source-3" placeholder="Default: 33" value="33" style="width: auto; display: inline-block;" />
+                </div>
+
+                <div>
+                <label class="form-label" style="margin-right: 8px; display: inline-block;">Target Volume Resolution (in nm)</label>
+                <input class="form-control" type="number" id="res-target-1" name="res-target-1" placeholder="Default: 8" value="8" style="width: auto; display: inline-block;" />
+                <input class="form-control" type="number" id="res-target-2" name="res-target-2" placeholder="Default: 8" value="8" style="width: auto; display: inline-block;" />
+                <input class="form-control" type="number" id="res-target-3" name="res-target-3" placeholder="Default: 33" value="33" style="width: auto; display: inline-block;" />
+                </div>
+
+              </div>
+
+            </div>
+
+
+            <!-- Modal for Embedded Neuroglancer -->
+            <div
+            class="modal fade"
+            id="neuroglancerModal"
+            tabindex="-1"
+          >
+            <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+              <div class="card-header text-center">
+                Neuron ID: <span id="neuron-id-open"></span>
+              </div>
+            <div class="modal-body">
+            <!-- Embedded Neuroglancer Viewer -->
+            <iframe
+              id="neuroglancerIframe"
+              src=""
+              width="100%"
+              height="700px"
+              style="border: 1px solid #ccc;"
+            ></iframe>
+            </div>
+              <div class="modal-footer d-flex justify-content-between align-items-center">
+              <p class="text-muted mb-0">
+                Press 'n' to select the neuron at your cursor.
+              </p>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                data-bs-dismiss="modal"
+              >
+                Close
+              </button>
               </div>
             </div>
-
-            <div id="view-form" {% if view_style=="neuron" %} class="hidden-form" {% endif %}>
-              <label for="coordinate-container-view" class="form-label">Slicing Indices for the Segmentation Volume (will be scaled for the image volume in case of a resolution mismatch)</label>
-              <div class="coordinate-container" id="coordinate-container-view">
-                <input class="coordinate-dims" type="number" id="x1" name="x1" placeholder="X1 - Default: 0" />
-                <input class="coordinate-dims" type="number" id="x2" name="x2" placeholder="X2 - Default: max(X)" />
-                <input class="coordinate-dims" type="number" id="y1" name="y1" placeholder="Y1 - Default: 0" />
-                <input class="coordinate-dims" type="number" id="y2" name="y2" placeholder="Y2 - Default: max(Y)" />
-                <input class="coordinate-dims" type="number" id="z1" name="z1" placeholder="Z1 - Default: 0" />
-                <input class="coordinate-dims" type="number" id="z2" name="z2" placeholder="Z2 - Default: max(Z)" />
-              </div>
             </div>
-
-            <div class="mb-3"></div>
-
-            <div>
-              <label class="form-label" style="margin-right: 2px">Source Volume Resolution (in nm)</label>
-              <input class="X-Res" type="number" id="res-source-1" name="res-source-1" placeholder="Default: 4" value="4" />
-              <input class="Y-Res" type="number" id="res-source-2" name="res-source-2" placeholder="Default: 4" value="4" />
-              <input class="Z-Res" type="number" id="res-source-3" name="res-source-3" placeholder="Default: 33" value="33" />
-            </div>
-
-            <div>
-              <label class="form-label" style="margin-right: 8px">Target Volume Resolution (in nm)</label>
-              <input class="X-Res" type="number" id="res-target-1" name="res-target-1" placeholder="Default: 8" value="8" />
-              <input class="Y-Res" type="number" id="res-target-2" name="res-target-2" placeholder="Default: 8" value="8" />
-              <input class="Z-Res" type="number" id="res-target-3" name="res-target-3" placeholder="Default: 33" value="33" />
-            </div>
-
-            <div class="mb-1"></div>
-
-            <label for="formGroupExampleInput" class="form-label" style="margin-right: 50px">Instance crop size (in pixel)</label>
-            <input type="number" id="cropsize_x" placeholder="256" name="crop_size_c0" value="256" />
-            <input type="number" id="cropsize_y" placeholder="256" name="crop_size_c1" value="256" />
-            <input type="number" id="cropsize_z" placeholder="16" name="crop_size_c2" value= {% if mode == 'draw'%}"16"{%
-              elif mode == 'annotate'%}"1"{% endif %}/>
           </div>
         </div>
       </div>
@@ -242,12 +290,12 @@
       <input
         id="processData"
         type="submit"
-        class="btn btn-secondary {{ modecurrent }} disabled"
+        class="btn btn-secondary {{ modecurrent }}" disabled
         value="Submit"
       />
       <a
         type="button"
-        class="btn btn-primary {{ modenext }}"
+        class="btn btn-secondary {{ modenext }}"
         href="{{ url_for('open_data.set_data_task', task=mode) }}"
       >
         {% if mode == 'draw'%} Start Drawing {% elif mode == 'annotate'%}Start
@@ -273,12 +321,27 @@
   </form>
 </div>
 
+<!-- Modal to indicate submission is done -->
+<div class="modal fade" id="submissionDoneModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-body d-flex flex-column">
+        <div id="shark_container"
+             class="flex-grow-1 w-100"
+             style="border: 1px solid #ccc; height: 70vh; max-height: 700px;">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <!-- Modal to indicating active loading -->
 {% include "loading_bar.html" %}
 
 <!-- add js file to disable the form on reset -->
-<script src="{{ url_for('static', filename='opendata.js') }}"></script>
-
-<script></script>
+<script type="module" src="{{ url_for('static', filename='opendata.js') }}" data-neuron-ready="{{ neuronReady }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='SharkViewer/three.min.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='viewer.js') }}" data-neuron-ready="{{ neuronReady }}" data-neuron-path="{{ neuronPath }}" data-neuron-section="{{ neuronSection }}" data-synapse-cloud-path="{{ synapseCloudPath }}"></script>
 
 {% endblock %}

@@ -580,4 +580,5 @@ $(document).ready(function () {
     pointsQBez.push({ x: Bx, y: By });
     return pointsQBez;
   }
+
 });

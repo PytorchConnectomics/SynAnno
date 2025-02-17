@@ -72,13 +72,16 @@ def initialize_global_variables(app):
     }
     app.ng_viewer = None
     app.ng_version = None
-    app.view_style = "view"
+    app.selected_neuron_id = None
     app.grid_opacity = 0.5
     app.coordinate_order = {}
     app.vol_dim = (0, 0, 0)
     app.vol_dim_scaled = (0, 0, 0)
     app.source = None
     app.cz1, app.cz2, app.cz, app.cy, app.cx = 0, 0, 0, 0, 0
+    # The auto segmentation view needs a set number of slices per instance (depth)
+    # see process_instances.py::load_missing_slices for more details
+    app.crop_size_z_draw = 16
     app.columns = [
         "Page",
         "Image_Index",

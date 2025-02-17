@@ -1,18 +1,12 @@
 import SharkViewer, { swcParser, Color } from "./SharkViewer/shark_viewer.js";
-import { nodes_array } from "./config.js";
 
 window.onload = () => {
     const neuronPath = $("script[src*='viewer.js']").data("neuron-path");
     const neuronSection = $("script[src*='viewer.js']").data("neuron-section");
+    const synapseCloudPath = $("script[src*='viewer.js']").data("synapse-cloud-path");
 
     try {
-        window.s = new SharkViewer({
-            mode: 'particle',
-            dom_element: document.getElementById('shark_container'),
-        });
-        console.log("Viewer initialized successfully.");
-        s.init();
-        s.animate();
+        initializeViewer();
 
         if (neuronPath) {
             loadSwcFile(neuronPath, neuronSection);
@@ -20,33 +14,47 @@ window.onload = () => {
             console.error("No neuron path provided.");
         }
 
-        // Make the viewer reactive to window resizing events
-        window.addEventListener('resize', onWindowResize, false);
+        if (synapseCloudPath) {
+            loadSynapseCloud(synapseCloudPath);
+        } else {
+            console.error("No synapse cloud path provided.");
+        }
 
-        // Force a resize event to ensure the viewer renders correctly
-        setTimeout(() => {
-            onWindowResize();
-            s.render(); // Force a re-render
-        }, 100); // Delay to allow layout updates
+        setupWindowResizeHandler();
     } catch (error) {
         console.error("Error initializing viewer:", error);
     }
 };
 
 /**
+ * Initializes the SharkViewer instance.
+ */
+function initializeViewer() {
+    window.s = new SharkViewer({
+        mode: 'particle',
+        dom_element: document.getElementById('shark_container'),
+    });
+    console.log("Viewer initialized successfully.");
+    s.init();
+    s.animate();
+}
+
+/**
+ * Sets up the window resize handler to adjust the viewer size.
+ */
+function setupWindowResizeHandler() {
+    window.addEventListener('resize', onWindowResize, false);
+    setTimeout(() => {
+        onWindowResize();
+        s.render(); // Force a re-render
+    }, 100); // Delay to allow layout updates
+}
+
+/**
  * Loads and processes an SWC file from the given path.
  *
  * @param {string} swcPath - The path to the SWC file.
  * @param {Array} neuronSection - The neuron sections to be highlighted.
- * @returns {void}
- *
- * @description
- * This function fetches an SWC file from the given path, parses the file content,
- * and processes the parsed SWC data. It adds the neuron object to the scene,
- * updates node and edge colors, adjusts the camera, and adds lights to the scene.
- * If any error occurs during the process, an alert is shown to the user.
- *
- * @throws {Error} If there is an error during the SWC file processing.
  */
 function loadSwcFile(swcPath, neuronSection) {
     fetch(swcPath)
@@ -78,8 +86,7 @@ function loadSwcFile(swcPath, neuronSection) {
                 if (neuron) {
                     console.log("Neuron found! Proceeding with color update.");
                     updateNodeAndEdgeColors(s, neuronSection, neuronSection);
-                    adjustCameraForNeuron(s);
-
+                    setTimeout(() => adjustCameraForNeuron(s), 500); // Ensure camera resets after neuron is loaded
                 } else {
                     console.warn("Neuron still not found in the scene.");
                 }
@@ -98,18 +105,67 @@ function loadSwcFile(swcPath, neuronSection) {
 }
 
 /**
+ * Loads and processes a synapse cloud JSON file from the given path.
+ *
+ * @param {string} jsonPath - The path to the JSON file.
+ */
+function loadSynapseCloud(jsonPath) {
+    fetch(jsonPath)
+        .then(response => response.json())
+        .then(data => {
+            try {
+                console.log("Parsed JSON data:", data);
+
+                // Ensure it's in Nx3 format
+                if (data.length % 3 !== 0) {
+                    console.error("JSON data length is not a multiple of 3. Data might be corrupted.");
+                    return;
+                }
+
+                // Convert the flat array into an array of THREE.Vector3
+                const points = [];
+                for (let i = 0; i < data.length; i += 3) {
+                    points.push(new THREE.Vector3(data[i], data[i + 1], data[i + 2]));
+                }
+                console.log("Parsed points:", points);
+
+                // Create a small sphere geometry for each point
+                const sphereGeometry = new THREE.SphereGeometry(500, 8, 8); // Small spheres
+                const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.6 });
+
+                const mesh = new THREE.InstancedMesh(sphereGeometry, sphereMaterial, points.length);
+                const dummy = new THREE.Object3D();
+
+                points.forEach((point, i) => {
+                    dummy.position.set(point.x, point.y, point.z);
+                    dummy.updateMatrix();
+                    mesh.setMatrixAt(i, dummy.matrix);
+                });
+
+                mesh.instanceMatrix.needsUpdate = true;
+                mesh.name = "synapse-cloud"; // Name the mesh for debugging
+                s.scene.add(mesh);
+
+                console.log("Point cloud successfully added as instanced spheres.");
+                s.render();
+            } catch (error) {
+                console.error("Error parsing JSON file:", error);
+                alert("An error occurred while processing the JSON file.");
+            }
+        })
+        .catch(error => {
+            console.error("Error fetching JSON file:", error);
+            alert("An error occurred while fetching the JSON file.");
+        });
+}
+
+/**
  * Updates the colors of nodes and edges in a 3D neuron visualization.
  *
  * @param {Object} viewer - The viewer object containing the scene.
- * @param {Object} neuron_section - The neuron section to be updated.
- * @param {THREE.Color} [color1=Color.blue] - The color to apply to highlighted nodes and edges.
- * @param {THREE.Color} [color2=Color.red] - The color to apply to non-highlighted nodes and edges.
- *
- * @throws Will log an error if the neuron object is not found in the scene.
- *
- * @example
- * // Assuming viewer is a valid viewer object and neuron_section is defined
- * updateNodeAndEdgeColors(viewer, neuron_section, new THREE.Color(0x0000ff), new THREE.Color(0xff0000));
+ * @param {Array} nodes_array - The array of nodes to be updated.
+ * @param {Array} edge_array - The array of edges to be updated.
+ * @param {Array} sectionColors - The colors to apply to the sections.
  */
 function updateNodeAndEdgeColors(viewer, nodes_array, edge_array, sectionColors) {
     const neuron = viewer.scene.getObjectByName('neuron');
@@ -118,7 +174,6 @@ function updateNodeAndEdgeColors(viewer, nodes_array, edge_array, sectionColors)
         return;
     }
 
-    // Generate colors if not provided
     if (!sectionColors) {
         sectionColors = generateSectionColors(nodes_array.length);
     }
@@ -127,7 +182,6 @@ function updateNodeAndEdgeColors(viewer, nodes_array, edge_array, sectionColors)
     const skeletonVertex = neuron.children.find(child => child.name === "skeleton-vertex");
     const skeletonEdge = neuron.children.find(child => child.name === "skeleton-edge");
 
-    // Update node colors (skeleton-vertex)
     if (skeletonVertex && skeletonVertex.geometry && skeletonVertex.geometry.attributes.position) {
         console.log("Updating node colors...");
         const numVertices = skeletonVertex.geometry.attributes.position.count;
@@ -135,7 +189,7 @@ function updateNodeAndEdgeColors(viewer, nodes_array, edge_array, sectionColors)
         console.log("Number of numVertices:", numVertices);
 
         nodes_array.forEach((nodeGroup, index) => {
-            const color = new THREE.Color(sectionColors[index] || 0xffffff); // Default to white if no color is provided
+            const color = new THREE.Color(sectionColors[index] || 0xffffff);
             nodeGroup.forEach(nodeIndex => {
                 if (nodeIndex < numVertices) {
                     colors.set([color.r, color.g, color.b], nodeIndex * 3);
@@ -150,7 +204,6 @@ function updateNodeAndEdgeColors(viewer, nodes_array, edge_array, sectionColors)
         console.warn("skeleton-vertex not found or has no geometry.");
     }
 
-    // Update edge colors (skeleton-edge)
     if (skeletonEdge && skeletonEdge.geometry && skeletonEdge.geometry.attributes.position) {
         console.log("Updating edge colors...");
         const numEdges = skeletonEdge.geometry.attributes.position.count / 2;
@@ -182,11 +235,8 @@ function updateNodeAndEdgeColors(viewer, nodes_array, edge_array, sectionColors)
  * Adjusts the camera position and settings to focus on a neuron object in the scene.
  *
  * @param {Object} viewer - The viewer object containing the scene and camera.
- * @param {THREE.Scene} viewer.scene - The scene containing the objects.
- * @param {THREE.Camera} viewer.camera - The camera to be adjusted.
  */
 function adjustCameraForNeuron(viewer) {
-
     const neuron = viewer.scene.getObjectByName('neuron');
     if (!neuron) {
         console.error("Neuron object not found in scene.");
@@ -201,10 +251,12 @@ function adjustCameraForNeuron(viewer) {
     const fov = viewer.camera.fov * (Math.PI / 180);
     const distance = (maxDim / 2) / Math.tan(fov / 2);
 
-    viewer.camera.position.set(center.x, center.y, center.z + distance * 1.0);
+    console.log("Adjusting camera. Distance:", distance, "Bounding box size:", size);
+
+    viewer.camera.position.set(center.x, center.y, center.z + distance * 0.5);
     viewer.camera.lookAt(center);
-    viewer.camera.near = distance / 10;
-    viewer.camera.far = distance * 10;
+    viewer.camera.near = 1;
+    viewer.camera.far = distance * 2;
     viewer.camera.updateProjectionMatrix();
 }
 
@@ -226,7 +278,6 @@ function addLights(scene) {
     }
 }
 
-
 /**
  * Generates an array of high-contrast colors for a given number of sections.
  * The colors are spread across the full hue spectrum for better distinction.
@@ -237,9 +288,9 @@ function addLights(scene) {
 function generateSectionColors(numSections) {
     const colors = [];
     for (let i = 0; i < numSections; i++) {
-        const hue = (i / numSections) * 1.0; // Use full hue range for maximum distinction
-        const saturation = 1.0; // Keep max saturation for vivid colors
-        const lightness = 0.4; // Slightly lower lightness for richer colors
+        const hue = (i / numSections) * 1.0;
+        const saturation = 1.0;
+        const lightness = 0.4;
         colors.push(new THREE.Color().setHSL(hue, saturation, lightness));
     }
     return colors;
@@ -249,18 +300,22 @@ function generateSectionColors(numSections) {
  * Handles window resize events to adjust the viewer's size and camera aspect ratio.
  */
 function onWindowResize() {
-    const container = document.getElementById('shark_container');('#shark_container');
-
+    const container = document.getElementById('shark_container');
     if (!container) {
         console.error("Shark container not found.");
         return;
     }
 
-    const width = container.clientWidth;
-    const height = container.clientHeight;
+    const width = container.clientWidth || window.innerWidth;
+    const height = container.clientHeight || window.innerHeight;
     console.log("Resizing viewer to:", width, "x", height);
 
-    s.camera.aspect = width / height;
-    s.camera.updateProjectionMatrix();
-    s.renderer.setSize(width, height);
+    if (width > 0 && height > 0) {
+        s.camera.aspect = width / height;
+        s.camera.updateProjectionMatrix();
+        s.renderer.setSize(width, height);
+        s.renderer.setPixelRatio(window.devicePixelRatio); // Improves scaling on high-res screens
+    }
+
+    s.render();
 }

@@ -11,6 +11,9 @@ from synanno.backend.neuron_processing.load_neuron import (
     navis_neuron,
     compute_sections,
 )
+from synanno.backend.neuron_processing.load_synapse_point_cloud import (
+    load_synapse_point_cloud,
+)
 
 # load existing json
 import json
@@ -348,11 +351,22 @@ def upload_file() -> Template:
         swc_file = load_neuron_skeleton(
             neuropil_url, current_app.selected_neuron_id, swc_path
         )
-        pruned_swc_file = navis_neuron(swc_file)
+        neuron_pruned, pruned_swc_file = navis_neuron(swc_file)
         sections = compute_sections(pruned_swc_file)
         swc_static_file_path = os.path.join(
             os.path.join(current_app.config["STATIC_FOLDER"], "swc"),
             os.path.basename(pruned_swc_file),
+        )
+        # load the synapse point cloud
+        _, snapped_points_json_path = load_synapse_point_cloud(
+            current_app.selected_neuron_id,
+            neuron_pruned,
+            current_app.synapse_data,
+            swc_path,
+        )
+        snapped_points_json_static_file_path = os.path.join(
+            os.path.join(current_app.config["STATIC_FOLDER"], "swc"),
+            os.path.basename(snapped_points_json_path),
         )
 
     flash("Data ready!")
@@ -365,6 +379,9 @@ def upload_file() -> Template:
         neuronReady="true" if current_app.view_style == "neuron" else "false",
         neuronPath=swc_static_file_path if current_app.view_style == "neuron" else None,
         neuronSection=sections if current_app.view_style == "neuron" else None,
+        synapseCloudPath=snapped_points_json_static_file_path
+        if current_app.view_style == "neuron"
+        else None,
     )
 
 

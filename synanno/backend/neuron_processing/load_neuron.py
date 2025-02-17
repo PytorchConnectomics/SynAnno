@@ -51,7 +51,7 @@ def load_neuron_skeleton(
     return swc_file
 
 
-def navis_neuron(swc_file: str):
+def navis_neuron(swc_file: str) -> tuple[navis.TreeNeuron, str]:
     """
     Load the neuron skeleton into a navis.TreeNeuron object, prune it, and save the pruned neuron.
 
@@ -59,7 +59,7 @@ def navis_neuron(swc_file: str):
         swc_file: The path to the SWC file.
 
     Returns:
-        The path to the saved pruned SWC file.
+        The pruned and healed neuron and the path to the SWC file.
     """
     # Load the skeleton into a navis.TreeNeuron object
     neuron = navis.read_swc(swc_file)
@@ -88,7 +88,7 @@ def navis_neuron(swc_file: str):
     pruned_swc_file = swc_file.replace(".swc", "_pruned.swc")
     neuron_pruned.to_swc(pruned_swc_file, write_meta=True)
 
-    return pruned_swc_file
+    return neuron_pruned, pruned_swc_file
 
 
 def compute_sections(pruned_swc_file: str):

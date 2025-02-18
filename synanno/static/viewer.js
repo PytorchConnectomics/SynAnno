@@ -33,6 +33,7 @@ function initializeViewer() {
     window.s = new SharkViewer({
         mode: 'particle',
         dom_element: document.getElementById('shark_container'),
+        maxVolumeSize: 1000000,
     });
     console.log("Viewer initialized successfully.");
     s.init();
@@ -114,7 +115,8 @@ function loadSynapseCloud(jsonPath) {
         .then(response => response.json())
         .then(data => {
             try {
-                console.log("Parsed JSON data:", data);
+                // length of data
+                console.log("Data length:", data.length);
 
                 // Ensure it's in Nx3 format
                 if (data.length % 3 !== 0) {
@@ -127,7 +129,6 @@ function loadSynapseCloud(jsonPath) {
                 for (let i = 0; i < data.length; i += 3) {
                     points.push(new THREE.Vector3(data[i], data[i + 1], data[i + 2]));
                 }
-                console.log("Parsed points:", points);
 
                 // Create a small sphere geometry for each point
                 const sphereGeometry = new THREE.SphereGeometry(500, 8, 8); // Small spheres
@@ -250,6 +251,10 @@ function adjustCameraForNeuron(viewer) {
     const maxDim = Math.max(size.x, size.y, size.z);
     const fov = viewer.camera.fov * (Math.PI / 180);
     const distance = (maxDim / 2) / Math.tan(fov / 2);
+
+        if (distance < 50) distance = 50; // Prevent too-close zoom
+        if (distance > 1000000) distance = 1000000; // Prevent excessive zoom-out
+
 
     console.log("Adjusting camera. Distance:", distance, "Bounding box size:", size);
 

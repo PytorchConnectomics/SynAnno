@@ -124,6 +124,8 @@ def save_point_clouds(
         snapped_points (np.ndarray): Array of snapped points.
         swc_path (str): Path to save the output files.
     """
+    logger.info(f"Length of point cloud: {len(point_cloud)}")
+    logger.info(f"Length of snapped points: {len(snapped_points)}")
     point_cloud_json = json.dumps([int(x) for x in point_cloud.flatten()])
     snapped_points_json = json.dumps([int(x) for x in snapped_points.flatten()])
 

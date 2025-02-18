@@ -135,7 +135,6 @@ def compute_sections(pruned_swc_file: str):
     # Generate nodes in a depth-first-search pre-ordering starting at source
     tree_traversal = list(nx.dfs_preorder_nodes(undirected_graph, source=center_node))
     logger.info(f"Tree length: {len(tree_traversal)}")
-    logger.info(f"Tree traversal: {tree_traversal}")
 
     segments = df_degree_based_partitioning(tree_traversal, undirected_graph)
     logger.info(

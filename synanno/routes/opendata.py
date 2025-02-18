@@ -38,7 +38,7 @@ from flask import current_app
 import logging
 
 # setup logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level="INFO")
 logger = logging.getLogger(__name__)
 
 # define a Blueprint for opendata routes
@@ -199,14 +199,14 @@ def upload_file() -> Template:
 
         # Check if the expected columns match the actual ones
         if expected_columns == actual_columns:
-            logging.info("All columns are present.")
+            logger.info("All columns are present.")
             # sort the dataframe by page and image_index
             current_app.df_metadata.sort_values(["Page", "Image_Index"], inplace=True)
         else:
             missing_columns = expected_columns - actual_columns
             extra_columns = actual_columns - expected_columns
-            logging.info(f"Missing columns: {missing_columns}")
-            logging.info(f"Extra columns: {extra_columns}")
+            logger.info(f"Missing columns: {missing_columns}")
+            logger.info(f"Extra columns: {extra_columns}")
             raise ValueError("The provided JSON does not match the expected format!")
 
         # update the slice number with the cropped size for z
@@ -658,7 +658,7 @@ def neuro() -> Dict[str, object]:
     else:
         raise Exception("No NG instance running")
 
-    logging.info(
+    logger.info(
         f"Neuroglancer instance running at {current_app.ng_viewer}, centered at {coordinate_order[0]},{coordinate_order[1]},{coordinate_order[2]}: {center[coordinate_order[0]], center[coordinate_order[1]], center[coordinate_order[2]]}"
     )
 
@@ -759,16 +759,16 @@ def load_materialization():
     if materialization_path is None or materialization_path == "":
         return jsonify({"error": "Materialization path is missing."}), 400
     try:
-        logging.info("Loading the materialization table...")
+        logger.info("Loading the materialization table...")
         path = materialization_path.replace("file://", "")
         current_app.synapse_data = pd.read_csv(path)
-        logging.info(current_app.synapse_data.head())
+        logger.info(current_app.synapse_data.head())
 
-        logging.info("Materialization table loaded successfully!")
+        logger.info("Materialization table loaded successfully!")
         return jsonify({"status": "success"}), 200
 
     except Exception as e:
-        logging.info(f"Failed to load materialization table: {e}")
+        logger.info(f"Failed to load materialization table: {e}")
         return jsonify({"error": str(e)}), 500
 
 

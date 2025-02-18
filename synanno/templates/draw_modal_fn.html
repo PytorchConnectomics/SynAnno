@@ -4,21 +4,12 @@
   class="modal fade"
   id="drawModalFN"
   tabindex="-1"
-  aria-labelledby="drawModalFN"
-  aria-hidden="true"
 >
   <div class="modal-dialog modal-dialog-centered modal-xl">
     <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="modalToggleLabel2">Neuroglancer</h5>
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Close"
-        ></button>
+      <div class="card-header text-center">
+        <span id="neuron-id-draw"></span>
       </div>
-
       <div class="modal-body">
         <div class="row">
           <iframe
@@ -30,12 +21,15 @@
           ></iframe>
         </div>
 
-        <div class="modal-footer">
+        <div class="modal-footer d-flex justify-content-between align-items-center">
+          <p class="text-muted mb-0">
+            Press 'c' to select the coordinates at your cursor.
+          </p>
           <div class="row">
             <div class="col">
               <button
                 id="review_bbox"
-                class="btn btn-primary"
+                class="btn btn-secondary"
                 type="button"
                 data-bs-target="#drawModalFNSave"
                 data-bs-toggle="modal"
@@ -44,7 +38,7 @@
               </button>
               <button
                 id="back_to_2d"
-                class="btn btn-primary"
+                class="btn btn-secondary"
                 data-bs-target="#drawModal"
                 data-bs-toggle="modal"
                 data-bs-dismiss="modal"

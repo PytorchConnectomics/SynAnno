@@ -158,7 +158,7 @@ def save_canvas() -> Dict[str, object]:
 
 
 @blueprint.route("/load_missing_slices", methods=["POST"])
-def load_missing_slices(necessary_slice_number: int = 16) -> Dict[str, str]:
+def load_missing_slices() -> Dict[str, str]:
     """The auto segmentation view needs a set number of slices per instance (depth). Coming from the
     Annotation view the user might use a different number of slices - most likely a single slice.
     To enable the user to go through the individual slices, redraw the mask and auto generate the mask we thus
@@ -181,7 +181,7 @@ def load_missing_slices(necessary_slice_number: int = 16) -> Dict[str, str]:
     )
 
     # update the slice number of the instances
-    update_slice_number(data, necessary_slice_number)
+    update_slice_number(data)
 
     # retrieve the updated data
     data = current_app.df_metadata.query(
@@ -215,7 +215,7 @@ def ng_bbox_fn() -> Dict[str, object]:
     # expand the bb in in z direction
     # we expand the front and the back z value dependent on their proximity to the boarders
 
-    expand_z = session["crop_size_z"] // 2
+    expand_z = current_app.crop_size_z_draw // 2
 
     cz1 = int(current_app.cz) - expand_z if int(current_app.cz) - expand_z > 0 else 0
     cz2 = (
@@ -289,6 +289,7 @@ def ng_bbox_fn_save() -> Dict[str, object]:
 
     item["Label"] = "Incorrect"
     item["Annotated"] = "No"
+    item["Neuron_ID"] = "None"
     item["Error_Description"] = "False Negatives"
     item["X_Index"] = coordinate_order.index("x")
     item["Y_Index"] = coordinate_order.index("y")
@@ -331,7 +332,7 @@ def ng_bbox_fn_save() -> Dict[str, object]:
 
     item["crop_size_x"] = session["crop_size_x"]
     item["crop_size_y"] = session["crop_size_y"]
-    item["crop_size_z"] = session["crop_size_z"]
+    item["crop_size_z"] = current_app.crop_size_z_draw
 
     # save the original bounding box using the provided coordinate order
     bbox = [None] * 6
@@ -669,3 +670,9 @@ def save_pre_post_coordinates() -> None:
         raise ValueError("id must be pre or post")
 
     return json.dumps({"success": True}), 200, {"ContentType": "application/json"}
+
+
+@blueprint.route("/get_coordinates", methods=["GET"])
+def get_coordinates():
+    """Get the current coordinates of the Neuroglancer instance."""
+    return jsonify({"cz": current_app.cz, "cy": current_app.cy, "cx": current_app.cx})

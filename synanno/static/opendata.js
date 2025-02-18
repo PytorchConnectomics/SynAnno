@@ -1,4 +1,17 @@
+import {enableNeuropilLayer, disableNeuropilLayer} from "./utils/ng_util.js";
+
 $(document).ready(function () {
+  // Get the neuronReady value from the data attribute and convert it to a boolean
+  const neuronReady = $("script[src*='opendata.js']").data("neuron-ready") === true;
+
+  console.log("Neuron Ready:", neuronReady); // Debugging step
+
+  // Show the submission done modal if neuronReady is true
+  if (neuronReady) {
+    console.log("Showing submission done modal"); // Debugging step
+    var submissionDoneModal = new bootstrap.Modal(document.getElementById('submissionDoneModal'));
+    submissionDoneModal.show();
+  }
 
   // show progressbar when submitting the data
   $("form").on("submit", function (event) {
@@ -88,33 +101,31 @@ $(document).ready(function () {
   });
 
   // toggle between view and neuron centric view
-  $('input[type="radio"]').change(function () {
-    if ($(this).val() === "view") {
-      $("#view-form").show();
-      $("#neuron-form").hide();
-    } else if ($(this).val() === "neuron") {
-      $("#view-form").hide();
+  $('#toggleSynapseSelection').change(function () {
+    if ($(this).is(':checked')) {
+      $("#synapse-id-form").hide();
       $("#neuron-form").show();
+      $("#view_style").val("neuron");
+    } else {
+      $("#synapse-id-form").show();
+      $("#neuron-form").hide();
+      $("#view_style").val("synapse");
     }
   });
 
+  $("#neuroglancerModal").on("shown.bs.modal", function () {
+    $(this).removeAttr("aria-hidden"); // Make modal accessible
+    $(this).removeAttr('inert'); // Make modal interactive
+    $("#neuroglancerIframe").focus(); // Move focus inside the modal
+  });
+
+  $("#neuroglancerModal").on("hidden.bs.modal", function () {
+    $(this).attr("aria-hidden", "true"); // Restore aria-hidden when closed
+    $(this).attr("inert", "true"); // Prevent interactions
+    $("#openNeuronModalBtn").focus();
+  });
+
   updateSubmitButtonState();
-
-  // enable the neuropil neuron segmentation layer
-  function enableNeuropilLayer() {
-    fetch('/enable_neuropil_layer', { method: 'POST' })
-        .then(response => response.json())
-        .then(data => console.log(data.status))
-        .catch(error => console.error('Error enabling neuropil layer:', error));
-  }
-
-  // disable the neuropil neuron segmentation layer
-  function disableNeuropilLayer() {
-    fetch('/disable_neuropil_layer', { method: 'POST' })
-        .then(response => response.json())
-        .then(data => console.log(data.status))
-        .catch(error => console.error('Error disabling neuropil layer:', error));
-  }
 
   // enable the neuropil layer when the modal opens
   $("#neuroglancerModal").on("show.bs.modal", function () {
@@ -192,15 +203,48 @@ $(document).ready(function () {
     }, debounceDelay);
   });
 
-  $('input[type="radio"][value="neuron"]').change(function () {
-    if ($(this).is(':checked')) {
-      $("#openNeuronModalBtn").hide();
-    }
+  let checkSelectedNeuronIDHandle;
+  let initialID = null;
+
+  // Start checking the neuron ID when the ng modal is shown
+  $("#neuroglancerModal").on("shown.bs.modal", function () {
+    // Pull initial coordinates
+    $.ajax({
+      type: 'GET',
+      url: '/get_neuron_id',
+      success: function (response) {
+        // start puling the neuron ID every 250ms
+        checkSelectedNeuronIDHandle = setInterval(checkNeuronID, 250);
+      },
+      error: function (error) {
+        console.error('Error fetching initial the neuron ID:', error);
+      }
+    });
   });
 
-  $('input[type="radio"][value="view"]').change(function () {
-    if ($(this).is(':checked')) {
-      $("#openNeuronModalBtn").show();
-    }
+  // Stop checking the neuron ID when the modal is hidden
+  $("#neuroglancerModal").on("hidden.bs.modal", function () {
+    clearInterval(checkSelectedNeuronIDHandle);
   });
+
+  // Function to check for changes in app.cz, app.cy, app.cx
+  function checkNeuronID() {
+    $.ajax({
+      type: 'GET',
+      url: '/get_neuron_id',
+      success: function (response) {
+        const selected_neuron_id = response.selected_neuron_id;
+        console.log('Selected Neuron ID:', selected_neuron_id);
+        if (selected_neuron_id !== initialID) {
+          console.log('Neuron ID changed:', selected_neuron_id);
+          $("#neuron-id-open").text(selected_neuron_id);
+          initialID = selected_neuron_id
+        }
+      },
+      error: function (error) {
+        console.error('Error fetching the neuron ID:', error);
+      }
+    });
+  }
+
 });

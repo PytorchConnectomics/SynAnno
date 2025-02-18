@@ -53,7 +53,7 @@
         </div>
         <div class="card-block mt-2 mt-auto">
           <div class="col justify-content-center">
-            <button id="add_new_instance" class="btn btn-primary" type="button" data-bs-target="#drawModalFN" data-bs-toggle="modal" data-bs-dismiss="modal">
+            <button id="add_new_instance" class="btn btn-secondary" type="button" data-bs-target="#drawModalFN" data-bs-toggle="modal" data-bs-dismiss="modal">
               Add New Instance
             </button>
           </div>
@@ -93,7 +93,7 @@
         </div>
         <div class="card-block mt-2">
           <div class="col justify-content-center">
-            <button class="btn btn-primary" id="drawButton-{{image.Page}}-{{image.Image_Index}}-{{image.Label}}" type="button" data-bs-target="#drawModal" data-bs-toggle="modal" data-bs-dismiss="modal">
+            <button class="btn btn-secondary" id="drawButton-{{image.Page}}-{{image.Image_Index}}-{{image.Label}}" type="button" data-bs-target="#drawModal" data-bs-toggle="modal" data-bs-dismiss="modal">
               Draw Mask
             </button>
           </div>
@@ -108,7 +108,7 @@
   </div>
 
   <div class="m-4 p-1">
-    <a type="button" id="submit_button" class="btn btn-primary {{ modenext }}" href="{{ url_for('finish.export_draw') }}">Submit and Finish</a>
+    <a type="button" id="submit_button" class="btn btn-secondary {{ modenext }}" href="{{ url_for('finish.export_draw') }}">Submit and Finish</a>
   </div>
 </div>
 
@@ -122,7 +122,7 @@
 {% include "loading_bar.html" %}
 
 
-<script src="{{ url_for('static', filename='draw_module.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='draw_module.js') }}"></script>
 <script src="{{ url_for('static', filename='draw.js') }}"></script>
 
 <script>

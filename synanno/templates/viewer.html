@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+	<head>
+    <style>
+      *:focus {
+        outline:none;
+      }
+      html, body {
+        height: 100%;
+      }
+      .content {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      #container {
+        flex: 1;
+      }
+      .navigation {
+        display: flex;
+        flex-direction: row;
+        align-content: flex-end;
+        justify-content: space-between;
+        align-items: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="content">
+      <div class="navigation">
+        <h1>SharkViewer</h1>
+      </div>
+      <form>
+        <label for='swc_input'>Upload a swc file to view it in the SharkViewer:</label>
+        <input type='file' name='swc_input' id='swc_input' />
+        <input type="file" id="json_input" accept=".json">
+
+      </form>
+      <!-- three.js container -->
+      <div id="container" style='position:relative'></div>
+    </div>
+    <!-- info on screen display -->
+    <script type="text/javascript" src="{{ url_for('static', filename='SharkViewer/three.min.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='testing_viewer.js') }}"></script>
+</body>
+</html>

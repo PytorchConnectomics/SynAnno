@@ -8,71 +8,13 @@
   id="detailsModal"
   tabindex="-1"
   aria-labelledby="modalToggleLabel1"
-  aria-hidden="true"
+  inert
 >
   <div class="modal-dialog">
     <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title pe-5" id="modalToggleLabel1">Synapse details</h5>
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Close"
-        ></button>
-      </div>
       <div class="modal-body mx-auto">
-        <div class="d-flex align-items-center">
-          <div class="p-1">
-            <div class="form-check pe-4">
-              <input
-                id="check-gt"
-                class="form-check-input"
-                type="checkbox"
-                value=""
-                onclick="check_gt();"
-                checked
-              />
-              <label class="form-check-label" for="flexCheckChecked">
-                Label
-              </label>
-            </div>
-          </div>
-
-          <div class="p-1 ms-auto">
-            <div
-              class="btn-group btn-group-sm"
-              role="group"
-              aria-label="Basic example"
-            >
-              <span style="margin-right: 8px; margin-top: 2px"
-                >Label opacity:
-              </span>
-              <button
-                id="dec-opacity"
-                type="button"
-                class="btn btn-primary rounded-start"
-                onclick="dec_opacity()"
-              >
-                -
-              </button>
-              <span
-                id="value-opacity"
-                type="button"
-                class="btn btn-light"
-                value="0.5"
-                >0.5</span
-              >
-              <button
-                id="inc-opacity"
-                type="button"
-                class="btn btn-primary"
-                onclick="add_opacity()"
-              >
-                +
-              </button>
-            </div>
-          </div>
+        <div class="card-header text-center">
+          Neuron ID: <span id="neuron-id"></span>
         </div>
         <div class="d-flex justify-content-center">
           <div id="cardDetails" class="card border-0 p-1">
@@ -110,18 +52,18 @@
           />
           <div class="container">
             <div class="row">
-              <div class="col justify-content-center">
+              <div class="col-4 d-flex justify-content-start">
                 <button
-                  id="minSlice"
-                  type="button"
-                  class="btn btn-outline-secondary btn-sm disabled float-start"
+                  id="toggle-label"
+                  class="btn btn-secondary rounded-start"
+                  onclick="check_gt();"
                 >
-                  -15
+                  Label
                 </button>
               </div>
-              <div class="col justify-content-center">
+              <div class="col-4 d-flex justify-content-center">
                 <button
-                  class="btn btn-primary"
+                  class="btn btn-secondary"
                   id="ng-link"
                   type="button"
                   data-bs-target="#neuroModel"
@@ -131,14 +73,31 @@
                   View in NG
                 </button>
               </div>
-              <div class="col justify-content-center">
-                <button
-                  id="maxSlice"
-                  type="button"
-                  class="btn btn-outline-secondary btn-sm disabled float-end"
-                >
-                  +15
-                </button>
+              <div class="col-4 d-flex justify-content-end">
+                <div class="btn-group btn-group-sm" role="group" aria-label="Basic example">
+                  <button
+                    id="dec-opacity"
+                    type="button"
+                    class="btn btn-secondary rounded-start"
+                    onclick="dec_opacity()"
+                  >
+                    -
+                  </button>
+                  <span
+                    id="value-opacity"
+                    type="button"
+                    class="btn btn-light"
+                    value="0.5"
+                  >0.5</span>
+                  <button
+                    id="inc-opacity"
+                    type="button"
+                    class="btn btn-secondary"
+                    onclick="add_opacity()"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
             </div>
           </div>

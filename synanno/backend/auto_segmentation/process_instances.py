@@ -4,7 +4,6 @@ from cloudvolume import Bbox
 from synanno.backend.processing import calculate_crop_pad, process_syn
 import pandas as pd
 from typing import Any
-from flask import current_app
 
 
 def compute_instance_metadata(

@@ -72,6 +72,7 @@ def initialize_global_variables(app):
     }
     app.ng_viewer = None
     app.ng_version = None
+    app.selected_neuron_id = None
     app.view_style = "view"
     app.grid_opacity = 0.5
     app.coordinate_order = {}

@@ -79,6 +79,20 @@
                 {% if mode == 'draw' or mode == 'annotate' %} data-required="true" {% endif %}
               />
             </p>
+            <label for="neuropil_url" class="form-label">
+              Neuropil Segmentation (precomputed: Neuroglancer's native format) - Required for View-Centric Analysis
+            </label>
+            <p>
+              <input
+                class="form-control"
+                type="url"
+                id="neuropil_url"
+                name="neuropil_url"
+                placeholder="Cloud Volume Bucket - file://<path_to_your_file>"
+                value="gs://h01-release/data/20210601/c3"
+                {% if mode == 'draw' or mode == 'annotate' %} data-required="true" {% endif %}
+              />
+            </p>
             <label for="materialization_url" class="form-label">
               Materialization (url/name of the table containing the ID association and bounding box information)
             </label>
@@ -155,6 +169,7 @@
               />
               View Centric
             </label>
+
             <label class="form-check-label">
               <input
                 type="radio"
@@ -178,7 +193,20 @@
               Coordinate Order
             </label>
 
+
             <div class="mb-1"></div>
+
+            <!-- Button to Open the Embedded Neuroglancer Modal -->
+            <button
+              id="openNeuronModalBtn"
+              type="button"
+              class="btn btn-primary"
+              data-bs-toggle="modal"
+              data-bs-target="#neuroglancerModal"
+              disabled
+            >
+              Choose a Neuron
+            </button>
 
             <div id="neuron-form" {% if view_style=="view" %} class="hidden-form" {% endif %}>
                 <input
@@ -197,20 +225,6 @@
                 />
               </div>
             </div>
-
-            <div id="view-form" {% if view_style=="neuron" %} class="hidden-form" {% endif %}>
-              <label for="coordinate-container-view" class="form-label">Slicing Indices for the Segmentation Volume (will be scaled for the image volume in case of a resolution mismatch)</label>
-              <div class="coordinate-container" id="coordinate-container-view">
-                <input class="coordinate-dims" type="number" id="x1" name="x1" placeholder="X1 - Default: 0" />
-                <input class="coordinate-dims" type="number" id="x2" name="x2" placeholder="X2 - Default: max(X)" />
-                <input class="coordinate-dims" type="number" id="y1" name="y1" placeholder="Y1 - Default: 0" />
-                <input class="coordinate-dims" type="number" id="y2" name="y2" placeholder="Y2 - Default: max(Y)" />
-                <input class="coordinate-dims" type="number" id="z1" name="z1" placeholder="Z1 - Default: 0" />
-                <input class="coordinate-dims" type="number" id="z2" name="z2" placeholder="Z2 - Default: max(Z)" />
-              </div>
-            </div>
-
-            <div class="mb-3"></div>
 
             <div>
               <label class="form-label" style="margin-right: 2px">Source Volume Resolution (in nm)</label>
@@ -233,6 +247,51 @@
             <input type="number" id="cropsize_y" placeholder="256" name="crop_size_c1" value="256" />
             <input type="number" id="cropsize_z" placeholder="16" name="crop_size_c2" value= {% if mode == 'draw'%}"16"{%
               elif mode == 'annotate'%}"1"{% endif %}/>
+          </div>
+
+            <!-- Modal for Embedded Neuroglancer -->
+            <div
+            class="modal fade"
+            id="neuroglancerModal"
+            tabindex="-1"
+            aria-labelledby="neuroglancerModalLabel"
+            aria-hidden="true"
+          >
+            <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+            <div class="modal-header">
+            <h5 class="modal-title" id="neuroglancerModalLabel">Neuron-Centric View</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+            </div>
+            <div class="modal-body">
+            <!-- Embedded Neuroglancer Viewer -->
+            <iframe
+              id="neuroglancerIframe"
+              src=""
+              width="100%"
+              height="700px"
+              style="border: 1px solid #ccc;"
+            ></iframe>
+            </div>
+              <div class="modal-footer d-flex justify-content-between align-items-center">
+              <p class="text-muted mb-0">
+                Press 'n' to select the neuron at your cursor.
+              </p>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                data-bs-dismiss="modal"
+              >
+                Close
+              </button>
+              </div>
+            </div>
+            </div>
           </div>
         </div>
       </div>

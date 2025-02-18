@@ -99,4 +99,108 @@ $(document).ready(function () {
   });
 
   updateSubmitButtonState();
+
+  // enable the neuropil neuron segmentation layer
+  function enableNeuropilLayer() {
+    fetch('/enable_neuropil_layer', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => console.log(data.status))
+        .catch(error => console.error('Error enabling neuropil layer:', error));
+  }
+
+  // disable the neuropil neuron segmentation layer
+  function disableNeuropilLayer() {
+    fetch('/disable_neuropil_layer', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => console.log(data.status))
+        .catch(error => console.error('Error disabling neuropil layer:', error));
+  }
+
+  // enable the neuropil layer when the modal opens
+  $("#neuroglancerModal").on("show.bs.modal", function () {
+    fetch('/launch_neuroglancer', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            $("#neuroglancerIframe").attr("src", data.ng_url);
+            fetch('/enable_neuropil_layer', { method: 'POST' });
+        })
+        .catch(error => console.error('Error launching Neuroglancer:', error));
+  });
+
+  // disable the neuropil layer when the modal closes
+  $("#neuroglancerModal").on("hidden.bs.modal", function () {
+    fetch('/disable_neuropil_layer', { method: 'POST' });
+  });
+
+  let debounceTimer;
+  const debounceDelay = 500;
+
+  document.getElementById('materialization_url').addEventListener('input', function() {
+    clearTimeout(debounceTimer);
+    const self = this;
+    debounceTimer = setTimeout(function() {
+      var materializationUrl = self.value.trim();
+      console.log("Materialization URL:", materializationUrl);
+      var openNeuronModalBtn = document.getElementById('openNeuronModalBtn');
+      openNeuronModalBtn.setAttribute('disabled', 'disabled');
+      if (materializationUrl) {
+        fetch('/load_materialization', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ materialization_url: materializationUrl })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === "success") {
+            console.log("Materialization table loaded.");
+            // Grab the form values
+            var source_url = document.getElementById('source_url').value.trim();
+            var target_url = document.getElementById('target_url').value.trim();
+            var neuropil_url = document.getElementById('neuropil_url').value.trim();
+
+            // Build the query string with proper URL encoding
+            var queryString = '?source_url=' + encodeURIComponent(source_url) +
+                              '&target_url=' + encodeURIComponent(target_url) +
+                              '&neuropil_url=' + encodeURIComponent(neuropil_url);
+
+            // Use a GET request to fetch the Neuroglancer URL with our form data in tow!
+            fetch('/launch_neuroglancer' + queryString, { method: 'GET' })
+              .then(response => response.json())
+              .then(ngData => {
+                if (ngData.ng_url) {
+                  document.getElementById('neuroglancerIframe').src = ngData.ng_url;
+                  console.log("Neuroglancer URL set to:", ngData.ng_url);
+                  // Only enable the button upon successful processing without any alerts
+                  openNeuronModalBtn.removeAttribute('disabled');
+                } else {
+                  console.error("No Neuroglancer URL received:", ngData.error);
+                }
+              })
+              .catch(error => {
+                console.error("Error launching Neuroglancer:", error);
+              });
+          } else {
+            console.error("Error loading materialization table:", data.error);
+          }
+        })
+        .catch(error => {
+          console.error("Error during fetch:", error);
+        });
+      }
+    }, debounceDelay);
+  });
+
+  $('input[type="radio"][value="neuron"]').change(function () {
+    if ($(this).is(':checked')) {
+      $("#openNeuronModalBtn").hide();
+    }
+  });
+
+  $('input[type="radio"][value="view"]').change(function () {
+    if ($(this).is(':checked')) {
+      $("#openNeuronModalBtn").show();
+    }
+  });
 });

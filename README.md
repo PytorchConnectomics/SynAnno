@@ -262,13 +262,23 @@ Each page has three buttons: "Home", "Question Mark", and "Menu". The first retu
 
 - URL: http://127.0.0.1:5000/open_data
 
-This view is identical for both workflows. You'll be prompted to provide a source bucket and target bucket (both in Neuroglancer's precomputed format), a URL to a materialization table, bucket secrets (defaults to ~/.cloudvolume/secrets), and optionally a JSON file containing instance metadata. The JSON file can be used to save and restore sessions or start a "Revise Dataset" workflow with information from a "Proofread Annotation" workflow.
+This view is identical for both workflows. You'll be prompted to provide a source bucket and target bucket (both in Neuroglancer's precomputed format), a URL to a materialization table, bucket secrets (defaults to ~/.cloudvolume/secrets), and optionally a JSON file containing instance metadata. The JSON file can be used to save and restore sessions or start a "Revise Dataset" workflow with information from a "Proofread Annotation" workflow. If you wish to use "View-Centric" neuron selection in a "Proofread Annotation" workflow, you must also provide a neuropil segmentation bucket in Neuroglancer's precomputed format as well.
 
-You can load instances by querying the materialization table based on sub-volume constraints in the 'View Centric' approach or based on pre-/post-synaptic coordinates in the 'Neuron Centric' approach. You'll also need to specify the coordinate layout of the referenced precomputed datasets, the source volume resolution (in nm), the target volume resolution (in nm), and instance crop size (in pixels).
+Opening the "Volume Parameters" tab, you will have two different options for the manner in which to select your instances, "View Centric" and "Neuron Centric".
+
+If you choose the 'View Centric' approach with all required parameters filled in, you will see a button prompting you to "Choose a Neuron".
+
+[![View Centric Open Data][2]][2]
+
+Clicking this button will open up a Neuroglancer view with your source, target, and neuropil layers displayed. Hover your mouse over the desired neuron and press the 'n' key to save your choice. After Neuroglancer window is closed, the app will remember which neuron you selected.
+
+[![Embedded Neuroglancer][13]][13]
+
+If you choose the 'Neuron Centric' approach. You'll need to specify the coordinate layout of the referenced precomputed datasets, desired range of ids, the source volume resolution (in nm), the target volume resolution (in nm), and instance crop size (in pixels).
+
+[![Embedded Neuroglancer][14]][14]
 
 After providing the required information, click 'Submit' to prepare the data for the first page or revision. Then, click "Start Data Proofread"/"Start Drawing" to begin proofreading or revision.
-
-[![Open Data][2]][2]
 
 ### Annotate
 
@@ -336,6 +346,31 @@ In this view, you can download the JSON file containing the instances' metadata 
 
 [![Export Masks][12]][12]
 
+## Example Data [(H01)](https://h01-release.storage.googleapis.com/landing.html)
+
+To obtain some sample data from the [H01](https://h01-release.storage.googleapis.com/landing.html) dataset to use in a SynAnno materialization table, run the following on the command line:
+
+```bash
+gsutil cp gs://h01-release/data/20210729/c3/synapses/exported/\* [PATH_TO_FOLDER]
+```
+
+where [PATH_TO_FOLDER] is a directory on your machine to store raw data from [H01](https://h01-release.storage.googleapis.com/landing.html).
+
+Then, from your project folder run:
+
+```bash
+python ./backend/materialization_generation.py [PATH_TO_FOLDER] --output_csv_path [PATH_TO_STORE_MATERIALIZATION TABLE]
+```
+
+where [PATH_TO_FOLDER] is as before and [PATH_TO_STORE_MATERIALIZATION TABLE] is where you wish to store your materialization of the raw [H01](https://h01-release.storage.googleapis.com/landing.html) data.
+
+The file stored at [PATH_TO_STORE_MATERIALIZATION TABLE] is a valid materialization table to use with SynAnno. For an example run through of the app, use the following URLs on SynAnno's 'Open Data' view:
+
+- source: gs://h01-release/data/20210601/4nm_raw
+- target: gs://h01-release/data/20210729/c3/synapses/whole_ei_onlyvol
+- neuropil: gs://h01-release/data/20210729/c3/synapses/whole_ei_onlyvol
+- materialization: [PATH_TO_STORE_MATERIALIZATION TABLE]
+
 ## Contributing
 
 Pre-submission, we ask you to only create issues for bugs, feature requests, or questions about the code. After submission, we strongly encourage any kind of contribution, including bug fixes, additional features, and documentation improvements. If you're unsure about whether a contribution is appropriate, feel free to open an issue and ask.
@@ -355,7 +390,7 @@ pre-commit run --all-files
 Now, whenever you try to commit changes to your repository, pre-commit will automatically run all hooks. If any problems are found, the commit will be prevented until you fix them.
 
 [1]: ./doc/images/landing_page.png
-[2]: ./doc/images/open_data.png
+[2]: ./doc/images/view_centric_open_data.png
 [3]: ./doc/images/grid_view.png
 [4]: ./doc/images/instance_view.png
 [5]: ./doc/images/ng_view.png
@@ -366,3 +401,5 @@ Now, whenever you try to commit changes to your repository, pre-commit will auto
 [10]: ./doc/images/draw_instance_view.png
 [11]: ./doc/images/add_fn_view.png
 [12]: ./doc/images/export_masks.png
+[13]: ./doc/images/embedded_neuroglancer.png
+[14]: ./doc/images/neuron_centric_open_data.png

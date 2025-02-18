@@ -203,18 +203,13 @@ def free_page() -> None:
                 print("Failed to delete %s. Reason: %s" % (img_dir_idx, e))
 
 
-def retrieve_instance_metadata(
-    app: Flask, page: int = 0, mode: str = "annotate"
-) -> Union[str, None]:
+def retrieve_instance_metadata(app: Flask, page: int = 0, mode: str = "annotate"):
     """Visualize the synapse and EM images in 2D slices for each instance by cropping the bounding box of the instance.
         Processing each instance individually, retrieving them from the cloud volume and saving them to the local disk.
 
     Args:
         app: an handle to the application context
         page (int): the current page number for which to compute the data.
-
-    Returns:
-        synanno_json (str): the path to the JSON file.
     """
 
     # create the handles to materialization data object
@@ -259,6 +254,12 @@ def retrieve_instance_metadata(
             item = {
                 "Page": int(page),
                 "Image_Index": int(idx),
+                "Section_Index": bbox_dict["Section_Index"]
+                if "Section_Index" in bbox_dict
+                else -1,
+                "Section_Order_Index": bbox_dict["Section_Order_Index"]
+                if "Section_Order_Index" in bbox_dict
+                else -1,
                 "GT": "/".join(syn_dir_instance.strip(".\\").split("/")[-3:]),
                 "EM": "/".join(img_dir_instance.strip(".\\").split("/")[-3:]),
                 "Label": "Correct",
@@ -622,7 +623,7 @@ def neuron_centric_3d_data_processing(
     source_url: str,
     target_url: str,
     neuropil_url: str,
-    table_name: str,
+    df: pd,
     preid: int = None,
     postid: int = None,
     bucket_secret_json: json = "~/.cloudvolume/secrets",
@@ -636,7 +637,7 @@ def neuron_centric_3d_data_processing(
         source_url (str): the url to the source cloud volume (EM).
         target_url (str): the url to the target cloud volume (synapse).
         neuropil_url (str): the url to the neuropil cloud volume (neuron segmentation).
-        table_name (str): the path to the JSON file.
+        df (pd): the materialization table as a pandas DataFrame.
         preid (int): the id of the pre synaptic region.
         postid (int): the id of the post synaptic region.
         bucket_secret_json (json): the path to the JSON file.
@@ -644,9 +645,6 @@ def neuron_centric_3d_data_processing(
     """
     # create the handles to the global materialization data object
     global materialization
-
-    # retrieve the order of the coordinates (xyz, xzy, yxz, yzx, zxy, zyx)
-    coordinate_order = list(current_app.coordinate_order.keys())
 
     # load the cloud volumes
     current_app.source_cv = CloudVolume(
@@ -699,9 +697,7 @@ def neuron_centric_3d_data_processing(
         int(a * b) for a, b in zip(vol_dim, current_app.scale.values())
     )
 
-    # Read the CSV file
-    df = pd.read_csv(table_name)
-
+    # TODO Move this to open data to not sort the whole table
     if view_style == "neuron":
         neuron_id = int(current_app.selected_neuron_id)  # Get the selected neuron ID
 
@@ -713,6 +709,25 @@ def neuron_centric_3d_data_processing(
         df = df.query("pre_neuron_id == @neuron_id or post_neuron_id == @neuron_id")
 
         print(f"Found {len(df)} synapses connected to neuron ID {neuron_id}")
+
+        # select only the necessary columns, save the real materialization table index as column 'index'
+        df = df.reset_index()
+        df = df[
+            [
+                "index",
+                "Section_Index",
+                "Section_Order_Index",
+                "pre_pt_x",
+                "pre_pt_y",
+                "pre_pt_z",
+                "post_pt_x",
+                "post_pt_y",
+                "post_pt_z",
+                "x",
+                "y",
+                "z",
+            ]
+        ]
 
     if view_style == "synapse":
         # TODO: This is currently a dummy solution.
@@ -726,22 +741,22 @@ def neuron_centric_3d_data_processing(
         # query the dataframe for all instances with an index between preid and postid
         df = df.query("index >= @preid and index <= @postid")
 
-    # select only the necessary columns, save the real materialization table index as column 'index'
-    df = df.reset_index()
-    df = df[
-        [
-            "index",
-            "pre_pt_x",
-            "pre_pt_y",
-            "pre_pt_z",
-            "post_pt_x",
-            "post_pt_y",
-            "post_pt_z",
-            "x",
-            "y",
-            "z",
+        # select only the necessary columns, save the real materialization table index as column 'index'
+        df = df.reset_index()
+        df = df[
+            [
+                "index",
+                "pre_pt_x",
+                "pre_pt_y",
+                "pre_pt_z",
+                "post_pt_x",
+                "post_pt_y",
+                "post_pt_z",
+                "x",
+                "y",
+                "z",
+            ]
         ]
-    ]
 
     # Convert the DataFrame to a dictionary
     bbox_dict = df.to_dict("index")
@@ -759,4 +774,4 @@ def neuron_centric_3d_data_processing(
 
     session["n_pages"] = number_pages
 
-    return retrieve_instance_metadata(app, page=0, mode=mode)
+    retrieve_instance_metadata(app, page=0, mode=mode)

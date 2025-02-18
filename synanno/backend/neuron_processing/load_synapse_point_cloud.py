@@ -32,10 +32,11 @@ def load_synapse_point_cloud(
     if point_cloud is None:
         return
 
-    snapped_points = snap_points_to_neuron(neuron_coords, point_cloud)
+    neuron_tree = create_neuron_tree(neuron_coords)
+    snapped_points = snap_points_to_neuron(neuron_coords, point_cloud, neuron_tree)
     save_point_clouds(neuron_id, point_cloud, snapped_points, swc_path)
 
-    return snapped_points, f"snapped_synapse_point_cloud_{neuron_id}.json"
+    return snapped_points, f"snapped_synapse_point_cloud_{neuron_id}.json", neuron_tree
 
 
 def get_neuron_coordinates(neuron: TreeNeuron) -> np.ndarray:
@@ -94,8 +95,21 @@ def convert_to_point_cloud(filtered_df: pd.DataFrame) -> np.ndarray:
         return None
 
 
+def create_neuron_tree(neuron_coords: np.ndarray) -> KDTree:
+    """
+    Create a KDTree from the neuron coordinates.
+
+    Args:
+        neuron_coords (np.ndarray): Array of neuron coordinates.
+
+    Returns:
+        KDTree: KDTree object for the neuron coordinates.
+    """
+    return KDTree(neuron_coords)
+
+
 def snap_points_to_neuron(
-    neuron_coords: np.ndarray, point_cloud: np.ndarray
+    neuron_coords: np.ndarray, point_cloud: np.ndarray, neuron_tree: KDTree
 ) -> np.ndarray:
     """
     Snap the points in the point cloud to the nearest neuron coordinates.
@@ -103,11 +117,11 @@ def snap_points_to_neuron(
     Args:
         neuron_coords (np.ndarray): Array of neuron coordinates.
         point_cloud (np.ndarray): Array of point cloud coordinates.
+        neuron_tree (KDTree): KDTree object for the neuron coordinates.
 
     Returns:
         np.ndarray: Array of snapped points.
     """
-    neuron_tree = KDTree(neuron_coords)
     _, indices = neuron_tree.query(point_cloud)
     return neuron_coords[indices]
 

@@ -124,6 +124,11 @@ function loadSynapseCloud(jsonPath) {
                     return;
                 }
 
+                // apply a small random offset to each point to move them out of the skeleton
+                for (let i = 0; i < data.length; i++) {
+                    data[i] += Math.random() * 100 - 50;
+                }
+
                 // Convert the flat array into an array of THREE.Vector3
                 const points = [];
                 for (let i = 0; i < data.length; i += 3) {
@@ -250,11 +255,10 @@ function adjustCameraForNeuron(viewer) {
 
     const maxDim = Math.max(size.x, size.y, size.z);
     const fov = viewer.camera.fov * (Math.PI / 180);
-    const distance = (maxDim / 2) / Math.tan(fov / 2);
+    let distance = (maxDim / 2) / Math.tan(fov / 2);
 
         if (distance < 50) distance = 50; // Prevent too-close zoom
         if (distance > 1000000) distance = 1000000; // Prevent excessive zoom-out
-
 
     console.log("Adjusting camera. Distance:", distance, "Bounding box size:", size);
 

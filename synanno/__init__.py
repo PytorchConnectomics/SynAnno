@@ -85,6 +85,8 @@ def initialize_global_variables(app):
     app.columns = [
         "Page",
         "Image_Index",
+        "Section_Index",
+        "Section_Order_Index",
         "GT",
         "EM",
         "Label",
@@ -114,6 +116,8 @@ def initialize_global_variables(app):
     dtypes = {
         "Page": int,  # Example: 1
         "Image_Index": int,  # Example: 0
+        "Section_Index": int,  # Example: 0
+        "Section_Order_Index": int,  # Example: 0,
         "GT": int,  # Example: 1
         "EM": str,  # Example: 'Images/Syn/1'
         "Label": str,  # Example: 'Images/Img/1'

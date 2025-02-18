@@ -275,6 +275,8 @@ def ng_bbox_fn_save() -> Dict[str, object]:
     ### Note that all dimensions are saved in then scale of the target (segmentation) volume. ###
 
     item["Image_Index"] = len(current_app.df_metadata) + 1
+    item["Section_Index"] = -1
+    item["Section_Order_Index"] = -1
 
     # crop out and save the relevant gt and im
     idx_dir = create_dir(

@@ -15,6 +15,11 @@ from synanno.backend.neuron_processing.load_synapse_point_cloud import (
     load_synapse_point_cloud,
 )
 
+from synanno.backend.neuron_processing.partition_order import (
+    compute_section_order,
+    assign_section_order_index,
+)
+
 # load existing json
 import json
 
@@ -262,19 +267,60 @@ def upload_file() -> Template:
         if bucket_secret := request.files.get("secrets_file"):
             bucket_secret = json.loads(bucket_secret.read())
 
-        # TODO: The URL should be a url currently it is set to text, if providing a false path no error handling is in place
-        # retrieve the materialization url
-        materialization_url = request.form.get("materialization_url")
-
         # if the user chose the view view_style mode load the bbox specific subvolume and then process the data like in the local case
         if current_app.view_style == "neuron":
+            static_folder = os.path.join(
+                current_app.root_path, current_app.config["STATIC_FOLDER"]
+            )
+            swc_path = os.path.join(static_folder, "swc")
+
+            neuron_skeleton_swc_path = load_neuron_skeleton(
+                neuropil_url, current_app.selected_neuron_id, swc_path
+            )
+
+            neuron_pruned, pruned_navis_swc_file_path = navis_neuron(
+                neuron_skeleton_swc_path
+            )
+            sections, tree_traversal = compute_sections(pruned_navis_swc_file_path)
+
+            pruned_navis_swc_static_file_path = os.path.join(
+                os.path.join(current_app.config["STATIC_FOLDER"], "swc"),
+                os.path.basename(pruned_navis_swc_file_path),
+            )
+
+            # load the synapse point cloud and snap the points to the neuron
+            _, snapped_points_json_path, neuron_tree = load_synapse_point_cloud(
+                current_app.selected_neuron_id,
+                neuron_pruned,
+                current_app.synapse_data,
+                swc_path,
+            )
+
+            snapped_points_json_static_file_path = os.path.join(
+                os.path.join(current_app.config["STATIC_FOLDER"], "swc"),
+                os.path.basename(snapped_points_json_path),
+            )
+
+            # define the order in which to traverse the sections
+            section_order = compute_section_order(tree_traversal, sections)
+
+            # Assign section index and order index to each row in the materialization DataFrame
+            assign_section_order_index(
+                current_app.synapse_data, sections, section_order, neuron_tree
+            )
+
+            # sort synapse_data by the section_order_index
+            current_app.synapse_data.sort_values(
+                ["Section_Order_Index"], inplace=True, ascending=[True]
+            )
+
             try:
                 ip.neuron_centric_3d_data_processing(
                     current_app._get_current_object(),
                     source_url,
                     target_url,
                     neuropil_url,
-                    materialization_url,
+                    current_app.synapse_data,
                     bucket_secret_json=bucket_secret
                     if bucket_secret
                     else "~/.cloudvolume/secrets",
@@ -309,7 +355,7 @@ def upload_file() -> Template:
                 source_url,
                 target_url,
                 neuropil_url,
-                materialization_url,
+                current_app.synapse_data,
                 preid,
                 postid,
                 bucket_secret_json=bucket_secret
@@ -340,35 +386,6 @@ def upload_file() -> Template:
             neuropil="precomputed://" + neuropil_url,
         )
 
-    # if neuron mode load and partition neuron
-    swc_static_file_path = None
-    sections = None
-    if current_app.view_style == "neuron":
-        static_folder = os.path.join(
-            current_app.root_path, current_app.config["STATIC_FOLDER"]
-        )
-        swc_path = os.path.join(static_folder, "swc")
-        swc_file = load_neuron_skeleton(
-            neuropil_url, current_app.selected_neuron_id, swc_path
-        )
-        neuron_pruned, pruned_swc_file = navis_neuron(swc_file)
-        sections = compute_sections(pruned_swc_file)
-        swc_static_file_path = os.path.join(
-            os.path.join(current_app.config["STATIC_FOLDER"], "swc"),
-            os.path.basename(pruned_swc_file),
-        )
-        # load the synapse point cloud
-        _, snapped_points_json_path = load_synapse_point_cloud(
-            current_app.selected_neuron_id,
-            neuron_pruned,
-            current_app.synapse_data,
-            swc_path,
-        )
-        snapped_points_json_static_file_path = os.path.join(
-            os.path.join(current_app.config["STATIC_FOLDER"], "swc"),
-            os.path.basename(snapped_points_json_path),
-        )
-
     flash("Data ready!")
     return render_template(
         "opendata.html",
@@ -377,7 +394,9 @@ def upload_file() -> Template:
         view_style=current_app.view_style,
         mode=draw_or_annotate,
         neuronReady="true" if current_app.view_style == "neuron" else "false",
-        neuronPath=swc_static_file_path if current_app.view_style == "neuron" else None,
+        neuronPath=pruned_navis_swc_static_file_path
+        if current_app.view_style == "neuron"
+        else None,
         neuronSection=sections if current_app.view_style == "neuron" else None,
         synapseCloudPath=snapped_points_json_static_file_path
         if current_app.view_style == "neuron"

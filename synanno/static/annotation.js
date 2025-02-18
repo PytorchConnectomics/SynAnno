@@ -154,7 +154,7 @@ $(document).ready(function () {
         "src",
         staticBaseUrl + data_json.GT + "/" + data_json.Middle_Slice + ".png",
       );
-      $("#neuron-id").text(neuronID);
+      $("#neuron-id").text(parseInt(neuronID));
       $("#detailsModal").modal("show");
 
       // Open modal properly

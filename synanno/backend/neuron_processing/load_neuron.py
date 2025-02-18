@@ -91,7 +91,7 @@ def navis_neuron(swc_file: str) -> tuple[navis.TreeNeuron, str]:
     return neuron_pruned, pruned_swc_file
 
 
-def compute_sections(pruned_swc_file: str):
+def compute_sections(pruned_swc_file: str) -> tuple[list[list[int]], list[int]]:
     """
     Compute the sections of the pruned neuron.
 
@@ -99,7 +99,7 @@ def compute_sections(pruned_swc_file: str):
         pruned_swc_file: The path to the pruned SWC file.
 
     Returns:
-        The merged segments of the neuron.
+        The merged segments of the neuron and the tree traversal order.
     """
     # Reload the pruned neuron
     neuron_pruned = navis.read_swc(pruned_swc_file, write_meta=True)
@@ -156,4 +156,4 @@ def compute_sections(pruned_swc_file: str):
             f"{len((segments))} merged segments with a joint length of {sum([len(s) for s in segments])}."
         )
 
-    return segments
+    return segments, tree_traversal

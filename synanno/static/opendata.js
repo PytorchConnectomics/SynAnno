@@ -213,8 +213,8 @@ $(document).ready(function () {
       type: 'GET',
       url: '/get_neuron_id',
       success: function (response) {
-        // start puling the neuron ID every 250ms
-        checkSelectedNeuronIDHandle = setInterval(checkNeuronID, 250);
+        // start puling the neuron ID every 500ms
+        checkSelectedNeuronIDHandle = setInterval(checkNeuronID, 500);
       },
       error: function (error) {
         console.error('Error fetching initial the neuron ID:', error);
@@ -237,7 +237,7 @@ $(document).ready(function () {
         console.log('Selected Neuron ID:', selected_neuron_id);
         if (selected_neuron_id !== initialID) {
           console.log('Neuron ID changed:', selected_neuron_id);
-          $("#neuron-id-open").text(selected_neuron_id);
+          $("#neuron-id-open").text(parseInt(selected_neuron_id));
           initialID = selected_neuron_id
         }
       },

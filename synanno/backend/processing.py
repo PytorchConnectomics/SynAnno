@@ -203,17 +203,52 @@ def free_page() -> None:
                 print("Failed to delete %s. Reason: %s" % (img_dir_idx, e))
 
 
-def retrieve_instance_metadata(app: Flask, page: int = 0, mode: str = "annotate"):
+def retrieve_materialization_data() -> None:
+    if current_app.view_style == "synapse":
+        df = current_app.synapse_data
+        df = df[
+            [
+                "pre_pt_x",
+                "pre_pt_y",
+                "pre_pt_z",
+                "post_pt_x",
+                "post_pt_y",
+                "post_pt_z",
+                "x",
+                "y",
+                "z",
+            ]
+        ]
+    elif current_app.view_style == "neuron":
+        df = current_app.synapse_data
+        df = df[
+            [
+                "materialization_index",
+                "section_index",
+                "section_order_index",
+                "pre_pt_x",
+                "pre_pt_y",
+                "pre_pt_z",
+                "post_pt_x",
+                "post_pt_y",
+                "post_pt_z",
+                "x",
+                "y",
+                "z",
+            ]
+        ]
+    return df.to_dict("index")
+
+
+def retrieve_instance_metadata(page: int = 0, mode: str = "annotate"):
     """Visualize the synapse and EM images in 2D slices for each instance by cropping the bounding box of the instance.
         Processing each instance individually, retrieving them from the cloud volume and saving them to the local disk.
 
     Args:
-        app: an handle to the application context
         page (int): the current page number for which to compute the data.
     """
 
-    # create the handles to materialization data object
-    global materialization
+    materialization = retrieve_materialization_data()
 
     # retrieve the order of the coordinates (xyz, xzy, yxz, yzx, zxy, zyx)
     coordinate_order = list(current_app.coordinate_order.keys())
@@ -254,19 +289,22 @@ def retrieve_instance_metadata(app: Flask, page: int = 0, mode: str = "annotate"
             item = {
                 "Page": int(page),
                 "Image_Index": int(idx),
-                "Section_Index": bbox_dict["Section_Index"]
-                if "Section_Index" in bbox_dict
+                "materialization_index": bbox_dict[idx]["materialization_index"]
+                if "materialization_index" in bbox_dict[idx]
                 else -1,
-                "Section_Order_Index": bbox_dict["Section_Order_Index"]
-                if "Section_Order_Index" in bbox_dict
+                "section_index": bbox_dict[idx]["section_index"]
+                if "section_index" in bbox_dict[idx]
+                else -1,
+                "section_order_index": bbox_dict[idx]["section_order_index"]
+                if "section_order_index" in bbox_dict[idx]
                 else -1,
                 "GT": "/".join(syn_dir_instance.strip(".\\").split("/")[-3:]),
                 "EM": "/".join(img_dir_instance.strip(".\\").split("/")[-3:]),
                 "Label": "Correct",
                 "Annotated": "No",
-                "Neuron_ID": "None"
-                if current_app.selected_neuron_id is None
-                else current_app.selected_neuron_id,
+                "neuron_id": current_app.selected_neuron_id
+                if current_app.selected_neuron_id is not None
+                else "No Neuron Selected...",
                 "Error_Description": "None",
                 "X_Index": coordinate_order.index("x"),
                 "Y_Index": coordinate_order.index("y"),
@@ -333,7 +371,7 @@ def retrieve_instance_metadata(app: Flask, page: int = 0, mode: str = "annotate"
         futures = [
             executor.submit(
                 run_with_app_context,
-                app,
+                current_app._get_current_object(),
                 process_instance,
                 item,
                 create_dir(img_dir, str(item["Image_Index"])),
@@ -618,35 +656,18 @@ def apply_transparency(image: np.ndarray, color: tuple = None) -> Image:
     return Image.fromarray(np.dstack([r, g, b, a]), "RGBA")
 
 
-def neuron_centric_3d_data_processing(
-    app,
-    source_url: str,
-    target_url: str,
-    neuropil_url: str,
-    df: pd,
-    preid: int = None,
-    postid: int = None,
-    bucket_secret_json: json = "~/.cloudvolume/secrets",
-    mode: str = "annotate",
-    view_style: str = None,
-) -> Union[str, Tuple[np.ndarray, np.ndarray]]:
-    """Retrieve the bounding boxes and instances indexes from the table and call the render function to render the 3D data as 2D images.
+def load_cloud_volumes(
+    source_url: str, target_url: str, neuropil_url: str, bucket_secret_json: str
+) -> None:
+    """
+    Load the cloud volumes for source, target, and optionally neuropil.
 
     Args:
-        app (Flask): an handle to the application context
-        source_url (str): the url to the source cloud volume (EM).
-        target_url (str): the url to the target cloud volume (synapse).
-        neuropil_url (str): the url to the neuropil cloud volume (neuron segmentation).
-        df (pd): the materialization table as a pandas DataFrame.
-        preid (int): the id of the pre synaptic region.
-        postid (int): the id of the post synaptic region.
-        bucket_secret_json (json): the path to the JSON file.
-        patch_size (int): the size of the 2D patch.
+        source_url: URL to the source cloud volume (EM).
+        target_url: URL to the target cloud volume (synapse).
+        neuropil_url: URL to the neuropil cloud volume (neuron segmentation).
+        bucket_secret_json: Path to the JSON file with bucket secrets.
     """
-    # create the handles to the global materialization data object
-    global materialization
-
-    # load the cloud volumes
     current_app.source_cv = CloudVolume(
         source_url,
         secrets=bucket_secret_json,
@@ -663,7 +684,7 @@ def neuron_centric_3d_data_processing(
         progress=False,
         use_https=True,
     )
-    if neuropil_url is not None:
+    if neuropil_url:
         current_app.neuropil_cv = CloudVolume(
             neuropil_url,
             secrets=bucket_secret_json,
@@ -673,105 +694,79 @@ def neuron_centric_3d_data_processing(
             use_https=True,
         )
 
-    # assert that both the source and target volumes have the same dimensions
+
+def determine_volume_dimensions() -> tuple:
+    """
+    Determine the dimensions of the volume based on the source and target cloud volumes.
+
+    Returns:
+        Tuple representing the volume dimensions.
+    """
     if list(current_app.source_cv.volume_size) == list(
         current_app.target_cv.volume_size
     ):
-        vol_dim = tuple([s - 1 for s in current_app.source_cv.volume_size])
+        return tuple([s - 1 for s in current_app.source_cv.volume_size])
     else:
-        # print a warning if the dimensions do not match, stating that we use the smaller size of the two volumes
-        print(
-            f"The dimensions of the source ({current_app.source_cv.volume_size}) and target ({current_app.target_cv.volume_size}) volumes do not match. We use the smaller size of the two volumes."
+        logger.warning(
+            f"The dimensions of the source ({current_app.source_cv.volume_size}) and target ({current_app.target_cv.volume_size}) volumes do not match. Using the smaller size of the two volumes."
         )
-
-        # test which size is smaller
         if np.prod(current_app.source_cv.volume_size) < np.prod(
             current_app.target_cv.volume_size
         ):
-            vol_dim = tuple([s - 1 for s in current_app.source_cv.volume_size])
+            return tuple([s - 1 for s in current_app.source_cv.volume_size])
         else:
-            vol_dim = tuple([s - 1 for s in current_app.target_cv.volume_size])
+            return tuple([s - 1 for s in current_app.target_cv.volume_size])
 
+
+def calculate_number_of_pages(n_images: int, per_page: int) -> int:
+    """
+    Calculate the number of pages needed for the given number of images and images per page.
+
+    Args:
+        n_images: Total number of images.
+        per_page: Number of images per page.
+
+    Returns:
+        Number of pages.
+    """
+    number_pages = n_images // per_page
+    if n_images % per_page != 0:
+        number_pages += 1
+    return number_pages
+
+
+def neuron_centric_3d_data_processing(
+    source_url: str,
+    target_url: str,
+    neuropil_url: str,
+    bucket_secret_json: str = "~/.cloudvolume/secrets",
+    mode: str = "annotate",
+) -> Union[str, tuple[np.ndarray, np.ndarray]]:
+    """
+    Retrieve the bounding boxes and instance indexes from the table and call the render function to render the 3D data as 2D images.
+
+    Args:
+        source_url: URL to the source cloud volume (EM).
+        target_url: URL to the target cloud volume (synapse).
+        neuropil_url: URL to the neuropil cloud volume (neuron segmentation).
+        bucket_secret_json: Path to the JSON file with bucket secrets.
+        mode: Mode of operation, either "annotate" or "draw".
+
+    Returns:
+        Union[str, tuple[np.ndarray, np.ndarray]]: Result of the processing.
+    """
+
+    load_cloud_volumes(source_url, target_url, neuropil_url, bucket_secret_json)
+
+    vol_dim = determine_volume_dimensions()
     current_app.vol_dim = vol_dim
     current_app.vol_dim_scaled = tuple(
         int(a * b) for a, b in zip(vol_dim, current_app.scale.values())
     )
 
-    # TODO Move this to open data to not sort the whole table
-    if view_style == "neuron":
-        neuron_id = int(current_app.selected_neuron_id)  # Get the selected neuron ID
+    session["n_images"] = len(current_app.synapse_data.index)
+    session["n_pages"] = calculate_number_of_pages(
+        session["n_images"], session["per_page"]
+    )
 
-        if neuron_id is None:
-            print("No neuron selected.")
-            return
-
-        # filter the materialization DataFrame for matching pre/post neuron IDs
-        df = df.query("pre_neuron_id == @neuron_id or post_neuron_id == @neuron_id")
-
-        print(f"Found {len(df)} synapses connected to neuron ID {neuron_id}")
-
-        # select only the necessary columns, save the real materialization table index as column 'index'
-        df = df.reset_index()
-        df = df[
-            [
-                "index",
-                "Section_Index",
-                "Section_Order_Index",
-                "pre_pt_x",
-                "pre_pt_y",
-                "pre_pt_z",
-                "post_pt_x",
-                "post_pt_y",
-                "post_pt_z",
-                "x",
-                "y",
-                "z",
-            ]
-        ]
-
-    if view_style == "synapse":
-        # TODO: This is currently a dummy solution.
-        # query the dataframe for all instances with an index between preid and postid
-        if preid is None:
-            preid = 0
-
-        if postid is None:
-            postid = len(df.index)
-
-        # query the dataframe for all instances with an index between preid and postid
-        df = df.query("index >= @preid and index <= @postid")
-
-        # select only the necessary columns, save the real materialization table index as column 'index'
-        df = df.reset_index()
-        df = df[
-            [
-                "index",
-                "pre_pt_x",
-                "pre_pt_y",
-                "pre_pt_z",
-                "post_pt_x",
-                "post_pt_y",
-                "post_pt_z",
-                "x",
-                "y",
-                "z",
-            ]
-        ]
-
-    # Convert the DataFrame to a dictionary
-    bbox_dict = df.to_dict("index")
-
-    # save the materialization to the global variable
-    materialization = bbox_dict
-
-    # number of rows in df
-    session["n_images"] = len(bbox_dict.keys())
-
-    # calculate the number of pages needed for the instance count in the JSON
-    number_pages = session.get("n_images") // session.get("per_page")
-    if not (session.get("n_images") % session.get("per_page") == 0):
-        number_pages = number_pages + 1
-
-    session["n_pages"] = number_pages
-
-    retrieve_instance_metadata(app, page=0, mode=mode)
+    retrieve_instance_metadata(page=0, mode=mode)

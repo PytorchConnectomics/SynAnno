@@ -46,7 +46,7 @@ def annotation(page: int = 0) -> Template:
     ip.free_page()
 
     # load the data for the current page
-    ip.retrieve_instance_metadata(current_app._get_current_object(), page=page)
+    ip.retrieve_instance_metadata(page=page)
 
     # start the timer for the annotation process
     if current_app.proofread_time["start_grid"] is None:
@@ -65,6 +65,7 @@ def annotation(page: int = 0) -> Template:
         page=page,
         n_pages=session.get("n_pages"),
         grid_opacity=current_app.grid_opacity,
+        neuron_id=current_app.selected_neuron_id,
     )
 
 

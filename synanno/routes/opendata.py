@@ -18,6 +18,7 @@ from synanno.backend.neuron_processing.load_synapse_point_cloud import (
 from synanno.backend.neuron_processing.partition_order import (
     compute_section_order,
     assign_section_order_index,
+    neuron_section_lookup,
 )
 
 # load existing json
@@ -98,82 +99,50 @@ def open_data(task: str) -> Template:
     )
 
 
-@blueprint.route("/upload", methods=["GET", "POST"])
-def upload_file() -> Template:
-    """Upload the source, target, and json file specified by the user.
-    Rerender the open-data view, enabling the user to start the annotation or draw process.
+def create_upload_folder() -> None:
+    """Create the upload folder if it does not exist."""
+    upload_folder_path = os.path.join(
+        current_app.root_path, current_app.config["UPLOAD_FOLDER"]
+    )
+    if not os.path.exists(upload_folder_path):
+        os.mkdir(upload_folder_path)
 
-    Return:
-        Renders the open-data view, with additional buttons enabled
+
+def remove_old_json_file() -> None:
+    """Remove the old JSON file if it exists."""
+    json_file_path = os.path.join(
+        current_app.root_path,
+        current_app.config["UPLOAD_FOLDER"],
+        current_app.config["JSON"],
+    )
+    if os.path.isfile(json_file_path):
+        os.remove(json_file_path)
+
+
+def save_coordinate_order_and_crop_size(form: MultiDict) -> None:
+    """Save the coordinate order and crop size from the form to the session and current_app.
+
+    Args:
+        form: The form data from the request.
     """
-
-    # defines the downstream task, set by the open-data view | 'draw', 'annotate'
-    global draw_or_annotate
-
-    # set the number of cards in one page
-    # this variable is, e.g., used by the preprocess script and the set_data function
-    session["per_page"] = 24
-
-    # init the number of pages to 0
-    session["n_pages"] = 0
-
-    # retrieve the view_style mode from the form, either view or neuron
-    current_app.view_style = request.form.get("view_style")
-
-    # Check if files folder exists, if not create it
-    if not os.path.exists(
-        os.path.join(
-            ".",
-            os.path.join(current_app.root_path, current_app.config["UPLOAD_FOLDER"]),
-        )
-    ):
-        os.mkdir(
-            os.path.join(
-                ".",
-                os.path.join(
-                    current_app.root_path,
-                    current_app.config["UPLOAD_FOLDER"],
-                ),
-            )
-        )
-
-    # remove the old json file should it exist
-    if os.path.isfile(
-        os.path.join(
-            os.path.join(current_app.root_path, current_app.config["UPLOAD_FOLDER"]),
-            current_app.config["JSON"],
-        )
-    ):
-        os.remove(
-            os.path.join(
-                os.path.join(
-                    current_app.root_path,
-                    current_app.config["UPLOAD_FOLDER"],
-                ),
-                current_app.config["JSON"],
-            )
-        )
-
-    # retrieve the coordinate order and resolution from the form and save them in a dict, used by the NG instance and the processing functions
     current_app.coordinate_order = {
         c: (
-            request.form.get("res-source-" + str(i + 1)),
-            request.form.get("res-target-" + str(i + 1)),
+            form.get("res-source-" + str(i + 1)),
+            form.get("res-target-" + str(i + 1)),
         )
-        for i, c in enumerate(list(request.form.get("coordinates")))
+        for i, c in enumerate(list(form.get("coordinates")))
     }
 
     coordinate_order = list(current_app.coordinate_order.keys())
 
-    # retrieve the crop size from the form and save it to the session
     session["crop_size_x"] = int(
-        request.form.get("crop_size_c" + str(coordinate_order.index("x")))
+        form.get("crop_size_c" + str(coordinate_order.index("x")))
     )
     session["crop_size_y"] = int(
-        request.form.get("crop_size_c" + str(coordinate_order.index("y")))
+        form.get("crop_size_c" + str(coordinate_order.index("y")))
     )
     session["crop_size_z"] = int(
-        request.form.get("crop_size_c" + str(coordinate_order.index("z")))
+        form.get("crop_size_c" + str(coordinate_order.index("z")))
     )
 
     if (
@@ -182,44 +151,37 @@ def upload_file() -> Template:
         or session["crop_size_z"] == 0
     ):
         flash(
-            "The crop sizes have to be larger then zero, the current setting will result in a crash of the backend!",
+            "The crop sizes have to be larger than zero, the current setting will result in a crash of the backend!",
             "error",
         )
         raise ValueError(
             "A crop size was set to 0, this will result in a crash of the backend!"
         )
 
-    # retrieve the handle to the json should one have been provided
-    file_json = request.files["file_json"]
 
-    # if a json was provided write its data to the metadata dataframe
-    if file_json.filename:
-        # retrieve the columns from current_app.df_metadata
-        expected_columns = set(current_app.df_metadata.columns)
+def load_json_to_metadata(file_json) -> None:
+    """Load the provided JSON file into the metadata DataFrame.
 
-        current_app.df_metadata = pd.read_json(file_json, orient="records")
+    Args:
+        file_json: The JSON file provided by the user.
+    """
+    expected_columns = set(current_app.df_metadata.columns)
+    current_app.df_metadata = pd.read_json(file_json, orient="records")
+    actual_columns = set(current_app.df_metadata.columns)
 
-        # retrieve the columns from current_app.df_metadata
-        actual_columns = set(current_app.df_metadata.columns)
+    if expected_columns != actual_columns:
+        missing_columns = expected_columns - actual_columns
+        extra_columns = actual_columns - expected_columns
+        logger.info(f"Missing columns: {missing_columns}")
+        logger.info(f"Extra columns: {extra_columns}")
+        raise ValueError("The provided JSON does not match the expected format!")
 
-        # Check if the expected columns match the actual ones
-        if expected_columns == actual_columns:
-            logger.info("All columns are present.")
-            # sort the dataframe by page and image_index
-            current_app.df_metadata.sort_values(["Page", "Image_Index"], inplace=True)
-        else:
-            missing_columns = expected_columns - actual_columns
-            extra_columns = actual_columns - expected_columns
-            logger.info(f"Missing columns: {missing_columns}")
-            logger.info(f"Extra columns: {extra_columns}")
-            raise ValueError("The provided JSON does not match the expected format!")
+    current_app.df_metadata.sort_values(["Page", "Image_Index"], inplace=True)
+    ip.update_slice_number(current_app.df_metadata.to_dict("records"))
 
-        # update the slice number with the cropped size for z
-        ip.update_slice_number(
-            current_app.df_metadata.to_dict("records"), int(session["crop_size_z"])
-        )
 
-    # Convert coordinate resolution values to integers
+def set_coordinate_resolution() -> None:
+    """Set the coordinate resolution for the source and target cloud volumes."""
     current_app.coord_resolution_source = np.array(
         [int(res[0]) for res in current_app.coordinate_order.values()]
     ).astype(int)
@@ -227,7 +189,10 @@ def upload_file() -> Template:
         [int(res[1]) for res in current_app.coordinate_order.values()]
     ).astype(int)
 
-    # calculate the scale factor for the source and target cloud volume
+
+def calculate_scale_factor() -> None:
+    """Calculate the scale factor for the source and target cloud volumes."""
+    coordinate_order = list(current_app.coordinate_order.keys())
     current_app.scale = {
         c: v
         for c, v in zip(
@@ -243,128 +208,194 @@ def upload_file() -> Template:
         )
     }
 
-    # retrieve the urls for the source, target, and neuropil segmentation cloud volume buckets
+
+def validate_cloud_volume_urls(
+    source_url: str, target_url: str, neuropil_url: str
+) -> bool:
+    """Validate the provided cloud volume URLs.
+
+    Args:
+        source_url: URL to the source cloud volume.
+        target_url: URL to the target cloud volume.
+        neuropil_url: URL to the neuropil cloud volume.
+
+    Returns:
+        True if all URLs are valid, False otherwise.
+    """
+    return all(
+        any(bucket in url for bucket in current_app.config["CLOUD_VOLUME_BUCKETS"])
+        for url in [source_url, target_url, neuropil_url]
+    )
+
+
+def handle_neuron_view(
+    source_url: str, target_url: str, neuropil_url: str, bucket_secret: dict
+) -> tuple[str, list[list[int]], str]:
+    """Handle the neuron view processing.
+
+    Args:
+        source_url: URL to the source cloud volume.
+        target_url: URL to the target cloud volume.
+        neuropil_url: URL to the neuropil cloud volume.
+        bucket_secret: Bucket secret JSON.
+    """
+    try:
+        neuron_id = int(current_app.selected_neuron_id)
+        if neuron_id == 0:
+            raise ValueError("Only the segmented neurons can be selected.")
+    except (TypeError, ValueError) as e:
+        flash(
+            "Please select a valid neuron under 'Synapse Selection' by clicking 'Choose a Neuron'.",
+            "error",
+        )
+        logger.error(f"Error: {e}")
+        return render_template(
+            "opendata.html",
+            modenext="disabled",
+            mode=draw_or_annotate,
+            view_style="neuron",
+            neuronReady="false",
+        )
+
+    current_app.synapse_data[
+        "materialization_index"
+    ] = current_app.synapse_data.index.to_series()
+    current_app.synapse_data = current_app.synapse_data.query(
+        "pre_neuron_id == @neuron_id or post_neuron_id == @neuron_id"
+    )
+    current_app.synapse_data.reset_index(drop=True, inplace=True)
+
+    static_folder = os.path.join(
+        current_app.root_path, current_app.config["STATIC_FOLDER"]
+    )
+    swc_path = os.path.join(static_folder, "swc")
+
+    neuron_skeleton_swc_path = load_neuron_skeleton(
+        neuropil_url, current_app.selected_neuron_id, swc_path
+    )
+    neuron_pruned, pruned_navis_swc_file_path = navis_neuron(neuron_skeleton_swc_path)
+    sections, tree_traversal = compute_sections(pruned_navis_swc_file_path)
+
+    pruned_navis_swc_static_file_path = os.path.join(
+        os.path.join(current_app.config["STATIC_FOLDER"], "swc"),
+        os.path.basename(pruned_navis_swc_file_path),
+    )
+
+    _, snapped_points_json_path, neuron_tree = load_synapse_point_cloud(
+        current_app.selected_neuron_id,
+        neuron_pruned,
+        current_app.synapse_data,
+        swc_path,
+    )
+
+    snapped_points_json_static_file_path = os.path.join(
+        os.path.join(current_app.config["STATIC_FOLDER"], "swc"),
+        os.path.basename(snapped_points_json_path),
+    )
+
+    section_order = compute_section_order(tree_traversal, sections)
+    neuron_sec_lookup = neuron_section_lookup(sections, section_order)
+
+    assign_section_order_index(current_app.synapse_data, neuron_sec_lookup, neuron_tree)
+    current_app.synapse_data = current_app.synapse_data.sort_values(
+        ["section_order_index"], ascending=[True]
+    )
+    current_app.synapse_data.reset_index(drop=True, inplace=True)
+
+    ip.neuron_centric_3d_data_processing(
+        source_url,
+        target_url,
+        neuropil_url,
+        bucket_secret_json=bucket_secret if bucket_secret else "~/.cloudvolume/secrets",
+        mode=draw_or_annotate,
+    )
+    return (
+        pruned_navis_swc_static_file_path,
+        sections,
+        snapped_points_json_static_file_path,
+    )
+
+
+def handle_synapse_view(
+    source_url: str, target_url: str, neuropil_url: str, bucket_secret: dict
+) -> None:
+    """Handle the synapse view processing.
+
+    Args:
+        source_url: URL to the source cloud volume.
+        target_url: URL to the target cloud volume.
+        neuropil_url: URL to the neuropil cloud volume.
+        bucket_secret: Bucket secret JSON.
+    """
+    preid = int(request.form.get("preid")) if request.form.get("preid") else None
+    postid = int(request.form.get("postid")) if request.form.get("postid") else None
+
+    if preid is None:
+        preid = 0
+    if postid is None:
+        postid = len(current_app.synapse_data.index)
+
+    current_app.synapse_data[
+        "materialization_index"
+    ] = current_app.synapse_data.index.to_series()
+    current_app.synapse_data = current_app.synapse_data.query(
+        "index >= @preid and index <= @postid"
+    )
+    current_app.synapse_data.reset_index(drop=True, inplace=True)
+
+    ip.neuron_centric_3d_data_processing(
+        source_url,
+        target_url,
+        neuropil_url,
+        bucket_secret_json=bucket_secret if bucket_secret else "~/.cloudvolume/secrets",
+        mode=draw_or_annotate,
+    )
+
+
+@blueprint.route("/upload", methods=["GET", "POST"])
+def upload_file() -> Template:
+    """Upload the source, target, and json file specified by the user.
+    Rerender the open-data view, enabling the user to start the annotation or draw process.
+
+    Return:
+        Renders the open-data view, with additional buttons enabled
+    """
+    global draw_or_annotate
+
+    session["per_page"] = 24
+    session["n_pages"] = 0
+    current_app.view_style = request.form.get("view_style")
+
+    create_upload_folder()
+    remove_old_json_file()
+    save_coordinate_order_and_crop_size(request.form)
+
+    file_json = request.files["file_json"]
+    if file_json.filename:
+        load_json_to_metadata(file_json)
+
+    set_coordinate_resolution()
+    calculate_scale_factor()
+
     source_url = request.form.get("source_url")
     target_url = request.form.get("target_url")
     neuropil_url = request.form.get("neuropil_url")
 
-    # check if the provided urls are valid based on the cloud provider prefix
-    if (
-        any(
-            bucket in source_url
-            for bucket in current_app.config["CLOUD_VOLUME_BUCKETS"]
+    if validate_cloud_volume_urls(source_url, target_url, neuropil_url):
+        bucket_secret = (
+            json.loads(request.files.get("secrets_file").read())
+            if request.files.get("secrets_file")
+            else None
         )
-        and any(
-            bucket in target_url
-            for bucket in current_app.config["CLOUD_VOLUME_BUCKETS"]
-        )
-        and any(
-            bucket in neuropil_url
-            for bucket in current_app.config["CLOUD_VOLUME_BUCKETS"]
-        )
-    ):
-        # retrieve the bucket secret if the user provided one
-        if bucket_secret := request.files.get("secrets_file"):
-            bucket_secret = json.loads(bucket_secret.read())
 
-        # if the user chose the view view_style mode load the bbox specific subvolume and then process the data like in the local case
         if current_app.view_style == "neuron":
-            static_folder = os.path.join(
-                current_app.root_path, current_app.config["STATIC_FOLDER"]
-            )
-            swc_path = os.path.join(static_folder, "swc")
-
-            neuron_skeleton_swc_path = load_neuron_skeleton(
-                neuropil_url, current_app.selected_neuron_id, swc_path
-            )
-
-            neuron_pruned, pruned_navis_swc_file_path = navis_neuron(
-                neuron_skeleton_swc_path
-            )
-            sections, tree_traversal = compute_sections(pruned_navis_swc_file_path)
-
-            pruned_navis_swc_static_file_path = os.path.join(
-                os.path.join(current_app.config["STATIC_FOLDER"], "swc"),
-                os.path.basename(pruned_navis_swc_file_path),
-            )
-
-            # load the synapse point cloud and snap the points to the neuron
-            _, snapped_points_json_path, neuron_tree = load_synapse_point_cloud(
-                current_app.selected_neuron_id,
-                neuron_pruned,
-                current_app.synapse_data,
-                swc_path,
-            )
-
-            snapped_points_json_static_file_path = os.path.join(
-                os.path.join(current_app.config["STATIC_FOLDER"], "swc"),
-                os.path.basename(snapped_points_json_path),
-            )
-
-            # define the order in which to traverse the sections
-            section_order = compute_section_order(tree_traversal, sections)
-
-            # Assign section index and order index to each row in the materialization DataFrame
-            assign_section_order_index(
-                current_app.synapse_data, sections, section_order, neuron_tree
-            )
-
-            # sort synapse_data by the section_order_index
-            current_app.synapse_data.sort_values(
-                ["Section_Order_Index"], inplace=True, ascending=[True]
-            )
-
-            try:
-                ip.neuron_centric_3d_data_processing(
-                    current_app._get_current_object(),
-                    source_url,
-                    target_url,
-                    neuropil_url,
-                    current_app.synapse_data,
-                    bucket_secret_json=bucket_secret
-                    if bucket_secret
-                    else "~/.cloudvolume/secrets",
-                    mode=draw_or_annotate,
-                    view_style=current_app.view_style,
-                )
-            except Exception as e:
-                flash(
-                    "Please select a neuron under 'Volume Parameters'",
-                    "error",
-                )
-                logging.error(f"Error: {e}")
-                return render_template(
-                    "opendata.html",
-                    modenext="disabled",
-                    mode=draw_or_annotate,
-                    view_style="neuron",
-                    neuronReady="false",
-                )
-        # if the user chose the neuron view_style mode, retrieve a list of all the synapses of the provided neuron ids and then process the data on synapse level
+            (
+                pruned_navis_swc_static_file_path,
+                sections,
+                snapped_points_json_static_file_path,
+            ) = handle_neuron_view(source_url, target_url, neuropil_url, bucket_secret)
         elif current_app.view_style == "synapse":
-            # if the user chose the neuron view_style mode retrieve the neuron ids
-            preid = (
-                int(request.form.get("preid")) if request.form.get("preid") else None
-            )
-            postid = (
-                int(request.form.get("postid")) if request.form.get("postid") else None
-            )
-
-            ip.neuron_centric_3d_data_processing(
-                current_app._get_current_object(),
-                source_url,
-                target_url,
-                neuropil_url,
-                current_app.synapse_data,
-                preid,
-                postid,
-                bucket_secret_json=bucket_secret
-                if bucket_secret
-                else "~/.cloudvolume/secrets",
-                mode=draw_or_annotate,
-                view_style=current_app.view_style,
-            )
-
+            handle_synapse_view(source_url, target_url, neuropil_url, bucket_secret)
     else:
         flash(
             "Please provide at least the paths to valid source and target cloud volume buckets!",
@@ -377,7 +408,6 @@ def upload_file() -> Template:
             neuronReady="false",
         )
 
-    # if the NG version number is None setup a new NG viewer
     if current_app.ng_version is None:
         ng_util.setup_ng(
             app=current_app._get_current_object(),
@@ -441,6 +471,7 @@ def set_data(task: str = "annotate") -> Template:
             page=page,
             n_pages=session.get("n_pages"),
             grid_opacity=current_app.grid_opacity,
+            neuron_id=current_app.selected_neuron_id,
         )
 
 

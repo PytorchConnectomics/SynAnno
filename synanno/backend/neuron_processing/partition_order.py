@@ -3,6 +3,55 @@ import pandas as pd
 from scipy.spatial import KDTree
 
 
+def compute_section_positions(
+    tree_traversal: list[int], sections: list[list[int]]
+) -> dict[int, list[int]]:
+    """
+    Assigns each node in a section its position in the tree traversal order.
+
+    Args:
+        tree_traversal: List of nodes in tree traversal order.
+        sections: List of lists, where each inner list represents a section of nodes.
+
+    Returns:
+        Dictionary where keys are section indices and values are lists of positions in the tree traversal order.
+    """
+    return {
+        section_idx: [tree_traversal.index(node) for node in section]
+        for section_idx, section in enumerate(sections)
+    }
+
+
+def compute_mean_positions(section_positions: dict[int, list[int]]) -> dict[int, float]:
+    """
+    Computes the mean traversal index for each section.
+
+    Args:
+        section_positions: Dictionary where keys are section indices and values are lists of positions in the tree traversal order.
+
+    Returns:
+        Dictionary where keys are section indices and values are mean traversal indices.
+    """
+    return {sec: np.mean(pos_list) for sec, pos_list in section_positions.items()}
+
+
+def sort_sections_by_mean_position(
+    section_mean_positions: dict[int, float]
+) -> list[int]:
+    """
+    Sorts sections by their mean traversal index.
+
+    Args:
+        section_mean_positions: Dictionary where keys are section indices and values are mean traversal indices.
+
+    Returns:
+        List of section indices sorted by mean traversal index.
+    """
+    return sorted(
+        section_mean_positions.keys(), key=lambda sec: section_mean_positions[sec]
+    )
+
+
 def compute_section_order(
     tree_traversal: list[int], sections: list[list[int]]
 ) -> dict[int, int]:
@@ -17,36 +66,16 @@ def compute_section_order(
     Returns:
         Dictionary where keys are traversal order (1-based) and values are section indices.
     """
-    # Step 1: Compute section positions in one pass
-    section_positions = {
-        section_idx: [
-            tree_traversal.index(node) for node in section if node in tree_traversal
-        ]
-        for section_idx, section in enumerate(sections)
-    }
-
-    # Step 2: Compute mean traversal index for each section
-    section_mean_positions = {
-        sec: np.mean(pos_list)
-        for sec, pos_list in section_positions.items()
-        if pos_list
-    }
-
-    # Step 3: Sort sections by mean traversal index and return an ordered dict
-    sorted_sections = sorted(
-        section_mean_positions.keys(), key=lambda sec: section_mean_positions[sec]
-    )
-
-    # Step 4: Construct output dictionary with 1-based ranking
+    section_positions = compute_section_positions(tree_traversal, sections)
+    section_mean_positions = compute_mean_positions(section_positions)
+    sorted_sections = sort_sections_by_mean_position(section_mean_positions)
     section_order = {rank: sec for rank, sec in enumerate(sorted_sections)}
-
     return section_order
 
 
 def assign_section_order_index(
     materialization_pd: pd.DataFrame,
-    sections: list[list[int]],
-    section_order: dict[int, int],
+    neuron_section_lookup: dict[int, tuple[int, int]],
     neuron_tree: KDTree,
 ) -> None:
     """
@@ -54,23 +83,24 @@ def assign_section_order_index(
 
     Args:
         materialization_pd: DataFrame containing synapse information.
-        sections: List of lists, where each inner list represents a section of nodes.
-        section_order: Dictionary where keys are traversal order (1-based) and values are section indices.
+        neuron_section_lookup: Dictionary where keys are neuron node IDs and values are tuples of section index and section order index.
         neuron_tree: KDTree of neuron coordinates.
     """
+
     for index, synapse in materialization_pd.iterrows():
-        # Retrieve the x, y, z coordinates of the synapse
         synapse_coords = np.array([synapse["x"], synapse["y"], synapse["z"]])
-
-        # Cluster the synapse coordinate using the neuron_tree
         _, node_id = neuron_tree.query(synapse_coords)
+        section_idx, order_idx = neuron_section_lookup[node_id]
+        materialization_pd.at[index, "section_index"] = int(section_idx)
+        materialization_pd.at[index, "section_order_index"] = int(order_idx)
 
-        # Derive a mapping from neuron node to section index
-        section_idx, order_idx = neuron_section_lookup(sections, section_order)[node_id]
-
-        # Update the materialization DataFrame with the section index and order index
-        materialization_pd.at[index, "Section_Index"] = section_idx
-        materialization_pd.at[index, "Section_Order_Index"] = order_idx
+    # Convert to Python int for later JSON serialization
+    materialization_pd["section_index"] = materialization_pd["section_index"].astype(
+        int
+    )
+    materialization_pd["section_order_index"] = materialization_pd[
+        "section_order_index"
+    ].astype(int)
 
 
 def neuron_section_lookup(
@@ -86,11 +116,9 @@ def neuron_section_lookup(
     Returns:
         Dictionary where keys are neuron node IDs and values are tuples of section index and section order index.
     """
-    neuron_section_lookup = {}
-
-    # Create node to section mapping
+    lookup = {}
     for i, section in enumerate(sections):
         for node_id in section:
-            neuron_section_lookup[node_id] = (i, section_order[i])
+            lookup[node_id] = (i, section_order[i])
 
-    return neuron_section_lookup
+    return lookup

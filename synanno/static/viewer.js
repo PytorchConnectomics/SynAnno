@@ -1,28 +1,34 @@
 import SharkViewer, { swcParser, Color } from "./SharkViewer/shark_viewer.js";
 
 window.onload = () => {
+    const neuronReady = $("script[src*='viewer.js']").data("neuron-ready");
     const neuronPath = $("script[src*='viewer.js']").data("neuron-path");
     const neuronSection = $("script[src*='viewer.js']").data("neuron-section");
     const synapseCloudPath = $("script[src*='viewer.js']").data("synapse-cloud-path");
 
-    try {
-        initializeViewer();
+    if (neuronReady) {
+        console.log("Neuron data is ready. Initializing viewer...");
+        try {
+            initializeViewer();
 
-        if (neuronPath) {
-            loadSwcFile(neuronPath, neuronSection);
-        } else {
-            console.error("No neuron path provided.");
+            if (neuronPath) {
+                loadSwcFile(neuronPath, neuronSection);
+            } else {
+                console.error("No neuron path provided.");
+            }
+
+            if (synapseCloudPath) {
+                loadSynapseCloud(synapseCloudPath);
+            } else {
+                console.error("No synapse cloud path provided.");
+            }
+
+            setupWindowResizeHandler();
+        } catch (error) {
+            console.error("Error initializing viewer:", error);
         }
-
-        if (synapseCloudPath) {
-            loadSynapseCloud(synapseCloudPath);
-        } else {
-            console.error("No synapse cloud path provided.");
-        }
-
-        setupWindowResizeHandler();
-    } catch (error) {
-        console.error("Error initializing viewer:", error);
+    }else{
+        console.log("Neuron data is not available. Viewer will not be initialized.");
     }
 };
 

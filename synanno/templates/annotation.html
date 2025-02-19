@@ -81,7 +81,6 @@
           class="stretched-link image-card-btn"
           page="{{page}}"
           data_id="{{ image.Image_Index }}"
-          neuronID="{{ image.Neuron_ID }}"
           label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}"
         ></a>
       </div>
@@ -149,5 +148,5 @@
 {% include "annotation_neuro.html" %}
 
 <!-- add js file to chang the card colors -->
-<script type="Module" src="{{ url_for('static', filename='annotation.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='annotation.js') }}" data-neuron-id="{{ neuron_id }}"></script>
 {% endblock %}

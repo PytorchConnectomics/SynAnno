@@ -2,6 +2,8 @@ import {enableNeuropilLayer, disableNeuropilLayer} from "./utils/ng_util.js";
 
 $(document).ready(function () {
 
+  const neuronID = $("script[src*='annotation.js']").data("neuron-id");
+
   // show progress bar when scrolling pages
   $(".nav-anno").click(function () {
     $("#loading-bar").css('display', 'flex');
@@ -106,15 +108,14 @@ $(document).ready(function () {
     // the instance label
     var label = $(this).attr("label");
 
-    // the neuron ID
-    var neuronID = $(this).attr("neuronID");
-
     // we are currently in the annotation mode
     var mode = "annotate";
 
     // we require the information about the whole instance
     var load = "full";
 
+    $("#neuron-id").text(neuronID);
+=
     // retrieve the info from the backend
     let req_data = $.ajax({
       url: "/get_instance",
@@ -154,7 +155,7 @@ $(document).ready(function () {
         "src",
         staticBaseUrl + data_json.GT + "/" + data_json.Middle_Slice + ".png",
       );
-      $("#neuron-id").text(parseInt(neuronID));
+
       $("#detailsModal").modal("show");
 
       // Open modal properly

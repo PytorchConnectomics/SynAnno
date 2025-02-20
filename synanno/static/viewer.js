@@ -1,4 +1,5 @@
-import SharkViewer, { swcParser, Color } from "./SharkViewer/shark_viewer.js";
+import SharkViewer, { swcParser, Color, NODE_PARTICLE_IMAGE } from "./SharkViewer/shark_viewer.js";
+import SynapseShader from "./shaders/SynapseShader.js";
 
 window.onload = () => {
     const neuronReady = $("script[src*='viewer.js']").data("neuron-ready");
@@ -18,16 +19,24 @@ window.onload = () => {
             }
 
             if (synapseCloudPath) {
-                loadSynapseCloud(synapseCloudPath);
+                setTimeout(() => loadSynapseCloud(synapseCloudPath), 1500);
             } else {
                 console.error("No synapse cloud path provided.");
             }
 
+            // waite 10 seconds and then color the first 200 synapses green
+            setTimeout(() => {
+                for (let i = 0; i < 800; i++) {
+                    updateSynapse(i, null, new THREE.Color(0x00ff00), 1000);
+                }
+            }, 10000);
+
             setupWindowResizeHandler();
+
         } catch (error) {
             console.error("Error initializing viewer:", error);
         }
-    }else{
+    } else {
         console.log("Neuron data is not available. Viewer will not be initialized.");
     }
 };
@@ -112,62 +121,96 @@ function loadSwcFile(swcPath, neuronSection) {
 }
 
 /**
- * Loads and processes a synapse cloud JSON file from the given path.
- *
- * @param {string} jsonPath - The path to the JSON file.
+ * Loads a synapse cloud JSON file and applies a custom shader.
  */
 function loadSynapseCloud(jsonPath) {
     fetch(jsonPath)
         .then(response => response.json())
         .then(data => {
             try {
-                // length of data
-                console.log("Data length:", data.length);
+                console.log("Synapse Cloud Data length:", data.length);
 
-                // Ensure it's in Nx3 format
-                if (data.length % 3 !== 0) {
-                    console.error("JSON data length is not a multiple of 3. Data might be corrupted.");
+                if (!Array.isArray(data) || data.length % 3 !== 0) {
+                    console.error("JSON data is not an Array or length is not a multiple of 3.");
                     return;
                 }
 
-                // apply a small random offset to each point to move them out of the skeleton
-                for (let i = 0; i < data.length; i++) {
-                    data[i] += Math.random() * 100 - 50;
-                }
-
-                // Convert the flat array into an array of THREE.Vector3
+                // Convert data to THREE.Vector3 points
                 const points = [];
                 for (let i = 0; i < data.length; i += 3) {
                     points.push(new THREE.Vector3(data[i], data[i + 1], data[i + 2]));
                 }
 
-                // Create a small sphere geometry for each point
-                const sphereGeometry = new THREE.SphereGeometry(500, 8, 8); // Small spheres
-                const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.6 });
+                // Create buffer attributes for position, color, and size
+                const positions = new Float32Array(points.length * 3);
+                const colors = new Float32Array(points.length * 3);
+                const sizes = new Float32Array(points.length);
 
-                const mesh = new THREE.InstancedMesh(sphereGeometry, sphereMaterial, points.length);
-                const dummy = new THREE.Object3D();
+                for (let i = 0; i < points.length; i++) {
+                    // Store positions, adding a random offset to each point to move them out of the skeleton
+                    positions[i * 3] = points[i].x + Math.random() * 50;
+                    positions[i * 3 + 1] = points[i].y + Math.random() * 50;
+                    positions[i * 3 + 2] = points[i].z + Math.random() * 50;
 
-                points.forEach((point, i) => {
-                    dummy.position.set(point.x, point.y, point.z);
-                    dummy.updateMatrix();
-                    mesh.setMatrixAt(i, dummy.matrix);
+                    // Assign random colors for better visualization
+                    // initially color all synapses yellow
+                    const color = new THREE.Color(0xffff00);
+                    colors[i * 3] = color.r;
+                    colors[i * 3 + 1] = color.g;
+                    colors[i * 3 + 2] = color.b;
+
+                    sizes[i] = 500;
+                }
+
+                // Create geometry and add attributes
+                const geometry = new THREE.BufferGeometry();
+                geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+                geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+                geometry.setAttribute("radius", new THREE.BufferAttribute(sizes, 1));
+
+                // Use SharkViewer's Sphere Texture
+                const image = document.createElement("img");
+                const sphereTexture = new THREE.Texture(image);
+
+                image.onload = function onload() {
+                    sphereTexture.needsUpdate = true;
+                    console.log("Sphere texture loaded and updated.");
+                };
+
+                image.src = NODE_PARTICLE_IMAGE; // Load texture from SharkViewer
+
+                // Set the sphere texture uniform
+                SynapseShader.uniforms["sphereTexture"].value = sphereTexture;
+
+                // Define shader material using imposter spheres
+                const material = new THREE.ShaderMaterial({
+                    uniforms: SynapseShader.uniforms,
+                    vertexShader: SynapseShader.vertexShader,
+                    fragmentShader: SynapseShader.fragmentShader,
+                    transparent: true,
+                    vertexColors: true,
                 });
 
-                mesh.instanceMatrix.needsUpdate = true;
-                mesh.name = "synapse-cloud"; // Name the mesh for debugging
-                s.scene.add(mesh);
+                // Create points and add to the scene
+                const pointsMesh = new THREE.Points(geometry, material);
+                pointsMesh.name = "synapse-cloud";
 
-                console.log("Point cloud successfully added as instanced spheres.");
+                console.log("Adding particle system to scene.");
+                s.scene.add(pointsMesh);
+                s.scene.needsUpdate = true;
+                console.log("Particle system added:", pointsMesh);
+
+                // Adjust camera to ensure visibility
+                adjustCameraForNeuron(s);
+
                 s.render();
+                console.log("Synapse cloud successfully added.");
             } catch (error) {
-                console.error("Error parsing JSON file:", error);
-                alert("An error occurred while processing the JSON file.");
+                console.error("Error processing synapse cloud:", error);
             }
         })
         .catch(error => {
-            console.error("Error fetching JSON file:", error);
-            alert("An error occurred while fetching the JSON file.");
+            console.error("Error fetching synapse cloud data:", error);
         });
 }
 
@@ -243,6 +286,48 @@ function updateNodeAndEdgeColors(viewer, nodes_array, edge_array, sectionColors)
     viewer.render();
 }
 
+function updateSynapse(index, newPosition = null, newColor = null, newSize = null) {
+    const pointsMesh = s.scene.getObjectByName("synapse-cloud");
+    if (!pointsMesh) {
+        console.error("Synapse cloud not found in the scene.");
+        return;
+    }
+
+    const geometry = pointsMesh.geometry;
+    const positions = geometry.getAttribute("position");
+    const colors = geometry.getAttribute("color");
+    const sizes = geometry.getAttribute("radius");
+
+    if (index < 0 || index >= positions.count) {
+        console.error("Invalid synapse index.");
+        return;
+    }
+
+    // Update position if provided
+    if (newPosition) {
+        positions.setXYZ(index, newPosition.x, newPosition.y, newPosition.z);
+        // Mark attribute as needing an update
+        positions.needsUpdate = true;
+    }
+
+    // Update color if provided
+    if (newColor) {
+        colors.setXYZ(index, newColor.r, newColor.g, newColor.b);
+        // Mark attribute as needing an update
+        colors.needsUpdate = true;
+    }
+
+    // Update size if provided
+    if (newSize !== null) {
+        sizes.setX(index, newSize);
+        // Mark attribute as needing an update
+        sizes.needsUpdate = true;
+    }
+
+    s.render();
+    console.log(`Synapse at index ${index} updated.`);
+}
+
 /**
  * Adjusts the camera position and settings to focus on a neuron object in the scene.
  *
@@ -263,8 +348,8 @@ function adjustCameraForNeuron(viewer) {
     const fov = viewer.camera.fov * (Math.PI / 180);
     let distance = (maxDim / 2) / Math.tan(fov / 2);
 
-        if (distance < 50) distance = 50; // Prevent too-close zoom
-        if (distance > 1000000) distance = 1000000; // Prevent excessive zoom-out
+    if (distance < 50) distance = 50; // Prevent too-close zoom
+    if (distance > 1000000) distance = 1000000; // Prevent excessive zoom-out
 
     console.log("Adjusting camera. Distance:", distance, "Bounding box size:", size);
 

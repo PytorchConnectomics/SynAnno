@@ -454,100 +454,20 @@ def update_slice_number(data: dict) -> None:
             ]
 
 
-def process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) -> None:
-    """Process the synapse and EM images for a single instance.
+def adjust_synapse_points(
+    item: dict, crop_box_dict: dict, img_padding: list, coord_order: list
+) -> tuple[int, int, int, int, int, int]:
+    """Adjust the pre and post synapse points to the cropped out section.
 
     Args:
-        item (dict): the dictionary containing the metadata of the current instance.
-        img_dir_instance (str): the path to the directory for saving the EM images.
-        syn_dir_instance (str): the path to the directory for saving the synapse images.
+        item: Dictionary containing the metadata of the current instance.
+        crop_box_dict: Dictionary containing the bounding box coordinates.
+        img_padding: List containing the padding values.
+        coord_order: List containing the coordinate order.
 
+    Returns:
+        Tuple containing the adjusted pre and post synapse points.
     """
-
-    crop_bbox = item["Adjusted_Bbox"]
-    img_padding = item["Padding"]
-
-    # retrieve the coordinate order of the cloud volume | xyz, xzy, yxz, yzx, zxy, zyx
-    coord_order = list(current_app.coordinate_order.keys())
-
-    # map the bounding box coordinates to a dictionary using the provided coordinate order
-    crop_box_dict = {
-        coord_order[0] + "1": crop_bbox[0],
-        coord_order[0] + "2": crop_bbox[1],
-        coord_order[1] + "1": crop_bbox[2],
-        coord_order[1] + "2": crop_bbox[3],
-        coord_order[2] + "1": crop_bbox[4],
-        coord_order[2] + "2": crop_bbox[5],
-    }
-
-    # create the bounding box for the current synapse based on the order of the coordinates
-    bound_target = Bbox(
-        [crop_box_dict[coord_order[i] + "1"] for i in range(3)],
-        [crop_box_dict[coord_order[i] + "2"] for i in range(3)],
-    )
-
-    # scale the bounding box to the resolution of the source cloud volume
-    bound_source = Bbox(
-        (bound_target.minpt * list(current_app.scale.values())).astype(int),
-        (bound_target.maxpt * list(current_app.scale.values())).astype(int),
-    )
-
-    # retrieve the source and target images from the cloud volume
-    cropped_img = current_app.source_cv.download(
-        bound_source,
-        coord_resolution=current_app.coord_resolution_source,
-        mip=0,
-        parallel=True,
-    )
-    cropped_gt = current_app.target_cv.download(
-        bound_target,
-        coord_resolution=current_app.coord_resolution_target,
-        mip=0,
-        parallel=True,
-    )
-
-    # remove the singleton dimension, take care as the z dimension might be singleton
-    cropped_img = cropped_img.squeeze(axis=3)
-    cropped_gt = cropped_gt.squeeze(axis=3)
-
-    # adjust the scale of the label volume
-    if sum(cropped_img.shape) > sum(cropped_gt.shape):  # up-sampling
-        cropped_gt = resize(
-            cropped_gt,
-            cropped_img.shape,
-            mode="constant",
-            preserve_range=True,
-            anti_aliasing=False,
-        )
-        cropped_gt = (cropped_gt > 0.5).astype(int)  # convert to binary mask
-    elif sum(cropped_img.shape) < sum(cropped_gt.shape):  # down-sampling
-        cropped_gt = resize(
-            cropped_gt,
-            cropped_img.shape,
-            mode="constant",
-            preserve_range=True,
-            anti_aliasing=True,
-        )
-        cropped_gt = (cropped_gt > 0.5).astype(int)  # convert to binary mask
-
-    # process the 3D gt segmentation by removing small objects and converting it to instance-level segmentation.
-    cropped_seg = process_syn(cropped_gt)
-
-    # pad the images and synapse segmentation to fit the crop size (sz)
-    cropped_img_pad = np.pad(
-        cropped_img, img_padding, mode="constant", constant_values=148
-    )
-    cropped_seg_pad = np.pad(
-        cropped_seg, img_padding, mode="constant", constant_values=0
-    )
-
-    assert (
-        cropped_img_pad.shape == cropped_seg_pad.shape
-    ), "The shape of the source and target images do not match."
-
-    ### mark the position of the post and pre synapses using pre_pt and post_pt
-
-    # adjust pre_pt and post_pt to cropped out section
     pre_pt_x = (
         item["pre_pt_x"] - crop_box_dict["x1"] + img_padding[coord_order.index("x")][0]
     )
@@ -568,7 +488,30 @@ def process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) -
         item["post_pt_z"] - crop_box_dict["z1"] + img_padding[coord_order.index("z")][0]
     )
 
-    # scale the the points to the resolution of the source cloud volume
+    return pre_pt_x, pre_pt_y, pre_pt_z, post_pt_x, post_pt_y, post_pt_z
+
+
+def scale_synapse_points(
+    pre_pt_x: int,
+    pre_pt_y: int,
+    pre_pt_z: int,
+    post_pt_x: int,
+    post_pt_y: int,
+    post_pt_z: int,
+) -> tuple[int, int, int, int, int, int]:
+    """Scale the pre and post synapse points to the resolution of the source cloud volume.
+
+    Args:
+        pre_pt_x: X coordinate of the pre synapse point.
+        pre_pt_y: Y coordinate of the pre synapse point.
+        pre_pt_z: Z coordinate of the pre synapse point.
+        post_pt_x: X coordinate of the post synapse point.
+        post_pt_y: Y coordinate of the post synapse point.
+        post_pt_z: Z coordinate of the post synapse point.
+
+    Returns:
+        Tuple containing the scaled pre and post synapse points.
+    """
     pre_pt_x = int(pre_pt_x * current_app.scale["x"])
     pre_pt_y = int(pre_pt_y * current_app.scale["y"])
     pre_pt_z = int(pre_pt_z * current_app.scale["z"])
@@ -577,11 +520,144 @@ def process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) -
     post_pt_y = int(post_pt_y * current_app.scale["y"])
     post_pt_z = int(post_pt_z * current_app.scale["z"])
 
-    # create an RGB mask of the synapse from the single channel binary mask
-    # colors all non zero values turquoise
-    vis_label = syn2rgb(cropped_seg_pad)  # coord_0, coord_1, coord_2, c, e.g., x,y,z,3
+    return pre_pt_x, pre_pt_y, pre_pt_z, post_pt_x, post_pt_y, post_pt_z
 
-    # draw a bright circle at the position of the pre and post synapse
+
+def save_slices(
+    cropped_img_pad: np.ndarray,
+    vis_label: np.ndarray,
+    img_dir_instance: str,
+    syn_dir_instance: str,
+    item: dict,
+    coord_order: list,
+) -> None:
+    """Save the slices of the cropped image and synapse segmentation.
+
+    Args:
+        cropped_img_pad: Padded cropped image.
+        vis_label: Visual label of the synapse segmentation.
+        img_dir_instance: Path to the directory for saving the EM images.
+        syn_dir_instance: Path to the directory for saving the synapse images.
+        item: Dictionary containing the metadata of the current instance.
+        coord_order: List containing the coordinate order.
+    """
+    slice_axis = coord_order.index("z")
+
+    for s in range(cropped_img_pad.shape[slice_axis]):
+        img_name = str(item["Adjusted_Bbox"][slice_axis * 2] + s) + ".png"
+
+        slicing_img = [s if idx == slice_axis else slice(None) for idx in range(3)]
+        slicing_seg = [s if idx == slice_axis else slice(None) for idx in range(4)]
+
+        img_c = Image.fromarray(adjust_image_range(cropped_img_pad[tuple(slicing_img)]))
+        img_c.save(os.path.join(img_dir_instance, img_name), "PNG")
+
+        lab_c = apply_transparency(vis_label[tuple(slicing_seg)])
+        lab_c.save(os.path.join(syn_dir_instance, img_name), "PNG")
+
+
+def process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) -> None:
+    """Process the synapse and EM images for a single instance.
+
+    Args:
+        item: Dictionary containing the metadata of the current instance.
+        img_dir_instance: Path to the directory for saving the EM images.
+        syn_dir_instance: Path to the directory for saving the synapse images.
+    """
+    crop_bbox = item["Adjusted_Bbox"]
+    img_padding = item["Padding"]
+
+    coord_order = list(current_app.coordinate_order.keys())
+
+    crop_box_dict = {
+        coord_order[0] + "1": crop_bbox[0],
+        coord_order[0] + "2": crop_bbox[1],
+        coord_order[1] + "1": crop_bbox[2],
+        coord_order[1] + "2": crop_bbox[3],
+        coord_order[2] + "1": crop_bbox[4],
+        coord_order[2] + "2": crop_bbox[5],
+    }
+
+    bound_target = Bbox(
+        [crop_box_dict[coord_order[i] + "1"] for i in range(3)],
+        [crop_box_dict[coord_order[i] + "2"] for i in range(3)],
+    )
+
+    bound_source = Bbox(
+        (bound_target.minpt * list(current_app.scale.values())).astype(int),
+        (bound_target.maxpt * list(current_app.scale.values())).astype(int),
+    )
+
+    cropped_img = current_app.source_cv.download(
+        bound_source,
+        coord_resolution=current_app.coord_resolution_source,
+        mip=0,
+        parallel=True,
+    )
+    cropped_gt = current_app.target_cv.download(
+        bound_target,
+        coord_resolution=current_app.coord_resolution_target,
+        mip=0,
+        parallel=True,
+    )
+
+    cropped_img = cropped_img.squeeze(axis=3)
+    cropped_gt = cropped_gt.squeeze(axis=3)
+
+    if sum(cropped_img.shape) > sum(cropped_gt.shape):
+        cropped_gt = resize(
+            cropped_gt,
+            cropped_img.shape,
+            mode="constant",
+            preserve_range=True,
+            anti_aliasing=False,
+        )
+        cropped_gt = (cropped_gt > 0.5).astype(int)
+    elif sum(cropped_img.shape) < sum(cropped_gt.shape):
+        cropped_gt = resize(
+            cropped_gt,
+            cropped_img.shape,
+            mode="constant",
+            preserve_range=True,
+            anti_aliasing=True,
+        )
+        cropped_gt = (cropped_gt > 0.5).astype(int)
+
+    cropped_seg = process_syn(cropped_gt)
+
+    cropped_img_pad = np.pad(
+        cropped_img, img_padding, mode="constant", constant_values=148
+    )
+    cropped_seg_pad = np.pad(
+        cropped_seg, img_padding, mode="constant", constant_values=0
+    )
+
+    assert (
+        cropped_img_pad.shape == cropped_seg_pad.shape
+    ), "The shape of the source and target images do not match."
+
+    (
+        pre_pt_x,
+        pre_pt_y,
+        pre_pt_z,
+        post_pt_x,
+        post_pt_y,
+        post_pt_z,
+    ) = adjust_synapse_points(item, crop_box_dict, img_padding, coord_order)
+
+    (
+        pre_pt_x,
+        pre_pt_y,
+        pre_pt_z,
+        post_pt_x,
+        post_pt_y,
+        post_pt_z,
+    ) = scale_synapse_points(
+        pre_pt_x, pre_pt_y, pre_pt_z, post_pt_x, post_pt_y, post_pt_z
+    )
+
+    vis_label = syn2rgb(cropped_seg_pad)
+
     vis_label = draw_cylinder(
         vis_label,
         pre_pt_x,
@@ -603,24 +679,14 @@ def process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) -
         layout=coord_order,
     )
 
-    # Determine the slice axis index based on the first entry in coord_order
-    slice_axis = coord_order.index("z")
-
-    for s in range(cropped_img_pad.shape[slice_axis]):
-        img_name = str(item["Adjusted_Bbox"][slice_axis * 2] + s) + ".png"
-
-        # Create a dynamic slicing tuple based on the determined slice axis
-        # slice(None) is equivalent to the colon (:) operator
-        slicing_img = [s if idx == slice_axis else slice(None) for idx in range(3)]
-        slicing_seg = [s if idx == slice_axis else slice(None) for idx in range(4)]
-
-        # image
-        img_c = Image.fromarray(adjust_image_range(cropped_img_pad[tuple(slicing_img)]))
-        img_c.save(os.path.join(img_dir_instance, img_name), "PNG")
-
-        # label
-        lab_c = apply_transparency(vis_label[tuple(slicing_seg)])
-        lab_c.save(os.path.join(syn_dir_instance, img_name), "PNG")
+    save_slices(
+        cropped_img_pad,
+        vis_label,
+        img_dir_instance,
+        syn_dir_instance,
+        item,
+        coord_order,
+    )
 
 
 def apply_transparency(image: np.ndarray, color: tuple = None) -> Image:

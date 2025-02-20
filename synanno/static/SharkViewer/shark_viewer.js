@@ -13,7 +13,7 @@ import {
 
   //import * as THREE from "three";
 
-  export { swcParser, stretch, stretch_inv, Color };
+  export { swcParser, stretch, stretch_inv, Color, NODE_PARTICLE_IMAGE };
 
   const DEFAULT_POINT_THRESHOLD = 150;
   const DEFAULT_LINE_THRESHOLD = 100;

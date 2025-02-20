@@ -115,7 +115,7 @@ $(document).ready(function () {
     var load = "full";
 
     $("#neuron-id").text(neuronID);
-=
+
     // retrieve the info from the backend
     let req_data = $.ajax({
       url: "/get_instance",

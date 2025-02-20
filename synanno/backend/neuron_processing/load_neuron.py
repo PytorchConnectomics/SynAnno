@@ -92,7 +92,9 @@ def navis_neuron(swc_file: str) -> tuple[navis.TreeNeuron, str]:
     return neuron_pruned, pruned_swc_file
 
 
-def compute_sections(pruned_swc_file: str) -> tuple[list[list[int]], list[int]]:
+def compute_sections(
+    pruned_swc_file: str, merge: bool = False
+) -> tuple[list[list[int]], list[int]]:
     """
     Compute the sections of the pruned neuron.
 
@@ -132,7 +134,7 @@ def compute_sections(pruned_swc_file: str) -> tuple[list[list[int]], list[int]]:
         len({node for node, degree in undirected_graph.degree() if degree >= 3}) // 4
     )
 
-    if num_sections > 1:
+    if num_sections > 1 and merge:
         logger.info(
             f"Merging {len(segments)} segments into {num_sections} largest segments..."
         )

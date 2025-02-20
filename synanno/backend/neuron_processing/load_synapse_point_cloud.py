@@ -11,28 +11,31 @@ logger = logging.getLogger(__name__)
 
 
 def load_synapse_point_cloud(
-    neuron_id: int, neuron: TreeNeuron, materialization_pd: pd.DataFrame, swc_path: str
+    neuron_id: int,
+    neuron_coords: np.ndarray,
+    neuron_tree: KDTree,
+    materialization_pd: pd.DataFrame,
+    swc_path: str,
 ) -> np.ndarray:
     """
     Load synapse point cloud, snap points to neuron skeleton, and save the results.
 
     Args:
         neuron_id (int): ID of the neuron.
-        neuron (TreeNeuron): Neuron object containing the skeleton.
+        neuron_coords (np.ndarray): Array of neuron coordinates.
+        neuron_tree (KDTree): KDTree object for the neuron coordinates.
         materialization_pd (pd.DataFrame): DataFrame containing synapse information.
         swc_path (str): Path to save the output files.
 
     Returns:
         np.ndarray: Snapped points and the path to the saved JSON file.
     """
-    neuron_coords = get_neuron_coordinates(neuron)
     filtered_df = filter_synapse_data(neuron_id, materialization_pd)
     point_cloud = convert_to_point_cloud(filtered_df)
 
     if point_cloud is None:
-        return
+        raise ValueError("Error: Point cloud is empty. Please check the input data.")
 
-    neuron_tree = create_neuron_tree(neuron_coords)
     snapped_points = snap_points_to_neuron(neuron_coords, point_cloud, neuron_tree)
     save_point_clouds(neuron_id, point_cloud, snapped_points, swc_path)
 

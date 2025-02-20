@@ -1,6 +1,5 @@
 $(document).ready(function () {
-    const neuronReady_annotate = $("script[src*='minimap.js']").data("neuron-ready") === true;
-    const neuronReady = neuronReady_annotate;
+    const neuronReady = $("script[src*='minimap.js']").data("neuron-ready") === true;
 
     if (neuronReady) {
         const $minimap = $("#minimapContainer");

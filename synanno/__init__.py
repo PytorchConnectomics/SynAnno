@@ -82,7 +82,7 @@ def initialize_global_variables(app):
     # Neuron skeleton info/data
     app.sections = None
     app.neuron_ready = None
-    app.pruned_navis_swc_file_path = None
+    app.pruned_navis_swc_file_name = None
     app.snapped_points_json_file_name = None
     # The auto segmentation view needs a set number of slices per instance (depth)
     # see process_instances.py::load_missing_slices for more details

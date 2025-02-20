@@ -69,7 +69,7 @@ def compute_section_order(
     section_positions = compute_section_positions(tree_traversal, sections)
     section_mean_positions = compute_mean_positions(section_positions)
     sorted_sections = sort_sections_by_mean_position(section_mean_positions)
-    section_order = {rank: sec for rank, sec in enumerate(sorted_sections)}
+    section_order = {sec: rank for rank, sec in enumerate(sorted_sections)}
     return section_order
 
 
@@ -101,6 +101,9 @@ def assign_section_order_index(
     materialization_pd["section_order_index"] = materialization_pd[
         "section_order_index"
     ].astype(int)
+
+    # print the section order index column
+    print("section index", materialization_pd["section_order_index"])
 
 
 def neuron_section_lookup(

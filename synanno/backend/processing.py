@@ -204,6 +204,11 @@ def free_page() -> None:
 
 
 def retrieve_materialization_data() -> None:
+    """Retrieve the for the view style relevant columns from the materialization data.
+
+    Returns:
+        The selected materialization data as a dictionary.
+    """
     if current_app.view_style == "synapse":
         df = current_app.synapse_data
         df = df[

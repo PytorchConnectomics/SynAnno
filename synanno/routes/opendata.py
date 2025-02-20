@@ -13,6 +13,8 @@ from synanno.backend.neuron_processing.load_neuron import (
 )
 from synanno.backend.neuron_processing.load_synapse_point_cloud import (
     load_synapse_point_cloud,
+    get_neuron_coordinates,
+    create_neuron_tree,
 )
 
 from synanno.backend.neuron_processing.partition_order import (
@@ -228,16 +230,11 @@ def validate_cloud_volume_urls(
     )
 
 
-def handle_neuron_view(
-    source_url: str, target_url: str, neuropil_url: str, bucket_secret: dict
-) -> tuple[str, list[list[int]], str]:
+def handle_neuron_view(neuropil_url: str) -> tuple[str, list[list[int]], str]:
     """Handle the neuron view processing.
 
     Args:
-        source_url: URL to the source cloud volume.
-        target_url: URL to the target cloud volume.
         neuropil_url: URL to the neuropil cloud volume.
-        bucket_secret: Bucket secret JSON.
     """
     try:
         neuron_id = int(current_app.selected_neuron_id)
@@ -273,31 +270,35 @@ def handle_neuron_view(
     neuron_skeleton_swc_path = load_neuron_skeleton(
         neuropil_url, current_app.selected_neuron_id, swc_path
     )
+
+    # compute the neuron skelton and sections
     neuron_pruned, pruned_navis_swc_file_path = navis_neuron(neuron_skeleton_swc_path)
     sections, tree_traversal = compute_sections(pruned_navis_swc_file_path)
 
-    _, snapped_points_json_file_name, neuron_tree = load_synapse_point_cloud(
-        current_app.selected_neuron_id,
-        neuron_pruned,
-        current_app.synapse_data,
-        swc_path,
-    )
+    # get the neuron coordinates and create a KDTree
+    neuron_coords = get_neuron_coordinates(neuron_pruned)
+    neuron_tree = create_neuron_tree(neuron_coords)
 
+    # derive the path for how to traverse the neuron sections
     section_order = compute_section_order(tree_traversal, sections)
+    logger.info(f"Section order: {section_order}")
     neuron_sec_lookup = neuron_section_lookup(sections, section_order)
-
     assign_section_order_index(current_app.synapse_data, neuron_sec_lookup, neuron_tree)
+
+    # reorder the synapse data based on the section order
     current_app.synapse_data = current_app.synapse_data.sort_values(
         ["section_order_index"], ascending=[True]
     )
+
+    # reset the index -> this sets the Image_Index used in the annotation ordering via image.Image_Index
     current_app.synapse_data.reset_index(drop=True, inplace=True)
 
-    ip.neuron_centric_3d_data_processing(
-        source_url,
-        target_url,
-        neuropil_url,
-        bucket_secret_json=bucket_secret if bucket_secret else "~/.cloudvolume/secrets",
-        mode=draw_or_annotate,
+    _, snapped_points_json_file_name, neuron_tree = load_synapse_point_cloud(
+        current_app.selected_neuron_id,
+        neuron_coords,
+        neuron_tree,
+        current_app.synapse_data,
+        swc_path,
     )
     return (
         os.path.basename(pruned_navis_swc_file_path),
@@ -306,17 +307,8 @@ def handle_neuron_view(
     )
 
 
-def handle_synapse_view(
-    source_url: str, target_url: str, neuropil_url: str, bucket_secret: dict
-) -> None:
-    """Handle the synapse view processing.
-
-    Args:
-        source_url: URL to the source cloud volume.
-        target_url: URL to the target cloud volume.
-        neuropil_url: URL to the neuropil cloud volume.
-        bucket_secret: Bucket secret JSON.
-    """
+def handle_synapse_view() -> None:
+    """Handle the synapse view processing."""
     preid = int(request.form.get("preid")) if request.form.get("preid") else None
     postid = int(request.form.get("postid")) if request.form.get("postid") else None
 
@@ -332,14 +324,6 @@ def handle_synapse_view(
         "index >= @preid and index <= @postid"
     )
     current_app.synapse_data.reset_index(drop=True, inplace=True)
-
-    ip.neuron_centric_3d_data_processing(
-        source_url,
-        target_url,
-        neuropil_url,
-        bucket_secret_json=bucket_secret if bucket_secret else "~/.cloudvolume/secrets",
-        mode=draw_or_annotate,
-    )
 
 
 @blueprint.route("/upload", methods=["GET", "POST"])
@@ -380,13 +364,23 @@ def upload_file() -> Template:
 
         if current_app.view_style == "neuron":
             (
-                current_app.pruned_navis_swc_file_path,
+                current_app.pruned_navis_swc_file_name,
                 current_app.snapped_points_json_file_name,
                 current_app.sections,
-            ) = handle_neuron_view(source_url, target_url, neuropil_url, bucket_secret)
+            ) = handle_neuron_view(neuropil_url)
             current_app.neuron_ready = "true"
         elif current_app.view_style == "synapse":
-            handle_synapse_view(source_url, target_url, neuropil_url, bucket_secret)
+            handle_synapse_view()
+
+        ip.neuron_centric_3d_data_processing(
+            source_url,
+            target_url,
+            neuropil_url,
+            bucket_secret_json=bucket_secret
+            if bucket_secret
+            else "~/.cloudvolume/secrets",
+            mode=draw_or_annotate,
+        )
     else:
         flash(
             "Please provide at least the paths to valid source and target cloud volume buckets!",
@@ -416,7 +410,7 @@ def upload_file() -> Template:
         mode=draw_or_annotate,
         neuronReady=current_app.neuron_ready,
         neuronSection=current_app.sections,
-        neuronPath=current_app.pruned_navis_swc_file_path,
+        neuronPath=current_app.pruned_navis_swc_file_name,
         synapseCloudPath=current_app.snapped_points_json_file_name,
     )
 
@@ -461,7 +455,7 @@ def set_data(task: str = "annotate") -> Template:
             neuron_id=current_app.selected_neuron_id,
             neuronReady=current_app.neuron_ready,
             neuronSection=current_app.sections,
-            neuronPath=current_app.pruned_navis_swc_file_path,
+            neuronPath=current_app.pruned_navis_swc_file_name,
             synapseCloudPath=current_app.snapped_points_json_file_name,
         )
 

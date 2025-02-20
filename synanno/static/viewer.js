@@ -1,8 +1,13 @@
 import SharkViewer, { swcParser, Color, NODE_PARTICLE_IMAGE } from "./SharkViewer/shark_viewer.js";
 import SynapseShader from "./shaders/SynapseShader.js";
 
-window.onload = () => {
-    const neuronReady = $("script[src*='viewer.js']").data("neuron-ready");
+$(document).ready(function () {
+
+    window.correct_instances = [];
+    window.incorrect_instances = [];
+    window.unsure_instances = [];
+
+    const neuronReady = $("script[src*='viewer.js']").data("neuron-ready") === true;
     const neuronPath = $("script[src*='viewer.js']").data("neuron-path");
     const neuronSection = $("script[src*='viewer.js']").data("neuron-section");
     const synapseCloudPath = $("script[src*='viewer.js']").data("synapse-cloud-path");
@@ -10,12 +15,12 @@ window.onload = () => {
     console.log("Neuron Path:", neuronPath);
     console.log("Synapse Cloud Path:", synapseCloudPath);
 
-    const shark_container_minimap = document.getElementById("shark_container_minimap")
+    const $sharkContainerMinimap = $("#shark_container_minimap");
 
     if (neuronReady) {
         console.log("Neuron data is ready. Initializing viewer...");
         try {
-        initializeViewer(shark_container_minimap);
+            initializeViewer($sharkContainerMinimap[0]);
 
             if (neuronPath) {
                 loadSwcFile(neuronPath, neuronSection);
@@ -29,14 +34,20 @@ window.onload = () => {
                 console.error("No synapse cloud path provided.");
             }
 
-            // waite 5 seconds and then color the first 800 synapses green
-            setTimeout(() => {
-                for (let i = 0; i < 20; i++) {
-                    updateSynapse(i, null, new THREE.Color(0x00ff00), null);
-                }
-            }, 5000);
+            // Update the color of synapses based on there label
+            for (let i = 0; i < correct_instances.length; i++) {
+                updateSynapse(correct_instances[i], null, new THREE.Color(0x00ff00), null);
+            }
 
-            setupWindowResizeHandler(shark_container_minimap);
+            for (let i = 0; i < incorrect_instances.length; i++) {
+                updateSynapse(incorrect_instances[i], null, new THREE.Color(0xff0000), null);
+            }
+
+            for (let i = 0; i < unsure_instances.length; i++) {
+                updateSynapse(unsure_instances[i], null, new THREE.Color(0xffff00), null);
+            }
+
+            setupWindowResizeHandler($sharkContainerMinimap[0]);
 
         } catch (error) {
             console.error("Error initializing viewer:", error);
@@ -44,15 +55,15 @@ window.onload = () => {
     } else {
         console.log("Neuron data is not available. Viewer will not be initialized.");
     }
-};
+});
 
 /**
  * Initializes the SharkViewer instance.
  */
-function initializeViewer(shark_container_minimap) {
+function initializeViewer(sharkContainerMinimap) {
     window.s = new SharkViewer({
         mode: 'particle',
-        dom_element: shark_container_minimap,
+        dom_element: sharkContainerMinimap,
         maxVolumeSize: 1000000,
     });
     console.log("Viewer initialized successfully.");
@@ -63,10 +74,10 @@ function initializeViewer(shark_container_minimap) {
 /**
  * Sets up the window resize handler to adjust the viewer size.
  */
-window.setupWindowResizeHandler = function(shark_container_minimap) {
-    window.addEventListener('resize', onWindowResize, false);
+window.setupWindowResizeHandler = function(sharkContainerMinimap) {
+    $(window).on('resize', () => onWindowResize(sharkContainerMinimap));
     setTimeout(() => {
-        onWindowResize(shark_container_minimap);
+        onWindowResize(sharkContainerMinimap);
         s.render(); // Force a re-render
     }, 100); // Delay to allow layout updates
 }
@@ -132,7 +143,7 @@ function loadSwcFile(swcPath, neuronSection) {
  * @param {string} jsonPath - The path to the JSON file.
  */
 function loadSynapseCloud(jsonPath) {
-    console.log("Fetching JSON from path:", jsonPath); // Log before the request
+    console.log("Fetching JSON from path:", jsonPath);
     fetch(jsonPath)
         .then(response => response.json())
         .then(data => {
@@ -143,6 +154,9 @@ function loadSynapseCloud(jsonPath) {
                     console.error("JSON data is not an Array or length is not a multiple of 3.");
                     return;
                 }
+
+                // Load existing synapseColors from sessionStorage or initialize a new one
+                window.synapseColors = JSON.parse(sessionStorage.getItem("synapseColors")) || {};
 
                 // Convert data to THREE.Vector3 points
                 const points = [];
@@ -156,20 +170,28 @@ function loadSynapseCloud(jsonPath) {
                 const sizes = new Float32Array(points.length);
 
                 for (let i = 0; i < points.length; i++) {
-                    // Store positions, adding a random offset to each point to move them out of the skeleton
                     positions[i * 3] = points[i].x + Math.random() * 50;
                     positions[i * 3 + 1] = points[i].y + Math.random() * 50;
                     positions[i * 3 + 2] = points[i].z + Math.random() * 50;
 
-                    // Assign random colors for better visualization
-                    // initially color all synapses yellow
-                    const color = new THREE.Color(0xffff00);
+                    // Assign a default color if not already assigned
+                    if (!window.synapseColors[i]) {
+                        window.synapseColors[i] = "yellow"; // Default unsure
+                    }
+
+                    const colorHex = window.synapseColors[i] === "green" ? 0x00ff00 :
+                                     window.synapseColors[i] === "red" ? 0xff0000 : 0xffff00;
+
+                    const color = new THREE.Color(colorHex);
                     colors[i * 3] = color.r;
                     colors[i * 3 + 1] = color.g;
                     colors[i * 3 + 2] = color.b;
 
                     sizes[i] = 500;
                 }
+
+                // Store updated synapseColors in sessionStorage
+                sessionStorage.setItem("synapseColors", JSON.stringify(window.synapseColors));
 
                 // Create geometry and add attributes
                 const geometry = new THREE.BufferGeometry();
@@ -180,13 +202,11 @@ function loadSynapseCloud(jsonPath) {
                 // Use SharkViewer's Sphere Texture
                 const image = document.createElement("img");
                 const sphereTexture = new THREE.Texture(image);
-
                 image.onload = function onload() {
                     sphereTexture.needsUpdate = true;
                     console.log("Sphere texture loaded and updated.");
                 };
-
-                image.src = NODE_PARTICLE_IMAGE; // Load texture from SharkViewer
+                image.src = NODE_PARTICLE_IMAGE;
 
                 // Set the sphere texture uniform
                 SynapseShader.uniforms["sphereTexture"].value = sphereTexture;
@@ -292,7 +312,7 @@ function updateNodeAndEdgeColors(viewer, nodes_array, edge_array, sectionColors)
     viewer.render();
 }
 
-function updateSynapse(index, newPosition = null, newColor = null, newSize = null) {
+window.updateSynapse = function(index, newPosition = null, newColor = null, newSize = null) {
     const pointsMesh = s.scene.getObjectByName("synapse-cloud");
     if (!pointsMesh) {
         console.error("Synapse cloud not found in the scene.");
@@ -312,27 +332,32 @@ function updateSynapse(index, newPosition = null, newColor = null, newSize = nul
     // Update position if provided
     if (newPosition) {
         positions.setXYZ(index, newPosition.x, newPosition.y, newPosition.z);
-        // Mark attribute as needing an update
         positions.needsUpdate = true;
     }
 
     // Update color if provided
     if (newColor) {
         colors.setXYZ(index, newColor.r, newColor.g, newColor.b);
-        // Mark attribute as needing an update
         colors.needsUpdate = true;
+
+        // Convert THREE.Color to hex string
+        let colorLabel = newColor.getHex() === 0x00ff00 ? "green" :
+                         newColor.getHex() === 0xff0000 ? "red" : "yellow";
+
+        window.synapseColors[index] = colorLabel;
+        sessionStorage.setItem("synapseColors", JSON.stringify(window.synapseColors));
     }
 
     // Update size if provided
     if (newSize !== null) {
         sizes.setX(index, newSize);
-        // Mark attribute as needing an update
         sizes.needsUpdate = true;
     }
 
     s.render();
-    console.log(`Synapse at index ${index} updated.`);
-}
+    console.log(`Synapse at index ${index} updated to ${window.synapseColors[index]}.`);
+};
+
 
 /**
  * Adjusts the camera position and settings to focus on a neuron object in the scene.
@@ -405,14 +430,14 @@ function generateSectionColors(numSections) {
 /**
  * Handles window resize events to adjust the viewer's size and camera aspect ratio.
  */
-window.onWindowResize = function(shark_container_minimap) {
-    if (!shark_container_minimap) {
+window.onWindowResize = function(sharkContainerMinimap) {
+    if (!sharkContainerMinimap) {
         console.error("Shark container not found.");
         return;
     }
 
-    const width = shark_container_minimap.clientWidth || window.innerWidth;
-    const height = shark_container_minimap.clientHeight || window.innerHeight;
+    const width = sharkContainerMinimap.clientWidth || window.innerWidth;
+    const height = sharkContainerMinimap.clientHeight || window.innerHeight;
     console.log("Resizing viewer to:", width, "x", height);
 
     if (width > 0 && height > 0) {
@@ -423,4 +448,10 @@ window.onWindowResize = function(shark_container_minimap) {
     }
 
     s.render();
+}
+
+window.saveSynapseColor = function(){
+    sessionStorage.setItem("correct_instances", JSON.stringify(window.correct_instances));
+    sessionStorage.setItem("incorrect_instances", JSON.stringify(window.incorrect_instances));
+    sessionStorage.setItem("unsure_instances", JSON.stringify(window.unsure_instances));
 }

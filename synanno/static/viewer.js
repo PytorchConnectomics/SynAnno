@@ -7,10 +7,15 @@ window.onload = () => {
     const neuronSection = $("script[src*='viewer.js']").data("neuron-section");
     const synapseCloudPath = $("script[src*='viewer.js']").data("synapse-cloud-path");
 
+    console.log("Neuron Path:", neuronPath);
+    console.log("Synapse Cloud Path:", synapseCloudPath);
+
+    const shark_container_minimap = document.getElementById("shark_container_minimap")
+
     if (neuronReady) {
         console.log("Neuron data is ready. Initializing viewer...");
         try {
-            initializeViewer();
+        initializeViewer(shark_container_minimap);
 
             if (neuronPath) {
                 loadSwcFile(neuronPath, neuronSection);
@@ -19,19 +24,19 @@ window.onload = () => {
             }
 
             if (synapseCloudPath) {
-                setTimeout(() => loadSynapseCloud(synapseCloudPath), 1500);
+                loadSynapseCloud(synapseCloudPath);
             } else {
                 console.error("No synapse cloud path provided.");
             }
 
-            // waite 10 seconds and then color the first 200 synapses green
+            // waite 5 seconds and then color the first 800 synapses green
             setTimeout(() => {
-                for (let i = 0; i < 800; i++) {
-                    updateSynapse(i, null, new THREE.Color(0x00ff00), 1000);
+                for (let i = 0; i < 20; i++) {
+                    updateSynapse(i, null, new THREE.Color(0x00ff00), null);
                 }
-            }, 10000);
+            }, 5000);
 
-            setupWindowResizeHandler();
+            setupWindowResizeHandler(shark_container_minimap);
 
         } catch (error) {
             console.error("Error initializing viewer:", error);
@@ -44,10 +49,10 @@ window.onload = () => {
 /**
  * Initializes the SharkViewer instance.
  */
-function initializeViewer() {
+function initializeViewer(shark_container_minimap) {
     window.s = new SharkViewer({
         mode: 'particle',
-        dom_element: document.getElementById('shark_container'),
+        dom_element: shark_container_minimap,
         maxVolumeSize: 1000000,
     });
     console.log("Viewer initialized successfully.");
@@ -58,10 +63,10 @@ function initializeViewer() {
 /**
  * Sets up the window resize handler to adjust the viewer size.
  */
-function setupWindowResizeHandler() {
+window.setupWindowResizeHandler = function(shark_container_minimap) {
     window.addEventListener('resize', onWindowResize, false);
     setTimeout(() => {
-        onWindowResize();
+        onWindowResize(shark_container_minimap);
         s.render(); // Force a re-render
     }, 100); // Delay to allow layout updates
 }
@@ -73,6 +78,7 @@ function setupWindowResizeHandler() {
  * @param {Array} neuronSection - The neuron sections to be highlighted.
  */
 function loadSwcFile(swcPath, neuronSection) {
+    console.log("Fetching swc from path:", swcPath); // Log before the request
     fetch(swcPath)
         .then(response => response.text())
         .then(swcTxt => {
@@ -121,9 +127,12 @@ function loadSwcFile(swcPath, neuronSection) {
 }
 
 /**
- * Loads a synapse cloud JSON file and applies a custom shader.
+ * Loads and processes a synapse cloud JSON file from the given path.
+ *
+ * @param {string} jsonPath - The path to the JSON file.
  */
 function loadSynapseCloud(jsonPath) {
+    console.log("Fetching JSON from path:", jsonPath); // Log before the request
     fetch(jsonPath)
         .then(response => response.json())
         .then(data => {
@@ -199,9 +208,6 @@ function loadSynapseCloud(jsonPath) {
                 s.scene.add(pointsMesh);
                 s.scene.needsUpdate = true;
                 console.log("Particle system added:", pointsMesh);
-
-                // Adjust camera to ensure visibility
-                adjustCameraForNeuron(s);
 
                 s.render();
                 console.log("Synapse cloud successfully added.");
@@ -399,15 +405,14 @@ function generateSectionColors(numSections) {
 /**
  * Handles window resize events to adjust the viewer's size and camera aspect ratio.
  */
-function onWindowResize() {
-    const container = document.getElementById('shark_container');
-    if (!container) {
+window.onWindowResize = function(shark_container_minimap) {
+    if (!shark_container_minimap) {
         console.error("Shark container not found.");
         return;
     }
 
-    const width = container.clientWidth || window.innerWidth;
-    const height = container.clientHeight || window.innerHeight;
+    const width = shark_container_minimap.clientWidth || window.innerWidth;
+    const height = shark_container_minimap.clientHeight || window.innerHeight;
     console.log("Resizing viewer to:", width, "x", height);
 
     if (width > 0 && height > 0) {

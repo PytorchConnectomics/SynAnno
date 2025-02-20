@@ -138,6 +138,17 @@
   </a>
 </div>
 
+
+<!-- Draggable Minimap Container -->
+<div id="minimapContainer" class="minimap" data-minimap-state="collapsed">
+  <div id="minimapHeader" class="minimap-header">
+      Neuron Minimap
+      <button id="toggleButton" class="btn btn-sm btn-secondary toggle-btn">Toggle</button>
+  </div>
+  <div id="shark_container_minimap" class="minimap-content"></div>
+</div>
+
+
 <!-- Modal to indicating active loading -->
 {% include "loading_bar.html" %}
 
@@ -149,4 +160,10 @@
 
 <!-- add js file to chang the card colors -->
 <script type="module" src="{{ url_for('static', filename='annotation.js') }}" data-neuron-id="{{ neuron_id }}"></script>
+
+<!-- Load the SharkViewer -->
+<script type="text/javascript" src="{{ url_for('static', filename='SharkViewer/three.min.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='viewer.js') }}" data-neuron-ready="{{ neuronReady }}" data-neuron-section="{{ neuronSection }}" data-neuron-path="{{ url_for('static', filename= 'swc/' ~ neuronPath)}}"  data-synapse-cloud-path="{{ url_for('static', filename='swc/' ~ synapseCloudPath)}}"></script>
+
+<script type="module" src="{{ url_for('static', filename='minimap.js') }}" data-neuron-ready="{{ neuronReady }}"></script>
 {% endblock %}

@@ -276,21 +276,11 @@ def handle_neuron_view(
     neuron_pruned, pruned_navis_swc_file_path = navis_neuron(neuron_skeleton_swc_path)
     sections, tree_traversal = compute_sections(pruned_navis_swc_file_path)
 
-    pruned_navis_swc_static_file_path = os.path.join(
-        os.path.join(current_app.config["STATIC_FOLDER"], "swc"),
-        os.path.basename(pruned_navis_swc_file_path),
-    )
-
-    _, snapped_points_json_path, neuron_tree = load_synapse_point_cloud(
+    _, snapped_points_json_file_name, neuron_tree = load_synapse_point_cloud(
         current_app.selected_neuron_id,
         neuron_pruned,
         current_app.synapse_data,
         swc_path,
-    )
-
-    snapped_points_json_static_file_path = os.path.join(
-        os.path.join(current_app.config["STATIC_FOLDER"], "swc"),
-        os.path.basename(snapped_points_json_path),
     )
 
     section_order = compute_section_order(tree_traversal, sections)
@@ -310,9 +300,9 @@ def handle_neuron_view(
         mode=draw_or_annotate,
     )
     return (
-        pruned_navis_swc_static_file_path,
+        os.path.basename(pruned_navis_swc_file_path),
+        snapped_points_json_file_name,
         sections,
-        snapped_points_json_static_file_path,
     )
 
 
@@ -390,10 +380,11 @@ def upload_file() -> Template:
 
         if current_app.view_style == "neuron":
             (
-                pruned_navis_swc_static_file_path,
-                sections,
-                snapped_points_json_static_file_path,
+                current_app.pruned_navis_swc_file_path,
+                current_app.snapped_points_json_file_name,
+                current_app.sections,
             ) = handle_neuron_view(source_url, target_url, neuropil_url, bucket_secret)
+            current_app.neuron_ready = "true"
         elif current_app.view_style == "synapse":
             handle_synapse_view(source_url, target_url, neuropil_url, bucket_secret)
     else:
@@ -423,14 +414,10 @@ def upload_file() -> Template:
         modeform="formFileDisabled",
         view_style=current_app.view_style,
         mode=draw_or_annotate,
-        neuronReady="true" if current_app.view_style == "neuron" else "false",
-        neuronPath=pruned_navis_swc_static_file_path
-        if current_app.view_style == "neuron"
-        else None,
-        neuronSection=sections if current_app.view_style == "neuron" else None,
-        synapseCloudPath=snapped_points_json_static_file_path
-        if current_app.view_style == "neuron"
-        else None,
+        neuronReady=current_app.neuron_ready,
+        neuronSection=current_app.sections,
+        neuronPath=current_app.pruned_navis_swc_file_path,
+        synapseCloudPath=current_app.snapped_points_json_file_name,
     )
 
 
@@ -472,6 +459,10 @@ def set_data(task: str = "annotate") -> Template:
             n_pages=session.get("n_pages"),
             grid_opacity=current_app.grid_opacity,
             neuron_id=current_app.selected_neuron_id,
+            neuronReady=current_app.neuron_ready,
+            neuronSection=current_app.sections,
+            neuronPath=current_app.pruned_navis_swc_file_path,
+            synapseCloudPath=current_app.snapped_points_json_file_name,
         )
 
 

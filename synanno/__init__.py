@@ -79,6 +79,11 @@ def initialize_global_variables(app):
     app.vol_dim_scaled = (0, 0, 0)
     app.source = None
     app.cz1, app.cz2, app.cz, app.cy, app.cx = 0, 0, 0, 0, 0
+    # Neuron skeleton info/data
+    app.sections = None
+    app.neuron_ready = None
+    app.pruned_navis_swc_file_path = None
+    app.snapped_points_json_file_name = None
     # The auto segmentation view needs a set number of slices per instance (depth)
     # see process_instances.py::load_missing_slices for more details
     app.crop_size_z_draw = 16
@@ -159,6 +164,7 @@ def initialize_global_variables(app):
 
 def register_routes(app):
     """Register routes to avoid circular imports and ensure proper Blueprint registration."""
+    from synanno.routes.file_access import blueprint as file_access_blueprint
     from synanno.routes.annotation import blueprint as annotation_blueprint
     from synanno.routes.finish import blueprint as finish_blueprint
     from synanno.routes.opendata import blueprint as opendata_blueprint
@@ -168,6 +174,7 @@ def register_routes(app):
     from synanno.routes.auto_annotate import blueprint as auto_annotate_blueprint
 
     # Register the Blueprints with the app object.
+    app.register_blueprint(file_access_blueprint)
     app.register_blueprint(annotation_blueprint)
     app.register_blueprint(finish_blueprint)
     app.register_blueprint(opendata_blueprint)

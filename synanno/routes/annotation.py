@@ -66,6 +66,10 @@ def annotation(page: int = 0) -> Template:
         n_pages=session.get("n_pages"),
         grid_opacity=current_app.grid_opacity,
         neuron_id=current_app.selected_neuron_id,
+        neuronReady=current_app.neuron_ready,
+        neuronSection=current_app.sections,
+        neuronPath=current_app.pruned_navis_swc_file_path,
+        synapseCloudPath=current_app.snapped_points_json_file_name,
     )
 
 

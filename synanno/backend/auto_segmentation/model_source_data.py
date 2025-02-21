@@ -47,7 +47,7 @@ def generate_seed_target(
 
     Args:
         volume (np.ndarray): The target volume of shape (x, y, z).
-        slices_to_generate (int): Maximum number of slices to select and mask (1 to slices_to_generate).
+        slices_to_generate (int): Maximum number of slices to select and mask (0 to slices_to_generate).
         target_range (tuple[int, int]): Range of slices to consider as (start, end).
 
     Returns:
@@ -55,7 +55,7 @@ def generate_seed_target(
     """
 
     # Create probabilities for the number of slices to generate
-    slice_indices = np.arange(1, slices_to_generate + 1)
+    slice_indices = np.arange(0, slices_to_generate + 1)
     slice_probs = norm.pdf(slice_indices, loc=1, scale=slices_to_generate / 3)
     slice_probs /= slice_probs.sum()
 

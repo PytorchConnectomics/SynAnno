@@ -1,34 +1,26 @@
-from typing import Union, Tuple
-from flask import Flask
+import logging
 import os
-import json
 import shutil
 import traceback
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Callable, Optional, Union
+
 import numpy as np
+import pandas as pd
+from cloudvolume import Bbox, CloudVolume
+from flask import Flask, current_app, session
 from PIL import Image
+from scipy.ndimage import center_of_mass
 from skimage.measure import label as label_cc
 from skimage.transform import resize
-from scipy.ndimage import center_of_mass
 
-from .utils import *
-
-from cloudvolume import CloudVolume, Bbox
-import pandas as pd
-
-from flask import session
-
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from threading import Lock
-
-from flask import current_app
-import logging
-
+from .utils import adjust_image_range, draw_cylinder, get_sub_dict_within_range
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def run_with_app_context(app: Flask, func: callable, *args, **kwargs):
+def run_with_app_context(app: Flask, func: Callable, *args, **kwargs):
     """Helper function to run a task within the app context."""
     with app.app_context():  # Ensure app context is available
         return func(*args, **kwargs)
@@ -48,7 +40,7 @@ def process_syn(gt: np.ndarray) -> np.ndarray:
     # convert the semantic segmentation to instance-level segmentation
     # assign each synapse a unique index
     seg = label_cc(gt).astype(int)
-    # identify the largest connected component in the center of the volume and mask out the rest
+    # identify the centers largest connected component and mask out the rest
     unique, counts = np.unique(seg, return_counts=True)
     if len(unique) > 1:
         center_blob_value = get_center_blob_value_vectorized(seg, np.unique(seg)[1:])
@@ -59,17 +51,19 @@ def process_syn(gt: np.ndarray) -> np.ndarray:
 
 
 def get_center_blob_value_vectorized(
-    labeled_array: np.ndarray, blob_values: np.ndarray, center_threshold: float = 0.25
+    labeled_array: np.ndarray,
+    blob_values: np.ndarray,
+    center_threshold: float = 0.25,
 ) -> int:
     """Get the value of the non-zero blob closest to the center of the labeled array.
 
     Args:
-        labeled_array (np.ndarray): 3D numpy array where different blobs are represented by different integers.
-        blob_values (np.ndarray): Array of unique blob values in the labeled_array.
-        center_threshold (float): Threshold for the center blob.
+        labeled_array: 3D array with individual blobs represented by different integers
+        blob_values: Array of unique blob values in the labeled_array
+        center_threshold : Threshold for the center blob
 
     Returns:
-        center_blob_value (int): Value of the center blob or -1 if no blob is within 40% of the center.
+        Value of the center blob or -1 if no blob is within 40% of the center.
     """
     # Calculate the center of the entire array
     array_center = np.array(labeled_array.shape) / 2.0
@@ -102,8 +96,8 @@ def get_center_blob_value_vectorized(
 
 def calculate_crop_pad(
     bbox_3d: list, volume_shape: tuple, pad_z: bool = False
-) -> Tuple[list, tuple]:
-    """Calculate the crop and pad parameters for the given bounding box and volume shape.
+) -> tuple[list, list]:
+    """Calculate the crop/pad parameters for the given bounding box and volume shape.
 
     Args:
         bbox_3d (list): the bounding box of the 3D volume.
@@ -129,7 +123,11 @@ def calculate_crop_pad(
 
     assert c11 < c12 and c21 < c22 and c31 < c32, "Invalid bounding box."
 
-    pad = [[c11 - c11o, c12o - c12], [c21 - c21o, c22o - c22], [c31 - c31o, c32o - c32]]
+    pad = [
+        [c11 - c11o, c12o - c12],
+        [c21 - c21o, c22o - c22],
+        [c31 - c31o, c32o - c32],
+    ]
 
     if not pad_z:
         pad[list(current_app.coordinate_order.keys()).index("z")] = [0, 0]
@@ -168,7 +166,7 @@ def syn2rgb(label: np.ndarray) -> np.ndarray:
 
 
 def free_page() -> None:
-    """Remove the segmentation and images from the EM and GT folder for the previous and next page."""
+    """Remove the current and next page segmentation/images from the EM/GT folder."""
 
     # create the handles to the directories
     base_folder = os.path.join(
@@ -185,9 +183,7 @@ def free_page() -> None:
             "Image_Index"
         ].values.tolist()
 
-    # remove the segmentation and images from the EM and GT folder for the previous and next page.
     for key in key_list:
-        # remove the segmentation and images from the EM and GT folder for the previous page.
         syn_dir_idx = os.path.join(syn_dir, str(key))
         img_dir_idx = os.path.join(img_dir, str(key))
 
@@ -203,7 +199,7 @@ def free_page() -> None:
                 print("Failed to delete %s. Reason: %s" % (img_dir_idx, e))
 
 
-def retrieve_materialization_data() -> None:
+def retrieve_materialization_data() -> dict:
     """Retrieve the for the view style relevant columns from the materialization data.
 
     Returns:
@@ -246,8 +242,11 @@ def retrieve_materialization_data() -> None:
 
 
 def retrieve_instance_metadata(page: int = 0, mode: str = "annotate"):
-    """Visualize the synapse and EM images in 2D slices for each instance by cropping the bounding box of the instance.
-        Processing each instance individually, retrieving them from the cloud volume and saving them to the local disk.
+    """Visualize the synapse and EM images in 2D slices for each instance.
+
+        Cropping the bounding box of the instance. Processing each instance
+        individually, retrieving them from the cloud volume and saving them
+        to the local disk.
 
     Args:
         page (int): the current page number for which to compute the data.
@@ -294,22 +293,30 @@ def retrieve_instance_metadata(page: int = 0, mode: str = "annotate"):
             item = {
                 "Page": int(page),
                 "Image_Index": int(idx),
-                "materialization_index": bbox_dict[idx]["materialization_index"]
-                if "materialization_index" in bbox_dict[idx]
-                else -1,
-                "section_index": bbox_dict[idx]["section_index"]
-                if "section_index" in bbox_dict[idx]
-                else -1,
-                "section_order_index": bbox_dict[idx]["section_order_index"]
-                if "section_order_index" in bbox_dict[idx]
-                else -1,
+                "materialization_index": (
+                    bbox_dict[idx]["materialization_index"]
+                    if "materialization_index" in bbox_dict[idx]
+                    else -1
+                ),
+                "section_index": (
+                    bbox_dict[idx]["section_index"]
+                    if "section_index" in bbox_dict[idx]
+                    else -1
+                ),
+                "section_order_index": (
+                    bbox_dict[idx]["section_order_index"]
+                    if "section_order_index" in bbox_dict[idx]
+                    else -1
+                ),
                 "GT": "/".join(syn_dir_instance.strip(".\\").split("/")[-3:]),
                 "EM": "/".join(img_dir_instance.strip(".\\").split("/")[-3:]),
                 "Label": "Correct",
                 "Annotated": "No",
-                "neuron_id": current_app.selected_neuron_id
-                if current_app.selected_neuron_id is not None
-                else "No Neuron Selected...",
+                "neuron_id": (
+                    current_app.selected_neuron_id
+                    if current_app.selected_neuron_id is not None
+                    else "No Neuron Selected..."
+                ),
                 "Error_Description": "None",
                 "X_Index": coordinate_order.index("x"),
                 "Y_Index": coordinate_order.index("y"),
@@ -326,8 +333,8 @@ def retrieve_instance_metadata(page: int = 0, mode: str = "annotate"):
                 "post_pt_z": int(bbox_dict[idx]["post_pt_z"]),
                 "crop_size_x": session["crop_size_x"],
                 "crop_size_y": session["crop_size_y"],
-                # The auto segmentation view needs a set number of slices per instance (depth)
-                # see process_instances.py::load_missing_slices for more details
+                # The auto segmentation view needs a set number of slices per instance
+                # (depth) see process_instances.py::load_missing_slices for more details
                 "crop_size_z": crop_size_x,
             }
 
@@ -347,6 +354,7 @@ def retrieve_instance_metadata(page: int = 0, mode: str = "annotate"):
                 for coord in ["z", "y", "x"]
                 for i in range(2)
             ]
+
             item["Adjusted_Bbox"], item["Padding"] = calculate_crop_pad(
                 item["Original_Bbox"], current_app.vol_dim
             )
@@ -411,7 +419,7 @@ def update_slice_number(data: dict) -> None:
         coord_order = list(current_app.coordinate_order.keys())
 
         for instance in data:
-            # retrieve the coordinate order of the cloud volume | xyz, xzy, yxz, yzx, zxy, zyx
+            # retrieve the CloudVolume's coordinate order: xyz, xzy, yxz, yzx, zxy, zyx
 
             instance["crop_size_z"] = current_app.crop_size_z_draw
             og_bb = instance["Original_Bbox"]
@@ -436,11 +444,14 @@ def update_slice_number(data: dict) -> None:
                 == current_app.crop_size_z_draw
             )
 
-            instance["Adjusted_Bbox"], instance["Padding"] = calculate_crop_pad(
+            (
+                instance["Adjusted_Bbox"],
+                instance["Padding"],
+            ) = calculate_crop_pad(
                 instance["Original_Bbox"], current_app.vol_dim, pad_z=True
             )
 
-            # Update the fields Adjusted_Bbox, Padding, crop_size_z, and Original_Bbox field by field
+            # Update the fields Adjusted_Bbox, Padding, crop_size_z, and Original_Bbox
             condition = (current_app.df_metadata["Page"] == instance["Page"]) & (
                 current_app.df_metadata["Image_Index"] == instance["Image_Index"]
             )
@@ -471,7 +482,7 @@ def adjust_synapse_points(
         coord_order: List containing the coordinate order.
 
     Returns:
-        Tuple containing the adjusted pre and post synapse points.
+        tuple containing the adjusted pre and post synapse points.
     """
     pre_pt_x = (
         item["pre_pt_x"] - crop_box_dict["x1"] + img_padding[coord_order.index("x")][0]
@@ -504,7 +515,7 @@ def scale_synapse_points(
     post_pt_y: int,
     post_pt_z: int,
 ) -> tuple[int, int, int, int, int, int]:
-    """Scale the pre and post synapse points to the resolution of the source cloud volume.
+    """Scale the pre/post synapse points to the resolution of the source cloud volume.
 
     Args:
         pre_pt_x: X coordinate of the pre synapse point.
@@ -515,7 +526,7 @@ def scale_synapse_points(
         post_pt_z: Z coordinate of the post synapse point.
 
     Returns:
-        Tuple containing the scaled pre and post synapse points.
+        tuple containing the scaled pre and post synapse points.
     """
     pre_pt_x = int(pre_pt_x * current_app.scale["x"])
     pre_pt_y = int(pre_pt_y * current_app.scale["y"])
@@ -694,7 +705,7 @@ def process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) -
     )
 
 
-def apply_transparency(image: np.ndarray, color: tuple = None) -> Image:
+def apply_transparency(image: np.ndarray, color: Optional[tuple] = None) -> Image:
     """Reduce the opacity of all black pixels to zero in an RGBA image.
 
     Args:
@@ -728,7 +739,10 @@ def apply_transparency(image: np.ndarray, color: tuple = None) -> Image:
 
 
 def load_cloud_volumes(
-    source_url: str, target_url: str, neuropil_url: str, bucket_secret_json: str
+    source_url: str,
+    target_url: str,
+    neuropil_url: str,
+    bucket_secret_json: str,
 ) -> None:
     """
     Load the cloud volumes for source, target, and optionally neuropil.
@@ -771,7 +785,7 @@ def determine_volume_dimensions() -> tuple:
     Determine the dimensions of the volume based on the source and target cloud volumes.
 
     Returns:
-        Tuple representing the volume dimensions.
+        tuple representing the volume dimensions.
     """
     if list(current_app.source_cv.volume_size) == list(
         current_app.target_cv.volume_size
@@ -779,7 +793,9 @@ def determine_volume_dimensions() -> tuple:
         return tuple([s - 1 for s in current_app.source_cv.volume_size])
     else:
         logger.warning(
-            f"The dimensions of the source ({current_app.source_cv.volume_size}) and target ({current_app.target_cv.volume_size}) volumes do not match. Using the smaller size of the two volumes."
+            f"The dimensions of the source ({current_app.source_cv.volume_size}) "
+            f" and target ({current_app.target_cv.volume_size}) volumes do not match. "
+            " Using the smaller size of the two volumes."
         )
         if np.prod(current_app.source_cv.volume_size) < np.prod(
             current_app.target_cv.volume_size
@@ -791,7 +807,7 @@ def determine_volume_dimensions() -> tuple:
 
 def calculate_number_of_pages(n_images: int, per_page: int) -> int:
     """
-    Calculate the number of pages needed for the given number of images and images per page.
+    Calculate the number of pages needed for the given number of images.
 
     Args:
         n_images: Total number of images.
@@ -814,7 +830,7 @@ def neuron_centric_3d_data_processing(
     mode: str = "annotate",
 ) -> Union[str, tuple[np.ndarray, np.ndarray]]:
     """
-    Retrieve the bounding boxes and instance indexes from the table and call the render function to render the 3D data as 2D images.
+    Retrieve the bounding boxes and indexes to render the 3D data as 2D images.
 
     Args:
         source_url: URL to the source cloud volume (EM).
@@ -841,3 +857,6 @@ def neuron_centric_3d_data_processing(
     )
 
     retrieve_instance_metadata(page=0, mode=mode)
+    return (
+        "Processing completed" if mode == "annotate" else (np.array([]), np.array([]))
+    )

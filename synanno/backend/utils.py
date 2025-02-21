@@ -1,12 +1,9 @@
-from __future__ import print_function, division
-from typing import Dict, Callable, Tuple
-
-
-import os
-import json
-import numpy as np
-
 import concurrent.futures
+import json
+import os
+from typing import Callable, Dict, Tuple
+
+import numpy as np
 
 
 class NpEncoder(json.JSONEncoder):
@@ -18,7 +15,8 @@ class NpEncoder(json.JSONEncoder):
     Returns:
         json.JSONEncoder: JSON encoder.
 
-    Inspired by: https://stackoverflow.com/questions/50916422/python-typeerror-object-of-type-int64-is-not-json-serializable
+    Inspired by:
+        https://stackoverflow.com/questions/50916422/python-typeerror-object-of-type-int64-is-not-json-serializable # noqa: E501
     """
 
     def default(self, obj):
@@ -31,14 +29,14 @@ class NpEncoder(json.JSONEncoder):
         return super(NpEncoder, self).default(obj)
 
 
-def adjust_image_range(image):
+def adjust_image_range(image: np.ndarray) -> np.ndarray:
     """Adjust the range of the given image to 0-255.
 
     Args:
-        image (np.ndarray): Image to be adjusted.
+        image: Image to be adjusted.
 
     Returns:
-        np.ndarray: Adjusted image.
+        Adjusted image.
     """
     if np.max(image) > 1:
         # image is in 0-255 range, convert to np.uint8 directly
@@ -48,15 +46,14 @@ def adjust_image_range(image):
         return (image * 255).astype(np.uint8)
 
 
-def adjust_datatype(data):
-    """Adjust the datatype of the given data to the smallest possible NG compatible datatype.
+def adjust_datatype(data: np.ndarray) -> Tuple[np.ndarray, str]:
+    """Adjust the datatype of the data to the smallest possible NG compatible datatype.
 
     Args:
-        data (np.ndarray): Data to be adjusted.
+        data: Data to be adjusted.
 
     Returns:
-        np.ndarray: Adjusted data.
-        str: Datatype of the adjusted data.
+        Adjusted data and its datatype.
     """
     max_val = np.max(data)
     if max_val <= np.iinfo(np.uint8).max:
@@ -69,11 +66,11 @@ def adjust_datatype(data):
         return data.astype(np.uint64), "uint64"
 
 
-def mkdir(folder_name):
+def mkdir(folder_name: str) -> None:
     """Create a folder if it does not exist.
 
     Args:
-        folder_name (str): Name of the folder to be created.
+        folder_name: Name of the folder to be created.
     """
     if not os.path.exists(folder_name):
         os.mkdir(folder_name)
@@ -83,12 +80,12 @@ def get_sub_dict_within_range(dictionary: Dict, start_key: int, end_key: int) ->
     """Get a sub-dictionary of the given dictionary within the given key range.
 
     Args:
-        dictionary (Dict): Dictionary to be sliced.
-        start_key (int): Start key of the sub-dictionary.
-        end_key (int): End key of the sub-dictionary.
+        dictionary: Dictionary to be sliced.
+        start_key: Start key of the sub-dictionary.
+        end_key: End key of the sub-dictionary.
 
     Returns:
-        Dict: Sub-dictionary within the given key range.
+        Sub-dictionary within the given key range.
     """
     return {
         key: value
@@ -106,15 +103,15 @@ def submit_with_retry(
     """Submit a task to the given executor and retry if it fails.
 
     Args:
-        executor (concurrent.futures.Executor): Executor to submit the task to.
-        func (function): Function to be executed.
-        retries (int, optional): Number of retries. Defaults to 3.
+        executor: Executor to submit the task to.
+        func: Function to be executed.
+        retries: Number of retries. Defaults to 3.
 
     Raises:
         exc: Exception thrown by the function.
 
     Returns:
-        object: Result of the function.
+        Result of the function.
     """
     for attempt in range(retries):
         future = executor.submit(func, *args)
@@ -135,23 +132,25 @@ def draw_cylinder(
     radius: int,
     color_main: Tuple[int, int, int],
     color_sub: Tuple[int, int, int],
-    layout: str,
+    layout: list[str],
 ) -> np.ndarray:
     """
-    Function to draw a cylinder in a 4D numpy array. The color of the cylinder changes based on the distance from the center_z.
+    Function to draw a cylinder in a 4D numpy array.
 
-    Parameters:
-    image (np.ndarray): Input 4D numpy array.
-    center_x (int): X-coordinate of the cylinder center.
-    center_y (int): Y-coordinate of the cylinder center.
-    center_z (int): Z-coordinate of the cylinder center.
-    radius (int): Radius of the cylinder.
-    color_main (Tuple[int, int, int]): RGB color of the circle in the center_z layer.
-    color_sub (Tuple[int, int, int]): RGB color of the circles in the other layers.
-    layout (str): The layout of the axes, for example, "zyxc".
+    The color of the cylinder changes based on the distance from the center_z.
+
+    Args:
+        image: Input 4D numpy array.
+        center_x: X-coordinate of the cylinder center.
+        center_y: Y-coordinate of the cylinder center.
+        center_z: Z-coordinate of the cylinder center.
+        radius: Radius of the cylinder.
+        color_main: RGB color of the circle in the center_z layer.
+        color_sub: RGB color of the circles in the other layers.
+        layout: The layout of the axes, for example, "zyxc".
 
     Returns:
-    np.ndarray: 4D numpy array with the cylinder drawn.
+        4D numpy array with the cylinder drawn.
     """
 
     # Find the index for each coordinate in the image shape based on the provided layout

@@ -1,23 +1,23 @@
-from torch.utils.data import Dataset
-import pandas as pd
-import numpy as np
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import traceback
 import logging
+import threading
+import traceback
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any
+
+import numpy as np
+import pandas as pd
+import torch
+import torchvision.transforms as transforms
+from torch.utils.data import Dataset
 from tqdm import tqdm
+
+from synanno.backend.auto_segmentation.config import get_config
+from synanno.backend.auto_segmentation.model_source_data import generate_seed_target
 from synanno.backend.auto_segmentation.retrieve_instances import (
     retrieve_instance_from_cv,
     retrieve_instance_metadata,
     setup_cloud_volume,
 )
-from synanno.backend.auto_segmentation.model_source_data import generate_seed_target
-import torch
-from typing import Any
-import threading
-
-from synanno.backend.auto_segmentation.config import get_config
-
-import torchvision.transforms as transforms
 
 CONFIG = get_config()
 
@@ -25,7 +25,7 @@ CONFIG = get_config()
 logger = logging.getLogger(__name__)
 
 
-def normalize_tensor(tensor: torch.Tensor, max_value: int = 255.0) -> torch.Tensor:
+def normalize_tensor(tensor: torch.Tensor, max_value: int = 255) -> torch.Tensor:
     """
     Normalize a tensor to [0, 1].
 
@@ -62,17 +62,17 @@ class SynapseDataset(Dataset):
         select_nr_from_range: int = 0,
         transform: Any = None,
         target_transform: Any = None,
-    ):
+    ) -> None:
         """
         Initialize the SynapseDataset.
 
         Args:
-            materialization_df (pd.DataFrame): DataFrame containing materialization data.
-            meta_data (dict[str, Any]): Metadata dictionary.
-            synapse_id_range (tuple[int, int]): Range of synapse IDs to include in the dataset.
-            select_nr_from_range (int, optional): Number of synapse IDs to select from the range. Defaults to 0.
-            transform (Any, optional): Transform to apply to the source data. Defaults to None.
-            target_transform (Any, optional): Transform to apply to the target data. Defaults to None.
+            materialization_df: DataFrame containing materialization data.
+            meta_data: Metadata dictionary.
+            synapse_id_range: Range of synapse IDs to include in the dataset.
+            select_nr_from_range: Number of synapse IDs to select from the range.
+            transform: Transform to apply to the source data. Defaults to None.
+            target_transform: Transform to apply to the target data. Defaults to None.
         """
         self.materialization_df = materialization_df
         self.meta_data = meta_data
@@ -109,7 +109,7 @@ class SynapseDataset(Dataset):
         Generate the dataset by retrieving instances and processing them.
 
         Returns:
-            list[dict[str, Any]]: list of dictionaries containing dataset instances.
+            list: list of dictionaries containing dataset instances.
         """
         instance_list = []
         for idx in tqdm(
@@ -141,13 +141,15 @@ class SynapseDataset(Dataset):
                 for item in instance_meta_data_list_of_dics
             ]
             for future in tqdm(
-                as_completed(futures), total=len(futures), desc="Data Retrieval"
+                as_completed(futures),
+                total=len(futures),
+                desc="Data Retrieval",
             ):
                 try:
                     result = future.result(timeout=self.timeout)
                     with lock:  # Ensure thread-safe addition to the dataset
                         dataset.append(result)
-                    logger.info(f"Successfully retrieved data sample.")
+                    logger.info("Successfully retrieved data sample.")
                 except Exception as exc:
                     logger.error(f"An exception occurred during data retrieval: {exc}")
                     # Retry logic
@@ -155,7 +157,7 @@ class SynapseDataset(Dataset):
                         result = future.result(timeout=self.timeout)
                         with lock:
                             dataset.append(result)
-                        logger.info(f"Successfully retrieved data sample after retry")
+                        logger.info("Successfully retrieved data sample after retry")
                     except Exception as exc:
                         logger.error(f"Retry failed with error: {exc}")
                         traceback.print_exc()
@@ -185,6 +187,12 @@ class SynapseDataset(Dataset):
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Retrieve a source and target sample from the dataset.
+
+        Args:
+            idx: Index of the sample to retrieve.
+
+        Returns:
+            tuple[torch.Tensor, torch.Tensor]: Source and target tensors.
         """
         sample = self.dataset[idx]
         source = sample["source"]  # Shape: (x, y, z, 2)
@@ -254,7 +262,7 @@ class SynapseDataset(Dataset):
         if self.transform:
             seed = (
                 torch.random.seed()
-            )  # Get a random seed to apply the same transformation to both inputs and targets
+            )  # Get a random seed to apply the same transform to both input and target
             torch.random.manual_seed(seed)
             source = self.transform(source)
             torch.random.manual_seed(seed)
@@ -264,7 +272,7 @@ class SynapseDataset(Dataset):
 
 
 class RandomRotation90:
-    def __call__(self, sample):
+    def __call__(self, sample: torch.Tensor) -> torch.Tensor:
         if torch.rand(1).item() > 0.75:  # Apply rotation 25% of the time
             angles = [90, -90]
             angle = np.random.choice(angles)
@@ -273,12 +281,12 @@ class RandomRotation90:
 
 
 if __name__ == "__main__":
+    from synanno.backend.auto_segmentation.match_source_and_target import (
+        compute_scale_factor,
+        retrieve_smallest_volume_dim,
+    )
     from synanno.backend.auto_segmentation.visualize_instances import (
         visualize_instances,
-    )
-    from synanno.backend.auto_segmentation.match_source_and_target import (
-        retrieve_smallest_volume_dim,
-        compute_scale_factor,
     )
 
     # Load the materialization csv
@@ -342,9 +350,10 @@ if __name__ == "__main__":
     assert (
         torch.max(sample[0][0, :, :, :]) == 1.0
     ), f"Max value image channel: {torch.max(sample[0][0,:,:,:])}"
-    assert (
-        len(torch.unique(sample[0][0, :, :, :])) > 1
-    ), f"Number of unique values in the image channel: {torch.unique(sample[0][0,:,:,:])}"
+    assert len(torch.unique(sample[0][0, :, :, :])) > 1, (
+        "Number of unique values in the image channel:"
+        f"{torch.unique(sample[0][0,:,:,:])}"
+    )
 
     assert (
         torch.min(sample[0][1, :, :, :]) == 0.0
@@ -352,12 +361,14 @@ if __name__ == "__main__":
     assert (
         torch.max(sample[0][1, :, :, :]) == 1.0
     ), f"Max value seed channel: {torch.max(sample[0][1,:,:,:])}"
-    assert (
-        len(torch.unique(sample[0][1, :, :, :])) == 2
-    ), f"Number of unique values in the seed channel: {torch.unique(sample[0][1,:,:,:])}"
-    assert (
-        torch.sum(sample[0][1, :, :, :] > 0) > 0
-    ), f"Number of non-zero values in the seed channel: {torch.sum(sample[0][1,:,:,:] > 0)}"
+    assert len(torch.unique(sample[0][1, :, :, :])) == 2, (
+        "Number of unique values in the seed channel: "
+        f"{torch.unique(sample[0][1,:,:,:])}"
+    )
+    assert torch.sum(sample[0][1, :, :, :] > 0) > 0, (
+        "Number of non-zero values in the seed channel: "
+        "{torch.sum(sample[0][1,:,:,:] > 0)}"
+    )
 
     assert (
         torch.min(sample[1][0, :, :, :]) == 0.0
@@ -368,9 +379,10 @@ if __name__ == "__main__":
     assert (
         len(torch.unique(sample[1][0, :, :, :])) == 2
     ), f"Number of unique values in the target: {torch.unique(sample[1][0,:,:,:])}"
-    assert (
-        torch.sum(sample[1][0, :, :, :] > 0) > 0
-    ), f"Number of non-zero values in the target sample: {torch.sum(sample[1][0,:,:,:] > 0)}"
+    assert torch.sum(sample[1][0, :, :, :] > 0) > 0, (
+        "Number of non-zero values in the target sample: "
+        "{torch.sum(sample[1][0,:,:,:] > 0)}"
+    )
 
     assert torch.sum(sample[0][1, :, :, :] > 0) < torch.sum(
         sample[1][0, :, :, :] > 0

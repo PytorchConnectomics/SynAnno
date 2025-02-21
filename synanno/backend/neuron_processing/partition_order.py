@@ -14,7 +14,8 @@ def compute_section_positions(
         sections: List of lists, where each inner list represents a section of nodes.
 
     Returns:
-        Dictionary where keys are section indices and values are lists of positions in the tree traversal order.
+        Dict with section indices as keys and lists of positions
+        in the tree traversal order as values.
     """
     return {
         section_idx: [tree_traversal.index(node) for node in section]
@@ -22,12 +23,15 @@ def compute_section_positions(
     }
 
 
-def compute_mean_positions(section_positions: dict[int, list[int]]) -> dict[int, float]:
+def compute_mean_positions(
+    section_positions: dict[int, list[int]],
+) -> dict[int, float]:
     """
     Computes the mean traversal index for each section.
 
     Args:
-        section_positions: Dictionary where keys are section indices and values are lists of positions in the tree traversal order.
+        section_positions: Dict with section indices as keys and lists of positions
+            in the tree traversal order as values.
 
     Returns:
         Dictionary where keys are section indices and values are mean traversal indices.
@@ -36,19 +40,21 @@ def compute_mean_positions(section_positions: dict[int, list[int]]) -> dict[int,
 
 
 def sort_sections_by_mean_position(
-    section_mean_positions: dict[int, float]
+    section_mean_positions: dict[int, float],
 ) -> list[int]:
     """
     Sorts sections by their mean traversal index.
 
     Args:
-        section_mean_positions: Dictionary where keys are section indices and values are mean traversal indices.
+        section_mean_positions: Dict with section indices as keys and
+            mean traversal indices as values.
 
     Returns:
         List of section indices sorted by mean traversal index.
     """
     return sorted(
-        section_mean_positions.keys(), key=lambda sec: section_mean_positions[sec]
+        section_mean_positions.keys(),
+        key=lambda sec: section_mean_positions[sec],
     )
 
 
@@ -64,7 +70,7 @@ def compute_section_order(
         sections: List of lists, where each inner list represents a section of nodes.
 
     Returns:
-        Dictionary where keys are traversal order (1-based) and values are section indices.
+        Dictionary where keys are traversal order and values are section indices.
     """
     section_positions = compute_section_positions(tree_traversal, sections)
     section_mean_positions = compute_mean_positions(section_positions)
@@ -83,11 +89,12 @@ def assign_section_order_index(
     neuron_tree: KDTree,
 ) -> None:
     """
-    Assigns a section index and section order index to each row in the materialization DataFrame.
+    Assigns section index and section order index to each row in the materialization df.
 
     Args:
         materialization_pd: DataFrame containing synapse information.
-        neuron_section_lookup: Dictionary where keys are neuron node IDs and values are tuples of section index and section order index.
+        neuron_section_lookup: Dict neuron node IDs as keys and tuples of
+                            section index and section order index as values.
         neuron_tree: KDTree of neuron coordinates.
     """
     for index, synapse in materialization_pd.iterrows():
@@ -116,10 +123,11 @@ def neuron_section_lookup(
 
     Args:
         sections: List of lists, where each inner list represents a section of nodes.
-        section_order: Dictionary where keys are traversal order (1-based) and values are section indices.
+        section_order: Dict traversal order as keys and section indices as values.
 
     Returns:
-        Dictionary where keys are neuron node IDs and values are tuples of section index and section order index.
+        Dict where keys are neuron node IDs and values are tuples
+        of section index and section order index.
     """
     lookup = {}
     for section_index, section in enumerate(sections):

@@ -6,14 +6,14 @@ def pick_slice_based_on_range(
     volume_shape: tuple[int, int, int], target_range: tuple[int, int]
 ) -> int:
     """
-    Pick a slice from the volume based on a Gaussian distribution centered within the target range.
+    Pick a slice from the volume based on a Gaussian centered within the target range.
 
     Args:
-        volume_shape (tuple[int, int, int]): Shape of the volume as (x, y, z).
-        target_range (tuple[int, int]): Range of slices to consider as (start, end).
+        volume_shape: Shape of the volume as (x, y, z).
+        target_range: Range of slices to consider as (start, end).
 
     Returns:
-        int: The index of the selected slice.
+        The index of the selected slice.
     """
     z_dim = volume_shape[2]
     start, end = target_range
@@ -24,19 +24,21 @@ def pick_slice_based_on_range(
     range_center = (start + end) / 2
     sigma = (end - start) / 6  # Approx. 99.7% of values within the range
 
-    # Generate probabilities for all slices in the volume
+    probabilities = _generate_probabilities(z_dim, range_center, sigma, start, end)
+
+    return np.random.choice(np.arange(z_dim), p=probabilities)
+
+
+def _generate_probabilities(
+    z_dim: int, range_center: float, sigma: float, start: int, end: int
+) -> np.ndarray:
+    """Generate probabilities for all slices in the volume."""
     z_indices = np.arange(z_dim)
     probabilities = norm.pdf(z_indices, loc=range_center, scale=sigma)
-
-    # Restrict probabilities to the target range
     probabilities[:start] = 0
     probabilities[end:] = 0
-
-    # Normalize probabilities
     probabilities /= probabilities.sum()
-
-    # Pick a slice based on the probabilities
-    return np.random.choice(z_indices, p=probabilities)
+    return probabilities
 
 
 def generate_seed_target(
@@ -46,32 +48,47 @@ def generate_seed_target(
     Generate the seed channel by masking a set number of slices in the target volume.
 
     Args:
-        volume (np.ndarray): The target volume of shape (x, y, z).
-        slices_to_generate (int): Maximum number of slices to select and mask (1 to slices_to_generate).
-        target_range (tuple[int, int]): Range of slices to consider as (start, end).
+        volume: The target volume of shape (x, y, z).
+        slices_to_generate: Max number of slices to select and mask.
+        target_range: Range of slices to consider as (start, end).
 
     Returns:
-        tuple[np.ndarray, list[int]]: A tuple containing the masked volume and the selected slices.
+        A tuple containing the masked volume and the selected slices.
     """
+    actual_slices_to_generate = _determine_slices_to_generate(slices_to_generate)
+    selected_slices = _select_slices(
+        volume.shape, target_range, actual_slices_to_generate
+    )
+    masked_volume = _create_masked_volume(volume, selected_slices)
 
-    # Create probabilities for the number of slices to generate
+    return masked_volume, selected_slices
+
+
+def _determine_slices_to_generate(slices_to_generate: int) -> int:
+    """Determine how many slices to generate."""
     slice_indices = np.arange(1, slices_to_generate + 1)
     slice_probs = norm.pdf(slice_indices, loc=1, scale=slices_to_generate / 3)
     slice_probs /= slice_probs.sum()
+    return np.random.choice(slice_indices, p=slice_probs)
 
-    # Determine how many slices to generate
-    actual_slices_to_generate = np.random.choice(slice_indices, p=slice_probs)
 
-    # Select the slices to include in the training sample
-    selected_slices = []
-    while len(selected_slices) < actual_slices_to_generate:
-        selected_slice = pick_slice_based_on_range(volume.shape, target_range)
+def _select_slices(
+    volume_shape: tuple[int, int, int],
+    target_range: tuple[int, int],
+    slices_to_generate: int,
+) -> list[int]:
+    """Select the slices to include in the training sample."""
+    selected_slices: list[int] = []
+    while len(selected_slices) < slices_to_generate:
+        selected_slice = pick_slice_based_on_range(volume_shape, target_range)
         if selected_slice not in selected_slices:
             selected_slices.append(selected_slice)
+    return selected_slices
 
-    # Create a masked volume with all selected slices
+
+def _create_masked_volume(volume: np.ndarray, selected_slices: list[int]) -> np.ndarray:
+    """Create a masked volume with all selected slices."""
     masked_volume = np.zeros_like(volume)
     for selected_slice in selected_slices:
         masked_volume[:, :, selected_slice] = volume[:, :, selected_slice]
-
-    return masked_volume, selected_slices
+    return masked_volume

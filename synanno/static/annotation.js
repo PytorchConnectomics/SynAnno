@@ -1,5 +1,3 @@
-import {enableNeuropilLayer, disableNeuropilLayer} from "./utils/ng_util.js";
-
 $(document).ready(function () {
 
   const neuronID = $("script[src*='annotation.js']").data("neuron-id");

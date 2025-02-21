@@ -1,47 +1,40 @@
 # flask util functions
-from flask import render_template, request, jsonify, session
-
-# flask ajax requests
-from flask_cors import cross_origin
-
-# open, resize and transform images
-from PIL import Image
-
-# handle binary stream from base64 decoder
-from io import BytesIO
-
 # base64 decoder to convert canvas
 import base64
-
-# regular expression matching
-import re
+import glob
+import json
 
 # manage paths and files
 import os
 
-# import processing functions
-from synanno.backend.processing import calculate_crop_pad, create_dir
+# regular expression matching
+import re
+
+# handle binary stream from base64 decoder
+from io import BytesIO
+
+import numpy as np
+import pandas as pd
+from cloudvolume import Bbox
+from flask import Blueprint, current_app, jsonify, render_template, request, session
+
+# flask ajax requests
+from flask_cors import cross_origin
 
 # for type hinting
 from jinja2 import Template
-from typing import Dict
 
-import json
+# open, resize and transform images
+from PIL import Image
 
-from cloudvolume import Bbox
-
-import numpy as np
-
-import pandas as pd
-
+# import processing functions
+from synanno.backend.processing import (
+    calculate_crop_pad,
+    create_dir,
+    process_instance,
+    update_slice_number,
+)
 from synanno.backend.utils import adjust_datatype
-
-import glob
-
-from flask import Blueprint
-from flask import current_app
-
-from synanno.backend.processing import process_instance, update_slice_number
 
 # define a Blueprint for manual_annotate routes
 blueprint = Blueprint("manual_annotate", __name__)
@@ -56,69 +49,38 @@ def draw() -> Template:
         Renders the draw view.
     """
 
-    # retrieve the data from the dataframe for which the user has marked the instance as "Incorrect" or "Unsure"
+    # retrieve the data for instance marked as "Incorrect" or "Unsure"
     data = current_app.df_metadata[
         current_app.df_metadata["Label"].isin(["Incorrect", "Unsure"])
     ].to_dict("records")
     return render_template("draw.html", images=data)
 
 
-@blueprint.route("/save_canvas", methods=["POST"])
-def save_canvas() -> Dict[str, object]:
-    """Serves an Ajax request from draw.js, downloading, converting, and saving
-    the canvas as image.
-
-    Return:
-        Passes the instance specific session information as JSON to draw.js
-    """
-
-    coordinate_order = list(current_app.coordinate_order.keys())
-
-    # retrieve the canvas
-    image_data = re.sub("^data:image/.+;base64,", "", request.form["imageBase64"])
-
-    # retrieve the instance specifiers
-    page = int(request.form["page"])  # required for pd query
-    index = int(request.form["data_id"])
-    viewed_instance_slice = int(request.form["viewed_instance_slice"])
-    canvas_type = str(request.form["canvas_type"])
-
-    # convert the canvas to PIL image format
-    im = Image.open(BytesIO(base64.b64decode(image_data)))
-
-    # adjust the size of the PIL Image in accordance with the session's path size
-    crop_axes = (
-        (session["crop_size_y"], session["crop_size_x"])
-        if coordinate_order.index("y") < coordinate_order.index("x")
-        else (session["crop_size_x"], session["crop_size_y"])
-    )
-    im = im.resize((crop_axes[0], crop_axes[1]), Image.LANCZOS)
-
-    # create the base folder where to save all custom mask objects
-    static_folder = os.path.join(
-        current_app.root_path, current_app.config["STATIC_FOLDER"]
-    )
-    mask_folder = os.path.join(static_folder, "Images/Mask")
-
-    if not os.path.exists(mask_folder):
-        os.makedirs(mask_folder)
-
-    # create the instance specific sub folder
-    instance_folder_path = os.path.join(mask_folder, str(index))
-
-    if not os.path.exists(instance_folder_path):
-        os.makedirs(instance_folder_path)
-
-    # retrieve the instance specific information for naming the image
-
-    data = current_app.df_metadata.query(
+def get_instance_data(page: int, index: int) -> dict:
+    """Retrieve instance specific data from metadata."""
+    return current_app.df_metadata.query(
         "Page == @page & Image_Index == @index"
     ).to_dict("records")[0]
-    coordinates = "_".join(map(str, data["Adjusted_Bbox"]))
-    img_index = str(data["Image_Index"])
 
-    # image name
-    img_name = (
+
+def save_image(im: Image, path: str) -> None:
+    """Save the PIL image to the specified path."""
+    im.save(path)
+
+
+def create_instance_folder(mask_folder: str, index: int) -> str:
+    """Create the instance specific sub folder."""
+    instance_folder_path = os.path.join(mask_folder, str(index))
+    if not os.path.exists(instance_folder_path):
+        os.makedirs(instance_folder_path)
+    return instance_folder_path
+
+
+def get_image_name(
+    canvas_type: str, img_index: str, viewed_instance_slice: int, coordinates: str
+) -> str:
+    """Generate the image name based on the canvas type and instance details."""
+    return (
         canvas_type
         + "_idx_"
         + img_index
@@ -129,40 +91,75 @@ def save_canvas() -> Dict[str, object]:
         + ".png"
     )
 
-    # we only want to save one pre and one post circle per instance
-    if canvas_type == "circlePre" or canvas_type == "circlePost":
-        # if a file exist with path path= os.path.join(folder_path, canvas_type +'_idx_'+img_index)
-        existing_path = glob.glob(
-            os.path.join(
-                instance_folder_path,
-                canvas_type
-                + "_idx_"
-                + img_index
-                + "_slice_*_cor_"
-                + coordinates
-                + ".png",
-            )
+
+def remove_existing_file(
+    instance_folder_path: str, canvas_type: str, img_index: str, coordinates: str
+) -> None:
+    """Remove existing file if it exists."""
+    existing_path = glob.glob(
+        os.path.join(
+            instance_folder_path,
+            canvas_type + "_idx_" + img_index + "_slice_*_cor_" + coordinates + ".png",
         )
-        if len(existing_path) > 0:
-            # remove the existing file
-            os.remove(existing_path[0])
+    )
+    if len(existing_path) > 0:
+        os.remove(existing_path[0])
 
-    # save the mask
-    im.save(os.path.join(instance_folder_path, img_name))
 
-    # send the instance specific information to draw.js
+@blueprint.route("/save_canvas", methods=["POST"])
+def save_canvas() -> dict:
+    """Serves an Ajax request from draw.js, downloading, converting, and saving
+    the canvas as image.
+
+    Return:
+        Passes the instance specific session information as JSON to draw.js
+    """
+    coordinate_order = list(current_app.coordinate_order.keys())
+    image_data = re.sub("^data:image/.+;base64,", "", request.form["imageBase64"])
+    page = int(request.form["page"])
+    index = int(request.form["data_id"])
+    viewed_instance_slice = int(request.form["viewed_instance_slice"])
+    canvas_type = str(request.form["canvas_type"])
+
+    im = Image.open(BytesIO(base64.b64decode(image_data)))
+    crop_axes = (
+        (session["crop_size_y"], session["crop_size_x"])
+        if coordinate_order.index("y") < coordinate_order.index("x")
+        else (session["crop_size_x"], session["crop_size_y"])
+    )
+    im = im.resize((crop_axes[0], crop_axes[1]), Image.LANCZOS)
+
+    static_folder = os.path.join(
+        current_app.root_path, current_app.config["STATIC_FOLDER"]
+    )
+    mask_folder = os.path.join(static_folder, "Images/Mask")
+    if not os.path.exists(mask_folder):
+        os.makedirs(mask_folder)
+
+    instance_folder_path = create_instance_folder(mask_folder, index)
+    data = get_instance_data(page, index)
+    coordinates = "_".join(map(str, data["Adjusted_Bbox"]))
+    img_index = str(data["Image_Index"])
+    img_name = get_image_name(
+        canvas_type, img_index, viewed_instance_slice, coordinates
+    )
+
+    if canvas_type in ["circlePre", "circlePost"]:
+        remove_existing_file(instance_folder_path, canvas_type, img_index, coordinates)
+
+    save_image(im, os.path.join(instance_folder_path, img_name))
     data = json.dumps(data)
     final_json = jsonify(data=data)
-
     return final_json
 
 
 @blueprint.route("/load_missing_slices", methods=["POST"])
-def load_missing_slices() -> Dict[str, str]:
-    """The auto segmentation view needs a set number of slices per instance (depth). Coming from the
-    Annotation view the user might use a different number of slices - most likely a single slice.
-    To enable the user to go through the individual slices, redraw the mask and auto generate the mask we thus
-    need to download the remaining slices.
+def load_missing_slices() -> dict:
+    """The auto segmentation view needs a set number of slices per instance (depth).
+    Coming from the Annotation view the user might use a different number of slices
+    - most likely a single slice. To enable the user to go through the individual
+    slices, redraw the mask and auto generate the mask we thus need to download the
+    remaining slices.
     """
 
     # Retrieve the current meta data from current_app.df_metadata
@@ -201,19 +198,19 @@ def load_missing_slices() -> Dict[str, str]:
 
 @blueprint.route("/ng_bbox_fn", methods=["POST"])
 @cross_origin()
-def ng_bbox_fn() -> Dict[str, object]:
-    """Serves an Ajax request by draw_module.js, passing the coordinates of the center point of a newly marked FN to the front end,
-    enabling the front end to depict the values and the user to manual update/correct them.
+def ng_bbox_fn() -> dict:
+    """Serves an Ajax request by draw_module.js, passing the coordinates of the center
+    point of a newly marked FN to the front end, enabling the front end to depict the
+    values and the user to manual update/correct them.
 
     Return:
-        The x and y coordinates of the center of the newly added instance as well as the upper and the
-        lower z bound of the instance as JSON to draw_module.js
+        The x and y coordinates of the center of the newly added instance as well as
+        the upper and the lower z bound of the instance as JSON to draw_module.js
     """
 
     coordinate_order = list(current_app.coordinate_order.keys())
 
-    # expand the bb in in z direction
-    # we expand the front and the back z value dependent on their proximity to the boarders
+    # expand the z value dependent on their proximity to the boarders
 
     expand_z = current_app.crop_size_z_draw // 2
 
@@ -238,14 +235,14 @@ def ng_bbox_fn() -> Dict[str, object]:
 
 @blueprint.route("/ng_bbox_fn_save", methods=["POST"])
 @cross_origin()
-def ng_bbox_fn_save() -> Dict[str, object]:
-    """Serves an Ajax request by draw_module.js, that passes the manual updated/corrected bb coordinates
-    to this backend function. Additionally, the function creates a new item instance and
-    updates the metadata dataframe.
+def ng_bbox_fn_save() -> dict:
+    """Serves an Ajax request by draw_module.js, that passes the manual updated/
+    corrected bb coordinates to this backend function. Additionally, the
+    function creates a new item instance and updates the metadata dataframe.
 
     Return:
-        The x and y coordinates of the center of the newly added instance as well as the upper and the
-        lower z bound of the instance as JSON to draw_module.js
+        The x and y coordinates of the center of the newly added instance as well as
+        the upper and the lower z bound of the instance as JSON to draw_module.js
     """
 
     coordinate_order = list(current_app.coordinate_order.keys())
@@ -257,22 +254,16 @@ def ng_bbox_fn_save() -> Dict[str, object]:
     current_app.cy = int(request.form["my"])
     current_app.cx = int(request.form["mx"])
 
-    ## add the new instance to the the json und update the session data
-
-    # create new item
-    item = dict()
-
-    # index starts at one, adding item, therefore, incrementing by one
+    item = {}
 
     # calculate the number of pages needed for the instance count in the JSON
     if not (len(current_app.df_metadata) % session.get("per_page") == 0):
+        # index starts at one, adding item, therefore, incrementing by one
         item["Page"] = len(current_app.df_metadata) // session.get("per_page") + 1
     else:
         item["Page"] = len(current_app.df_metadata) // session.get("per_page")
 
-    # divide the number of instance by the number of instances per page to get the index of the current page
-
-    ### Note that all dimensions are saved in then scale of the target (segmentation) volume. ###
+    # note that all dimensions are saved in then scale of the target (seg) volume
 
     item["Image_Index"] = len(current_app.df_metadata) + 1
     item["materialization_index"] = -1
@@ -325,7 +316,7 @@ def ng_bbox_fn_save() -> Dict[str, object]:
         else current_app.vol_dim_scaled[coordinate_order.index("y")]
     )
 
-    # we update the pre and post coordinates with None as we do not have them initially for FNs
+    # set the pre and post coords to None as we initially do not have them for FNs
     item["pre_pt_z"] = None
     item["pre_pt_y"] = None
     item["pre_pt_x"] = None
@@ -338,7 +329,7 @@ def ng_bbox_fn_save() -> Dict[str, object]:
     item["crop_size_z"] = current_app.crop_size_z_draw
 
     # save the original bounding box using the provided coordinate order
-    bbox = [None] * 6
+    bbox: list[int] = [0] * 6
     bbox[coordinate_order.index("z") * 2] = int(cz1)
     bbox[coordinate_order.index("z") * 2 + 1] = int(cz2)
     bbox[coordinate_order.index("y") * 2] = int(bb_y1)
@@ -370,7 +361,7 @@ def ng_bbox_fn_save() -> Dict[str, object]:
     # retrieve the order of the coordinates (xyz, xzy, yxz, yzx, zxy, zyx)
     cord_order = list(current_app.coordinate_order.keys())
 
-    # create the bounding box for the current synapse based on the order of the coordinates
+    # create the bb box for the current synapse based on the order of the coordinates
     bound = Bbox(
         [
             crop_box_dict[cord_order[0] + "1"],
@@ -385,8 +376,8 @@ def ng_bbox_fn_save() -> Dict[str, object]:
     )
 
     # Convert coordinate resolution values to integers
-    # Each coordinate resolution is a tuple where the first value is the resolution of the source image
-    # and the second value is the resolution of the target image
+    # Each coordinate resolution is a tuple where the first value is the resolution
+    # of the source image and the second value is the resolution of the target image
     coord_resolution = [int(res[0]) for res in current_app.coordinate_order.values()]
 
     # Retrieve the source and target images from the cloud volume
@@ -438,9 +429,10 @@ def ng_bbox_fn_save() -> Dict[str, object]:
         img_c = Image.fromarray(adjust_datatype(cropped_img[tuple(slicing_img)])[0])
         img_c.save(os.path.join(img_all, img_name), "PNG")
 
-    assert set(item.keys()) == set(
-        current_app.df_metadata.columns
-    ), f"Difference: {set(item.keys()).symmetric_difference(set(current_app.df_metadata.columns))}"
+    assert set(item.keys()) == set(current_app.df_metadata.columns), (
+        f"Diff: "
+        f"{set(item.keys()).symmetric_difference(set(current_app.df_metadata.columns))}"
+    )
 
     df_item = pd.DataFrame([item])
     current_app.df_metadata = pd.concat(
@@ -457,34 +449,90 @@ def ng_bbox_fn_save() -> Dict[str, object]:
     )
 
 
-@blueprint.route("/save_pre_post_coordinates", methods=["POST"])
-@cross_origin()
-def save_pre_post_coordinates() -> None:
-    # retrieve the data from the request
-    # the x and y value from the java script refers to the classical x=horizontal and y=vertical axis
-    # however, this does not necessarily correspond to the x and y axis order of the image
+def get_coordinate_order() -> list:
+    """Retrieve the coordinate order from the current app."""
+    return list(current_app.coordinate_order.keys())
 
-    coordinate_order = list(current_app.coordinate_order.keys())
 
-    x_index = coordinate_order.index("x")
-    y_index = coordinate_order.index("y")
-    z_index = coordinate_order.index("z")
-
-    x = int(round(float(request.form["x"])))
-    y = int(round(float(request.form["y"])))
-    z = int(round(float(request.form["z"])))
-    data_id = int(request.form["data_id"])
-    page = int(request.form["page"])
-    id = str(request.form["id"])
-
-    # scaling the coordinates to the original target size
+def scale_coordinates(x: int, y: int, z: int) -> tuple:
+    """Scale the coordinates to the original target size."""
     x = int(x / current_app.scale["x"])
     y = int(y / current_app.scale["y"])
     z = int(z / current_app.scale["z"])
+    return x, y, z
 
-    x = (
-        x
-        + current_app.df_metadata.loc[
+
+def update_metadata(data_id: int, page: int, x: int, y: int, z: int, id: str) -> None:
+    """Update the metadata with the new coordinates."""
+    if id == "pre":
+        current_app.df_metadata.loc[
+            (current_app.df_metadata["Image_Index"] == data_id)
+            & (current_app.df_metadata["Page"] == page),
+            ["pre_pt_x", "pre_pt_y", "pre_pt_z"],
+        ] = [x, y, z]
+    elif id == "post":
+        current_app.df_metadata.loc[
+            (current_app.df_metadata["Image_Index"] == data_id)
+            & (current_app.df_metadata["Page"] == page),
+            ["post_pt_x", "post_pt_y", "post_pt_z"],
+        ] = [x, y, z]
+    else:
+        raise ValueError("id must be pre or post")
+
+
+def update_segmentation_color(seg_folder: str, middle_slice: int, color: tuple) -> None:
+    """Update the color of the segmentation in the middle slice."""
+    if os.path.exists(
+        os.path.join(
+            current_app.root_path, seg_folder.lstrip("/"), str(middle_slice) + ".png"
+        )
+    ):
+        seg_slice = Image.open(
+            os.path.join(
+                current_app.root_path,
+                seg_folder.lstrip("/"),
+                str(middle_slice) + ".png",
+            )
+        )
+        seg_slice = np.array(seg_slice)
+        mask_main = np.all(
+            seg_slice[:, :, :3] == current_app.pre_id_color_main, axis=-1
+        )
+        mask_sub = np.all(seg_slice[:, :, :3] == current_app.pre_id_color_sub, axis=-1)
+        mask = mask_main | mask_sub
+        seg_slice[mask] = color
+        Image.fromarray(seg_slice).save(
+            os.path.join(
+                current_app.root_path,
+                seg_folder.lstrip("/"),
+                str(middle_slice) + ".png",
+            )
+        )
+
+
+@blueprint.route("/save_pre_post_coordinates", methods=["POST"])
+@cross_origin()
+def save_pre_post_coordinates() -> tuple:
+    """Save the pre or post coordinates."""
+    coordinate_order = get_coordinate_order()
+    x_index, y_index, z_index = (
+        coordinate_order.index("x"),
+        coordinate_order.index("y"),
+        coordinate_order.index("z"),
+    )
+    x, y, z = (
+        int(round(float(request.form["x"]))),
+        int(round(float(request.form["y"]))),
+        int(round(float(request.form["z"]))),
+    )
+    data_id, page, id = (
+        int(request.form["data_id"]),
+        int(request.form["page"]),
+        str(request.form["id"]),
+    )
+    x, y, z = scale_coordinates(x, y, z)
+    x += (
+        current_app.df_metadata.loc[
             (current_app.df_metadata["Image_Index"] == data_id)
             & (current_app.df_metadata["Page"] == page),
             "Adjusted_Bbox",
@@ -495,9 +543,8 @@ def save_pre_post_coordinates() -> None:
             "Padding",
         ].values[0][x_index][0]
     )
-    y = (
-        y
-        + current_app.df_metadata.loc[
+    y += (
+        current_app.df_metadata.loc[
             (current_app.df_metadata["Image_Index"] == data_id)
             & (current_app.df_metadata["Page"] == page),
             "Adjusted_Bbox",
@@ -508,174 +555,27 @@ def save_pre_post_coordinates() -> None:
             "Padding",
         ].values[0][y_index][0]
     )
-    z = (
-        z
-        - current_app.df_metadata.loc[
-            (current_app.df_metadata["Image_Index"] == data_id)
-            & (current_app.df_metadata["Page"] == page),
-            "Padding",
-        ].values[0][z_index][0]
-    )
-
-    # if id=='pre' update 'pre_pt_x', 'pre_pt_y', 'post_pt_y' of the instance specific information in the dataframe
-    if id == "pre":
-        current_app.df_metadata.loc[
-            (current_app.df_metadata["Image_Index"] == data_id)
-            & (current_app.df_metadata["Page"] == page),
-            "pre_pt_x",
-        ] = x
-        current_app.df_metadata.loc[
-            (current_app.df_metadata["Image_Index"] == data_id)
-            & (current_app.df_metadata["Page"] == page),
-            "pre_pt_y",
-        ] = y
-        current_app.df_metadata.loc[
-            (current_app.df_metadata["Image_Index"] == data_id)
-            & (current_app.df_metadata["Page"] == page),
-            "pre_pt_z",
-        ] = z
-
-        # get the segmentation folder
-        seg_folder = current_app.df_metadata.loc[
-            (current_app.df_metadata["Image_Index"] == data_id)
-            & (current_app.df_metadata["Page"] == page),
-            "GT",
-        ].values[0]
-
-        # get the instance middle slice
-        middle_slice = current_app.df_metadata.loc[
-            (current_app.df_metadata["Image_Index"] == data_id)
-            & (current_app.df_metadata["Page"] == page),
-            "Middle_Slice",
-        ].values[0]
-
-        # set the color of the pre coordinate instance in the middle slice of the segmentation to (128, 128, 128, 0.5)
-        # we only have to check the middle slice since it is the only slice of the original masks,
-        # that ever gets depicted in the draw view
-        # if the instance is not a false negative and the middle slice mask exists
-        if os.path.exists(
-            os.path.join(
-                current_app.root_path,
-                seg_folder.lstrip("/"),
-                str(middle_slice) + ".png",
-            )
-        ):
-            # load the slice of the segmentation
-            seg_slice = Image.open(
-                os.path.join(
-                    current_app.root_path,
-                    seg_folder.lstrip("/"),
-                    str(middle_slice) + ".png",
-                )
-            )
-
-            # set any pixels with value current_app.pre_id_color_main to pre_id_color_sub
-            seg_slice = np.array(seg_slice)
-
-            # Create a boolean mask where the RGB values of seg_slice match current_app.pre_id_color_main and sub
-            mask_main = np.all(
-                seg_slice[:, :, :3] == current_app.pre_id_color_main, axis=-1
-            )
-            mask_sub = np.all(
-                seg_slice[:, :, :3] == current_app.pre_id_color_sub, axis=-1
-            )
-
-            mask = mask_main | mask_sub
-
-            # Where the mask is True, set the RGB values to current_app.pre_id_color_sub
-            seg_slice[mask] = (128, 128, 128, 0.5)
-
-            # save the updated segmentation
-            Image.fromarray(seg_slice).save(
-                os.path.join(
-                    current_app.root_path,
-                    seg_folder.lstrip("/"),
-                    str(middle_slice) + ".png",
-                )
-            )
-
-    elif id == "post":
-        current_app.df_metadata.loc[
-            (current_app.df_metadata["Image_Index"] == data_id)
-            & (current_app.df_metadata["Page"] == page),
-            "post_pt_x",
-        ] = x
-        current_app.df_metadata.loc[
-            (current_app.df_metadata["Image_Index"] == data_id)
-            & (current_app.df_metadata["Page"] == page),
-            "post_pt_y",
-        ] = y
-        current_app.df_metadata.loc[
-            (current_app.df_metadata["Image_Index"] == data_id)
-            & (current_app.df_metadata["Page"] == page),
-            "post_pt_z",
-        ] = z
-
-        # get the segmentation folder
-        seg_folder = current_app.df_metadata.loc[
-            (current_app.df_metadata["Image_Index"] == data_id)
-            & (current_app.df_metadata["Page"] == page),
-            "GT",
-        ].values[0]
-
-        # get the instance middle slice
-        middle_slice = current_app.df_metadata.loc[
-            (current_app.df_metadata["Image_Index"] == data_id)
-            & (current_app.df_metadata["Page"] == page),
-            "Middle_Slice",
-        ].values[0]
-
-        # set the color of the pre instance in the middle slice of the segmentation to gray
-        # we only have to check the middle slice since it is the only slice of the original masks,
-        # that ever gets depicted in the draw view
-        # if the instance is not a false negative and the middle slice mask exists
-        if os.path.exists(
-            os.path.join(
-                current_app.root_path,
-                seg_folder.lstrip("/"),
-                str(middle_slice) + ".png",
-            )
-        ):
-            # load the slice of the segmentation
-            seg_slice = Image.open(
-                os.path.join(
-                    current_app.root_path,
-                    seg_folder.lstrip("/"),
-                    str(middle_slice) + ".png",
-                )
-            )
-
-            # set any pixels with value current_app.post_id_color_main to post_id_color_sub
-            seg_slice = np.array(seg_slice)
-
-            # Create a boolean mask where the RGB values of seg_slice match current_app.post_id_color_main
-            mask_main = np.all(
-                seg_slice[:, :, :3] == current_app.post_id_color_main, axis=-1
-            )
-            mask_sub = np.all(
-                seg_slice[:, :, :3] == current_app.post_id_color_sub, axis=-1
-            )
-
-            mask = mask_main | mask_sub
-
-            # Where the mask is True, set the RGB values to current_app.post_id_color_sub
-            seg_slice[mask] = (128, 128, 128, 0.5)
-
-            # save the updated segmentation
-            Image.fromarray(seg_slice).save(
-                os.path.join(
-                    current_app.root_path,
-                    seg_folder.lstrip("/"),
-                    str(middle_slice) + ".png",
-                )
-            )
-    else:
-        raise ValueError("id must be pre or post")
-
+    z -= current_app.df_metadata.loc[
+        (current_app.df_metadata["Image_Index"] == data_id)
+        & (current_app.df_metadata["Page"] == page),
+        "Padding",
+    ].values[0][z_index][0]
+    update_metadata(data_id, page, x, y, z, id)
+    seg_folder = current_app.df_metadata.loc[
+        (current_app.df_metadata["Image_Index"] == data_id)
+        & (current_app.df_metadata["Page"] == page),
+        "GT",
+    ].values[0]
+    middle_slice = current_app.df_metadata.loc[
+        (current_app.df_metadata["Image_Index"] == data_id)
+        & (current_app.df_metadata["Page"] == page),
+        "Middle_Slice",
+    ].values[0]
+    update_segmentation_color(seg_folder, middle_slice, (128, 128, 128, 0.5))
     return json.dumps({"success": True}), 200, {"ContentType": "application/json"}
 
 
 @blueprint.route("/get_coordinates", methods=["GET"])
-def get_coordinates():
+def get_coordinates() -> dict:
     """Get the current coordinates of the Neuroglancer instance."""
     return jsonify({"cz": current_app.cz, "cy": current_app.cy, "cx": current_app.cx})

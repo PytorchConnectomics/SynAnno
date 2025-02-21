@@ -1,13 +1,13 @@
-import neuroglancer
+import logging
 from random import randint
+from typing import Union
+
+import neuroglancer
 
 # for type hinting
 import numpy as np
 import numpy.typing as npt
-
-from typing import Union
 from flask import Flask
-import logging
 
 # setup logging
 logging.basicConfig(level=logging.INFO)
@@ -40,13 +40,13 @@ def center_annotation(app, coordinate_space):
         logging.info(f"Center Coordinates: {[app.cx, app.cy, app.cz]}")
 
         # add a yellow dot at the recorded position within the NG
-        with app.ng_viewer.txn() as l:
-            l.layers["marker_dot"].annotations = []  # Clear previous annotations
+        with app.ng_viewer.txn() as layer:
+            layer.layers["marker_dot"].annotations = []  # Clear previous annotations
             pt = neuroglancer.PointAnnotation(
                 point=[int(center[0]), int(center[1]), int(center[2])],
                 id="center_point",
             )
-            l.layers["marker_dot"].annotations.append(pt)
+            layer.layers["marker_dot"].annotations.append(pt)
 
     return _center_annotation
 
@@ -63,9 +63,7 @@ def get_hovered_neuron_id(app):
             logging.info("No mouse coordinates available.")
             return
 
-        logging.info(
-            f"Mouse Voxel Coordinates: {list((int(vc) for vc in voxel_coords))}"
-        )
+        logging.info(f"Mouse Voxel Coordinates: {voxel_coords}")
 
         # retrieve the selected neuron ID from the segmentation layer
         neuron_info = s.selected_values["neuropil"].value
@@ -89,8 +87,8 @@ def get_hovered_neuron_id(app):
         logging.info(f"Selected Neuron ID: {neuron_id}")
 
         # add a marker at the neuron ID location
-        with app.ng_viewer.txn() as l:
-            l.layers["marker_dot"].annotations = []  # Clear previous annotations
+        with app.ng_viewer.txn() as layer:
+            layer.layers["marker_dot"].annotations = []  # Clear previous annotations
             pt = neuroglancer.PointAnnotation(
                 point=[
                     int(voxel_coords[0]),
@@ -99,7 +97,7 @@ def get_hovered_neuron_id(app):
                 ],
                 id="neuron_point",
             )
-            l.layers["marker_dot"].annotations.append(pt)
+            layer.layers["marker_dot"].annotations.append(pt)
 
     return _get_hovered_neuron_id
 
@@ -144,7 +142,7 @@ def setup_ng(
     app.ng_viewer = neuroglancer.Viewer(token=app.ng_version)
 
     # default coordinate order to pass in if processing route not undergone
-    # TODO: set coordinate scales as required before neuron button pressed and remove need for default
+    # TODO: set scales before the neuron button gets pressed and remove need for default
     default_coordinate_order = {"x": (4, 4), "y": (4, 4), "z": (33, 33)}
 
     # specify the NG coordinate space
@@ -257,5 +255,6 @@ def setup_ng(
         s.input_event_bindings.viewer["keyn"] = "get_neuron_id"
 
     logging.info(
-        f"Starting a Neuroglancer instance at {app.ng_viewer}, centered at x,y,z {0,0,0}"
+        f"Starting a Neuroglancer instance at "
+        f"{app.ng_viewer}, centered at x,y,z {0,0,0}."
     )

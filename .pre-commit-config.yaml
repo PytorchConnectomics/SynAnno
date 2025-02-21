@@ -1,29 +1,44 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v5.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-json
 
-  -   repo: local
-      hooks:
-      -   id: pytest
-          name: Run pytest tests
-          entry: pytest
-          language: system
-          types: [python]
-          pass_filenames: false
-          always_run: true
+  - repo: https://github.com/myint/autoflake
+    rev: v2.3.1
+    hooks:
+      - id: autoflake
+        args: ["--remove-all-unused-imports", "--remove-unused-variables", "--expand-star-imports", "-i"]
+
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+      - id: black
+        language_version: python3.9
+        args: ["--line-length=88"]
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.1.2
+    hooks:
+      - id: flake8
+        additional_dependencies: [flake8-bugbear, flake8-comprehensions]
+        args: ["--max-line-length=88"]
+
 
   - repo: https://github.com/Lucas-C/pre-commit-hooks-nodejs
     rev: v1.1.2
     hooks:
       - id: dockerfile_lint
 
-  - repo: https://github.com/psf/black
-    rev: 23.7.0
+  - repo: local
     hooks:
-      - id: black
-        language_version: python3.9
+      - id: pytest
+        name: Run pytest tests
+        entry: pytest
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true

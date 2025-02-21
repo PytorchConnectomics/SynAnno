@@ -3,11 +3,8 @@ import SynapseShader from "./shaders/SynapseShader.js";
 
 $(document).ready(function () {
 
-    window.correct_instances = [];
-    window.incorrect_instances = [];
-    window.unsure_instances = [];
-
     const neuronReady = $("script[src*='viewer.js']").data("neuron-ready") === true;
+    const initialLoad = $("script[src*='viewer.js']").data("initial-load") === true;
     const neuronPath = $("script[src*='viewer.js']").data("neuron-path");
     const neuronSection = $("script[src*='viewer.js']").data("neuron-section");
     const synapseCloudPath = $("script[src*='viewer.js']").data("synapse-cloud-path");
@@ -18,6 +15,13 @@ $(document).ready(function () {
     const $sharkContainerMinimap = $("#shark_container_minimap");
 
     if (neuronReady) {
+
+        if (initialLoad){
+            window.synapseColors = {};
+            sessionStorage.removeItem("synapseColors");
+            console.log("Initial load, synapseColors cleared.");
+        }
+
         console.log("Neuron data is ready. Initializing viewer...");
         try {
             initializeViewer($sharkContainerMinimap[0]);
@@ -32,19 +36,6 @@ $(document).ready(function () {
                 loadSynapseCloud(synapseCloudPath);
             } else {
                 console.error("No synapse cloud path provided.");
-            }
-
-            // Update the color of synapses based on there label
-            for (let i = 0; i < correct_instances.length; i++) {
-                updateSynapse(correct_instances[i], null, new THREE.Color(0x00ff00), null);
-            }
-
-            for (let i = 0; i < incorrect_instances.length; i++) {
-                updateSynapse(incorrect_instances[i], null, new THREE.Color(0xff0000), null);
-            }
-
-            for (let i = 0; i < unsure_instances.length; i++) {
-                updateSynapse(unsure_instances[i], null, new THREE.Color(0xffff00), null);
             }
 
             setupWindowResizeHandler($sharkContainerMinimap[0]);
@@ -312,7 +303,7 @@ function updateNodeAndEdgeColors(viewer, nodes_array, edge_array, sectionColors)
     viewer.render();
 }
 
-window.updateSynapse = function(index, newPosition = null, newColor = null, newSize = null) {
+window.updateSynapse = function(index, newPosition = null, newColor = null, newSize = null, save_in_session = true) {
     const pointsMesh = s.scene.getObjectByName("synapse-cloud");
     if (!pointsMesh) {
         console.error("Synapse cloud not found in the scene.");
@@ -345,7 +336,11 @@ window.updateSynapse = function(index, newPosition = null, newColor = null, newS
                          newColor.getHex() === 0xff0000 ? "red" : "yellow";
 
         window.synapseColors[index] = colorLabel;
-        sessionStorage.setItem("synapseColors", JSON.stringify(window.synapseColors));
+
+        if (save_in_session) {
+            sessionStorage.setItem("synapseColors", JSON.stringify(window.synapseColors));
+            console.log("Synapse color saved in session storage.", window.synapseColors);
+        }
     }
 
     // Update size if provided
@@ -448,10 +443,4 @@ window.onWindowResize = function(sharkContainerMinimap) {
     }
 
     s.render();
-}
-
-window.saveSynapseColor = function(){
-    sessionStorage.setItem("correct_instances", JSON.stringify(window.correct_instances));
-    sessionStorage.setItem("incorrect_instances", JSON.stringify(window.incorrect_instances));
-    sessionStorage.setItem("unsure_instances", JSON.stringify(window.unsure_instances));
 }

@@ -230,16 +230,20 @@ def validate_cloud_volume_urls(
     )
 
 
-def handle_neuron_view(neuropil_url: str) -> tuple[str, list[list[int]], str]:
-    """Handle the neuron view processing.
+def validate_neuron_id() -> int:
+    """Validate the selected neuron ID.
 
-    Args:
-        neuropil_url: URL to the neuropil cloud volume.
+    Returns:
+        The validated neuron ID.
+
+    Raises:
+        ValueError: If the neuron ID is invalid.
     """
     try:
         neuron_id = int(current_app.selected_neuron_id)
         if neuron_id == 0:
             raise ValueError("Only the segmented neurons can be selected.")
+        return neuron_id
     except (TypeError, ValueError) as e:
         flash(
             "Please select a valid neuron under 'Synapse Selection' by clicking 'Choose a Neuron'.",
@@ -253,6 +257,16 @@ def handle_neuron_view(neuropil_url: str) -> tuple[str, list[list[int]], str]:
             view_style="neuron",
             neuronReady="false",
         )
+
+
+def handle_neuron_view(neuropil_url: str) -> tuple[str, list[list[int]], str]:
+    """Handle the neuron view processing.
+
+    Args:
+        neuropil_url: URL to the neuropil cloud volume.
+    """
+
+    neuron_id = validate_neuron_id()  # used in pd query
 
     current_app.synapse_data[
         "materialization_index"

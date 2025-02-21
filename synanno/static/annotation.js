@@ -46,17 +46,15 @@ $(document).ready(function () {
       if (neuronReady) {
         label = $("#id-a-" + data_id).attr("label");
         if (label === "Correct") {
-            window.updateSynapse(data_id, null, new THREE.Color(0x00ff00), null);
+            window.updateSynapse(data_id, null, new THREE.Color(0x00ff00), null, true);
             window.synapseColors[data_id] = "green";
         } else if (label === "Unsure") {
-            window.updateSynapse(data_id, null, new THREE.Color(0xffff00), null);
+            window.updateSynapse(data_id, null, new THREE.Color(0xffff00), null, true);
             window.synapseColors[data_id] = "yellow";
         } else if (label === "Incorrect") {
-            window.updateSynapse(data_id, null, new THREE.Color(0xff0000), null);
+            window.updateSynapse(data_id, null, new THREE.Color(0xff0000), null, true);
             window.synapseColors[data_id] = "red";
         }
-        // Save to session storage
-        sessionStorage.setItem("synapseColors", JSON.stringify(window.synapseColors));
 
         window.setupWindowResizeHandler($sharkContainerAnnotate[0]);
       }

@@ -35,23 +35,6 @@ def compute_mean_positions(section_positions: dict[int, list[int]]) -> dict[int,
     return {sec: np.mean(pos_list) for sec, pos_list in section_positions.items()}
 
 
-def sort_sections_by_mean_position(
-    section_mean_positions: dict[int, float]
-) -> list[int]:
-    """
-    Sorts sections by their mean traversal index.
-
-    Args:
-        section_mean_positions: Dictionary where keys are section indices and values are mean traversal indices.
-
-    Returns:
-        List of section indices sorted by mean traversal index.
-    """
-    return sorted(
-        section_mean_positions.keys(), key=lambda sec: section_mean_positions[sec]
-    )
-
-
 def compute_section_order(
     tree_traversal: list[int], sections: list[list[int]]
 ) -> dict[int, int]:
@@ -68,8 +51,7 @@ def compute_section_order(
     """
     section_positions = compute_section_positions(tree_traversal, sections)
     section_mean_positions = compute_mean_positions(section_positions)
-    sorted_sections = sort_sections_by_mean_position(section_mean_positions)
-    section_order = {sec: rank for rank, sec in enumerate(sorted_sections)}
+    section_order = {sec: rank for rank, sec in enumerate(section_mean_positions)}
     return section_order
 
 

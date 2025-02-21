@@ -9,9 +9,6 @@ $(document).ready(function () {
     const neuronSection = $("script[src*='viewer.js']").data("neuron-section");
     const synapseCloudPath = $("script[src*='viewer.js']").data("synapse-cloud-path");
 
-    console.log("Neuron Path:", neuronPath);
-    console.log("Synapse Cloud Path:", synapseCloudPath);
-
     const $sharkContainerMinimap = $("#shark_container_minimap");
 
     if (neuronReady) {
@@ -80,7 +77,6 @@ window.setupWindowResizeHandler = function(sharkContainerMinimap) {
  * @param {Array} neuronSection - The neuron sections to be highlighted.
  */
 function loadSwcFile(swcPath, neuronSection) {
-    console.log("Fetching swc from path:", swcPath); // Log before the request
     fetch(swcPath)
         .then(response => response.text())
         .then(swcTxt => {
@@ -92,7 +88,6 @@ function loadSwcFile(swcPath, neuronSection) {
                     return;
                 }
 
-                console.log("Parsed SWC data:", swc);
                 s.swc = swc;
 
                 const neuronData = s.loadNeuron('neuron', 'red', swc, true, false, true);
@@ -134,12 +129,10 @@ function loadSwcFile(swcPath, neuronSection) {
  * @param {string} jsonPath - The path to the JSON file.
  */
 function loadSynapseCloud(jsonPath) {
-    console.log("Fetching JSON from path:", jsonPath);
     fetch(jsonPath)
         .then(response => response.json())
         .then(data => {
             try {
-                console.log("Synapse Cloud Data length:", data.length);
 
                 if (!Array.isArray(data) || data.length % 3 !== 0) {
                     console.error("JSON data is not an Array or length is not a multiple of 3.");
@@ -157,7 +150,7 @@ function loadSynapseCloud(jsonPath) {
 
                 // Create buffer attributes for position, color, and size
                 const positions = new Float32Array(points.length * 3);
-                const colors = new Float32Array(points.length * 3);
+                const colors = new Float32Array(points.length * 4); // Updated to include alpha
                 const sizes = new Float32Array(points.length);
 
                 for (let i = 0; i < points.length; i++) {
@@ -174,9 +167,10 @@ function loadSynapseCloud(jsonPath) {
                                      window.synapseColors[i] === "red" ? 0xff0000 : 0xffff00;
 
                     const color = new THREE.Color(colorHex);
-                    colors[i * 3] = color.r;
-                    colors[i * 3 + 1] = color.g;
-                    colors[i * 3 + 2] = color.b;
+                    colors[i * 4] = color.r;
+                    colors[i * 4 + 1] = color.g;
+                    colors[i * 4 + 2] = color.b;
+                    colors[i * 4 + 3] = window.synapseColors[i] === "yellow" ? 0.2 : 0.9; // Set alpha
 
                     sizes[i] = 500;
                 }
@@ -187,7 +181,7 @@ function loadSynapseCloud(jsonPath) {
                 // Create geometry and add attributes
                 const geometry = new THREE.BufferGeometry();
                 geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-                geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+                geometry.setAttribute("color", new THREE.BufferAttribute(colors, 4)); // Updated to include alpha
                 geometry.setAttribute("radius", new THREE.BufferAttribute(sizes, 1));
 
                 // Use SharkViewer's Sphere Texture
@@ -195,7 +189,6 @@ function loadSynapseCloud(jsonPath) {
                 const sphereTexture = new THREE.Texture(image);
                 image.onload = function onload() {
                     sphereTexture.needsUpdate = true;
-                    console.log("Sphere texture loaded and updated.");
                 };
                 image.src = NODE_PARTICLE_IMAGE;
 
@@ -215,10 +208,8 @@ function loadSynapseCloud(jsonPath) {
                 const pointsMesh = new THREE.Points(geometry, material);
                 pointsMesh.name = "synapse-cloud";
 
-                console.log("Adding particle system to scene.");
                 s.scene.add(pointsMesh);
                 s.scene.needsUpdate = true;
-                console.log("Particle system added:", pointsMesh);
 
                 s.render();
                 console.log("Synapse cloud successfully added.");
@@ -250,15 +241,12 @@ function updateNodeAndEdgeColors(viewer, nodes_array, edge_array, sectionColors)
         sectionColors = generateSectionColors(nodes_array.length);
     }
 
-    console.log("Neuron found! Proceeding with coloring.");
     const skeletonVertex = neuron.children.find(child => child.name === "skeleton-vertex");
     const skeletonEdge = neuron.children.find(child => child.name === "skeleton-edge");
 
     if (skeletonVertex && skeletonVertex.geometry && skeletonVertex.geometry.attributes.position) {
-        console.log("Updating node colors...");
         const numVertices = skeletonVertex.geometry.attributes.position.count;
         const colors = new Float32Array(numVertices * 3);
-        console.log("Number of numVertices:", numVertices);
 
         nodes_array.forEach((nodeGroup, index) => {
             const color = new THREE.Color(sectionColors[index] || 0xffffff);
@@ -277,10 +265,8 @@ function updateNodeAndEdgeColors(viewer, nodes_array, edge_array, sectionColors)
     }
 
     if (skeletonEdge && skeletonEdge.geometry && skeletonEdge.geometry.attributes.position) {
-        console.log("Updating edge colors...");
         const numEdges = skeletonEdge.geometry.attributes.position.count / 2;
         const colors = new Float32Array(numEdges * 6 * 3);
-        console.log("Number of edges:", numEdges);
 
         edge_array.forEach((edgeGroup, index) => {
             const color = new THREE.Color(sectionColors[index] || 0xffffff);
@@ -339,7 +325,6 @@ window.updateSynapse = function(index, newPosition = null, newColor = null, newS
 
         if (save_in_session) {
             sessionStorage.setItem("synapseColors", JSON.stringify(window.synapseColors));
-            console.log("Synapse color saved in session storage.", window.synapseColors);
         }
     }
 
@@ -350,7 +335,6 @@ window.updateSynapse = function(index, newPosition = null, newColor = null, newS
     }
 
     s.render();
-    console.log(`Synapse at index ${index} updated to ${window.synapseColors[index]}.`);
 };
 
 

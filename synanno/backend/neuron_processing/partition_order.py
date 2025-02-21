@@ -35,6 +35,23 @@ def compute_mean_positions(section_positions: dict[int, list[int]]) -> dict[int,
     return {sec: np.mean(pos_list) for sec, pos_list in section_positions.items()}
 
 
+def sort_sections_by_mean_position(
+    section_mean_positions: dict[int, float]
+) -> list[int]:
+    """
+    Sorts sections by their mean traversal index.
+
+    Args:
+        section_mean_positions: Dictionary where keys are section indices and values are mean traversal indices.
+
+    Returns:
+        List of section indices sorted by mean traversal index.
+    """
+    return sorted(
+        section_mean_positions.keys(), key=lambda sec: section_mean_positions[sec]
+    )
+
+
 def compute_section_order(
     tree_traversal: list[int], sections: list[list[int]]
 ) -> dict[int, int]:
@@ -51,7 +68,12 @@ def compute_section_order(
     """
     section_positions = compute_section_positions(tree_traversal, sections)
     section_mean_positions = compute_mean_positions(section_positions)
-    section_order = {sec: rank for rank, sec in enumerate(section_mean_positions)}
+    sorted_sections = sort_sections_by_mean_position(section_mean_positions)
+    section_order = {sec: rank for rank, sec in enumerate(sorted_sections)}
+
+    # again sort by section
+    section_order = dict(sorted(section_order.items()))
+
     return section_order
 
 
@@ -68,9 +90,10 @@ def assign_section_order_index(
         neuron_section_lookup: Dictionary where keys are neuron node IDs and values are tuples of section index and section order index.
         neuron_tree: KDTree of neuron coordinates.
     """
-
     for index, synapse in materialization_pd.iterrows():
-        synapse_coords = np.array([synapse["x"], synapse["y"], synapse["z"]])
+        synapse_coords = np.array(
+            (synapse["x"] * 8, synapse["y"] * 8, synapse["z"] * 33)
+        )
         _, node_id = neuron_tree.query(synapse_coords)
         section_idx, order_idx = neuron_section_lookup[node_id]
         materialization_pd.at[index, "section_index"] = int(section_idx)
@@ -83,9 +106,6 @@ def assign_section_order_index(
     materialization_pd["section_order_index"] = materialization_pd[
         "section_order_index"
     ].astype(int)
-
-    # print the section order index column
-    print("section index", materialization_pd["section_order_index"])
 
 
 def neuron_section_lookup(
@@ -102,8 +122,9 @@ def neuron_section_lookup(
         Dictionary where keys are neuron node IDs and values are tuples of section index and section order index.
     """
     lookup = {}
-    for i, section in enumerate(sections):
+    for section_index, section in enumerate(sections):
         for node_id in section:
-            lookup[node_id] = (i, section_order[i])
+            section_order_index = section_order[section_index]
+            lookup[node_id] = (section_index, section_order_index)
 
     return lookup

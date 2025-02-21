@@ -296,16 +296,21 @@ def handle_neuron_view(neuropil_url: str) -> tuple[str, list[list[int]], str]:
     # derive the path for how to traverse the neuron sections
     section_order = compute_section_order(tree_traversal, sections)
     logger.info(f"Section order: {section_order}")
+
     neuron_sec_lookup = neuron_section_lookup(sections, section_order)
     assign_section_order_index(current_app.synapse_data, neuron_sec_lookup, neuron_tree)
-
+    print(current_app.synapse_data[["section_order_index"]].isnull().values.any())
     # reorder the synapse data based on the section order
-    current_app.synapse_data = current_app.synapse_data.sort_values(
-        ["section_order_index"], ascending=[True]
+    print(current_app.synapse_data[["section_order_index"]].head(10))
+    current_app.synapse_data.sort_values(
+        ["section_order_index"], ascending=[True], inplace=True
     )
+    print(current_app.synapse_data[["section_order_index"]].head(10))
 
     # reset the index -> this sets the Image_Index used in the annotation ordering via image.Image_Index
+    print(current_app.synapse_data[["section_order_index"]].head(10))
     current_app.synapse_data.reset_index(drop=True, inplace=True)
+    print(current_app.synapse_data[["section_order_index"]].head(10))
 
     _, snapped_points_json_file_name, neuron_tree = load_synapse_point_cloud(
         current_app.selected_neuron_id,

@@ -31,10 +31,13 @@ def load_neuron_skeleton(
     os.makedirs(swc_path, exist_ok=True)
 
     cv = CloudVolume(c3_bucket, mip=0, cache=False, use_https=True)
-    skeletons = cv.skeleton.get([neuron_id])
 
-    if not skeletons:
-        raise ValueError(f"Neuron {neuron_id} not found in c3 bucket {c3_bucket}")
+    try:
+        skeletons = cv.skeleton.get([neuron_id])
+    except ValueError as e:
+        raise ValueError(
+            f"Neuron {neuron_id} not found in c3 bucket {c3_bucket}"
+        ) from e
 
     skeleton = skeletons[0]
 
@@ -78,11 +81,9 @@ def navis_neuron(swc_file: str) -> tuple[navis.TreeNeuron, str]:
         neuron.reconnect(method="spatial")
 
     # Prune the neuron
-    logger.info(f"Nodes before pruning: {neuron.n_nodes}")
     neuron_pruned = navis.prune_twigs(
         neuron, size="8192 nm", inplace=False, recursive=True
     )
-    logger.info(f"Nodes after pruning: {neuron_pruned.n_nodes}")
 
     # Save the pruned neuron to SWC
     pruned_swc_file = swc_file.replace(".swc", "_pruned.swc")
@@ -91,7 +92,9 @@ def navis_neuron(swc_file: str) -> tuple[navis.TreeNeuron, str]:
     return neuron_pruned, pruned_swc_file
 
 
-def compute_sections(pruned_swc_file: str):
+def compute_sections(
+    pruned_swc_file: str, merge: bool = False
+) -> tuple[list[list[int]], list[int]]:
     """
     Compute the sections of the pruned neuron.
 
@@ -99,26 +102,12 @@ def compute_sections(pruned_swc_file: str):
         pruned_swc_file: The path to the pruned SWC file.
 
     Returns:
-        The merged segments of the neuron.
+        The merged segments of the neuron and the tree traversal order.
     """
     # Reload the pruned neuron
     neuron_pruned = navis.read_swc(pruned_swc_file, write_meta=True)
     # Convert the graph to networkx
     nx_graph = navis.neuron2nx(neuron_pruned)
-
-    # Sanity check
-    logger.info(
-        "Nodes - # "
-        + str(len(nx_graph.nodes.keys()))
-        + ":"
-        + str(list(nx_graph.nodes.keys())[:100])
-    )
-    logger.info(
-        "Edges - # "
-        + str(len(nx_graph.edges.keys()))
-        + ":"
-        + str(list(nx_graph.edges.keys())[:100])
-    )
 
     # Convert the digraph to an undirected graph
     undirected_graph = nx_graph.to_undirected()
@@ -145,7 +134,7 @@ def compute_sections(pruned_swc_file: str):
         len({node for node, degree in undirected_graph.degree() if degree >= 3}) // 4
     )
 
-    if num_sections > 1:
+    if num_sections > 1 and merge:
         logger.info(
             f"Merging {len(segments)} segments into {num_sections} largest segments..."
         )
@@ -156,4 +145,4 @@ def compute_sections(pruned_swc_file: str):
             f"{len((segments))} merged segments with a joint length of {sum([len(s) for s in segments])}."
         )
 
-    return segments
+    return segments, tree_traversal

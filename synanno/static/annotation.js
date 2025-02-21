@@ -2,6 +2,10 @@ import {enableNeuropilLayer, disableNeuropilLayer} from "./utils/ng_util.js";
 
 $(document).ready(function () {
 
+  const neuronID = $("script[src*='annotation.js']").data("neuron-id");
+  const neuronReady = $("script[src*='minimap.js']").data("neuron-ready") === true;
+  const $sharkContainerAnnotate = $("#shark_container_minimap");
+
   // show progress bar when scrolling pages
   $(".nav-anno").click(function () {
     $("#loading-bar").css('display', 'flex');
@@ -38,7 +42,28 @@ $(document).ready(function () {
           .addClass("incorrect");
         $("#id-a-" + data_id).attr("label", "Incorrect");
       }
+
+      if (neuronReady) {
+        label = $("#id-a-" + data_id).attr("label");
+        if (label === "Correct") {
+            window.updateSynapse(data_id, null, new THREE.Color(0x00ff00), null, true);
+            window.synapseColors[data_id] = "green";
+        } else if (label === "Unsure") {
+            window.updateSynapse(data_id, null, new THREE.Color(0xffff00), null, true);
+            window.synapseColors[data_id] = "yellow";
+        } else if (label === "Incorrect") {
+            window.updateSynapse(data_id, null, new THREE.Color(0xff0000), null, true);
+            window.synapseColors[data_id] = "red";
+        }
+
+        window.setupWindowResizeHandler($sharkContainerAnnotate[0]);
+      }
     });
+  });
+
+  // Trigger updateSynapseColors on page navigation for all instances on the page
+  $(".nav-anno").on("click", function () {
+    updateSynapseColors();
   });
 
   // link to the NG, edited when ever right clicking an instance in the grid view
@@ -106,14 +131,13 @@ $(document).ready(function () {
     // the instance label
     var label = $(this).attr("label");
 
-    // the neuron ID
-    var neuronID = $(this).attr("neuronID");
-
     // we are currently in the annotation mode
     var mode = "annotate";
 
     // we require the information about the whole instance
     var load = "full";
+
+    $("#neuron-id").text(neuronID);
 
     // retrieve the info from the backend
     let req_data = $.ajax({
@@ -154,7 +178,7 @@ $(document).ready(function () {
         "src",
         staticBaseUrl + data_json.GT + "/" + data_json.Middle_Slice + ".png",
       );
-      $("#neuron-id").text(neuronID);
+
       $("#detailsModal").modal("show");
 
       // Open modal properly
@@ -297,4 +321,23 @@ window.check_gt = function check_gt() {
   }
 }
 
+function updateSynapseColors() {
+  if ($("script[src*='viewer.js']").data("neuron-ready") === true) {
+      $(".image-card-btn").each(function () {
+          const data_id = $(this).attr("data_id");
+          const label = $(this).attr("label");
+          if (label === "Correct"){
+            window.synapseColors[data_id] = "green";
+          }
+          else if (label === "Unsure"){
+            window.synapseColors[data_id] = "yellow";
+          }
+          else if (label === "Incorrect"){
+            window.synapseColors[data_id] = "red";
+          }
+        });
+      // Save to colors to storage
+      sessionStorage.setItem("synapseColors", JSON.stringify(window.synapseColors));
+  }
+}
 });

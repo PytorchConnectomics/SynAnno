@@ -134,3 +134,67 @@
   .progress {
     position: relative;
   }
+
+/* shark viewer minimap */
+/* Minimap Container */
+.minimap {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  width: 400px;
+  height: 400px; /* Fixed height */
+  background: white;
+  border: 1px solid #ccc;
+  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  border-radius: 5px;
+  overflow: hidden; /* Prevents content from pushing elements */
+  box-sizing: border-box;
+}
+
+/* Minimap Header - Draggable */
+.minimap-header {
+  background: #444;
+  color: white;
+  cursor: move;
+  text-align: center;
+  position: relative;
+  height: 30px; /* Fixed height to prevent shifting */
+  line-height: 30px; /* Centers text vertically */
+  user-select: none; /* Prevents text selection while dragging */
+  box-sizing: border-box;
+}
+
+/* Minimap Content */
+.minimap-content {
+  width: 100%;
+  height: calc(100% - 30px); /* Ensures it fits within minimap */
+  overflow: auto; /* Prevents content from expanding and shifting header */
+  box-sizing: border-box;
+}
+
+/* Toggle Button */
+.toggle-btn {
+  position: absolute;
+  top: 3px;
+  right: 2px;
+  z-index: 1001;
+  background: #666;
+  color: white;
+  border: none;
+  padding: 3px 5px;
+  font-size: 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.2s ease-in-out;
+}
+
+.toggle-btn:hover {
+  background: #888;
+}
+
+/* Prevent header from moving when clicking content */
+.minimap-content:active {
+  outline: none; /* Removes focus outline */
+}

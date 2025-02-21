@@ -275,6 +275,9 @@ def ng_bbox_fn_save() -> Dict[str, object]:
     ### Note that all dimensions are saved in then scale of the target (segmentation) volume. ###
 
     item["Image_Index"] = len(current_app.df_metadata) + 1
+    item["materialization_index"] = -1
+    item["section_index"] = -1
+    item["section_order_index"] = -1
 
     # crop out and save the relevant gt and im
     idx_dir = create_dir(
@@ -289,7 +292,7 @@ def ng_bbox_fn_save() -> Dict[str, object]:
 
     item["Label"] = "Incorrect"
     item["Annotated"] = "No"
-    item["Neuron_ID"] = "None"
+    item["neuron_id"] = -1
     item["Error_Description"] = "False Negatives"
     item["X_Index"] = coordinate_order.index("x")
     item["Y_Index"] = coordinate_order.index("y")

@@ -283,7 +283,7 @@ $(document).ready(function () {
       url: '/get_coordinates',
       success: function (response) {
         // start puling the coordinates every 500ms
-        checkCoordinatesInterval = setInterval(checkCoordinates, 250);
+        checkCoordinatesInterval = setInterval(checkCoordinates, 500);
       },
       error: function (error) {
         console.error('Error fetching initial coordinates:', error);
@@ -304,7 +304,7 @@ $(document).ready(function () {
       success: function (response) {
         const { cz, cy, cx } = response;
         if (cz !== initialCoordinates.cz || cy !== initialCoordinates.cy || cx !== initialCoordinates.cx) {
-          $('#neuron-id-draw').text(`cx: ${cx}, cy: ${cy}, cz: ${cz}`);
+          $('#neuron-id-draw').text(`cx: ${parseInt(cx)}, cy: ${parseInt(cy)}, cz: ${parseInt(cz)}`);
           initialCoordinates = { cz, cy, cx };
         }
       },

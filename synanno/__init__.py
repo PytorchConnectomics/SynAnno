@@ -79,16 +79,25 @@ def initialize_global_variables(app):
     app.vol_dim_scaled = (0, 0, 0)
     app.source = None
     app.cz1, app.cz2, app.cz, app.cy, app.cx = 0, 0, 0, 0, 0
+    # Neuron skeleton info/data
+    app.sections = None
+    app.neuron_ready = None
+    app.pruned_navis_swc_file_name = None
+    app.snapped_points_json_file_name = None
     # The auto segmentation view needs a set number of slices per instance (depth)
     # see process_instances.py::load_missing_slices for more details
     app.crop_size_z_draw = 16
     app.columns = [
         "Page",
         "Image_Index",
+        "materialization_index",
+        "section_index",
+        "section_order_index",
         "GT",
         "EM",
         "Label",
         "Annotated",
+        "neuron_id",
         "Error_Description",
         "Y_Index",
         "X_Index",
@@ -114,10 +123,14 @@ def initialize_global_variables(app):
     dtypes = {
         "Page": int,  # Example: 1
         "Image_Index": int,  # Example: 0
+        "materialization_index": int,  # Example: 0
+        "section_index": int,  # Example: 0
+        "section_order_index": int,  # Example: 0,
         "GT": int,  # Example: 1
         "EM": str,  # Example: 'Images/Syn/1'
         "Label": str,  # Example: 'Images/Img/1'
         "Annotated": str,  # Example: 'Incorrect'
+        "neuron_id": int,  # Example: 1
         "Error_Description": str,  # Example: 'No'
         "Y_Index": int,  # Example: None (can be float if numeric)
         "X_Index": int,  # Example: 1
@@ -151,6 +164,7 @@ def initialize_global_variables(app):
 
 def register_routes(app):
     """Register routes to avoid circular imports and ensure proper Blueprint registration."""
+    from synanno.routes.file_access import blueprint as file_access_blueprint
     from synanno.routes.annotation import blueprint as annotation_blueprint
     from synanno.routes.finish import blueprint as finish_blueprint
     from synanno.routes.opendata import blueprint as opendata_blueprint
@@ -160,6 +174,7 @@ def register_routes(app):
     from synanno.routes.auto_annotate import blueprint as auto_annotate_blueprint
 
     # Register the Blueprints with the app object.
+    app.register_blueprint(file_access_blueprint)
     app.register_blueprint(annotation_blueprint)
     app.register_blueprint(finish_blueprint)
     app.register_blueprint(opendata_blueprint)

@@ -1,17 +1,6 @@
 import {enableNeuropilLayer, disableNeuropilLayer} from "./utils/ng_util.js";
 
 $(document).ready(function () {
-  // Get the neuronReady value from the data attribute and convert it to a boolean
-  const neuronReady = $("script[src*='opendata.js']").data("neuron-ready") === true;
-
-  console.log("Neuron Ready:", neuronReady); // Debugging step
-
-  // Show the submission done modal if neuronReady is true
-  if (neuronReady) {
-    console.log("Showing submission done modal"); // Debugging step
-    var submissionDoneModal = new bootstrap.Modal(document.getElementById('submissionDoneModal'));
-    submissionDoneModal.show();
-  }
 
   // show progressbar when submitting the data
   $("form").on("submit", function (event) {
@@ -213,8 +202,8 @@ $(document).ready(function () {
       type: 'GET',
       url: '/get_neuron_id',
       success: function (response) {
-        // start puling the neuron ID every 250ms
-        checkSelectedNeuronIDHandle = setInterval(checkNeuronID, 250);
+        // start puling the neuron ID every 500ms
+        checkSelectedNeuronIDHandle = setInterval(checkNeuronID, 500);
       },
       error: function (error) {
         console.error('Error fetching initial the neuron ID:', error);
@@ -237,7 +226,7 @@ $(document).ready(function () {
         console.log('Selected Neuron ID:', selected_neuron_id);
         if (selected_neuron_id !== initialID) {
           console.log('Neuron ID changed:', selected_neuron_id);
-          $("#neuron-id-open").text(selected_neuron_id);
+          $("#neuron-id-open").text(parseInt(selected_neuron_id));
           initialID = selected_neuron_id
         }
       },

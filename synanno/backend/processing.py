@@ -203,22 +203,57 @@ def free_page() -> None:
                 print("Failed to delete %s. Reason: %s" % (img_dir_idx, e))
 
 
-def retrieve_instance_metadata(
-    app: Flask, page: int = 0, mode: str = "annotate"
-) -> Union[str, None]:
+def retrieve_materialization_data() -> None:
+    """Retrieve the for the view style relevant columns from the materialization data.
+
+    Returns:
+        The selected materialization data as a dictionary.
+    """
+    if current_app.view_style == "synapse":
+        df = current_app.synapse_data
+        df = df[
+            [
+                "pre_pt_x",
+                "pre_pt_y",
+                "pre_pt_z",
+                "post_pt_x",
+                "post_pt_y",
+                "post_pt_z",
+                "x",
+                "y",
+                "z",
+            ]
+        ]
+    elif current_app.view_style == "neuron":
+        df = current_app.synapse_data
+        df = df[
+            [
+                "materialization_index",
+                "section_index",
+                "section_order_index",
+                "pre_pt_x",
+                "pre_pt_y",
+                "pre_pt_z",
+                "post_pt_x",
+                "post_pt_y",
+                "post_pt_z",
+                "x",
+                "y",
+                "z",
+            ]
+        ]
+    return df.to_dict("index")
+
+
+def retrieve_instance_metadata(page: int = 0, mode: str = "annotate"):
     """Visualize the synapse and EM images in 2D slices for each instance by cropping the bounding box of the instance.
         Processing each instance individually, retrieving them from the cloud volume and saving them to the local disk.
 
     Args:
-        app: an handle to the application context
         page (int): the current page number for which to compute the data.
-
-    Returns:
-        synanno_json (str): the path to the JSON file.
     """
 
-    # create the handles to materialization data object
-    global materialization
+    materialization = retrieve_materialization_data()
 
     # retrieve the order of the coordinates (xyz, xzy, yxz, yzx, zxy, zyx)
     coordinate_order = list(current_app.coordinate_order.keys())
@@ -259,13 +294,22 @@ def retrieve_instance_metadata(
             item = {
                 "Page": int(page),
                 "Image_Index": int(idx),
+                "materialization_index": bbox_dict[idx]["materialization_index"]
+                if "materialization_index" in bbox_dict[idx]
+                else -1,
+                "section_index": bbox_dict[idx]["section_index"]
+                if "section_index" in bbox_dict[idx]
+                else -1,
+                "section_order_index": bbox_dict[idx]["section_order_index"]
+                if "section_order_index" in bbox_dict[idx]
+                else -1,
                 "GT": "/".join(syn_dir_instance.strip(".\\").split("/")[-3:]),
                 "EM": "/".join(img_dir_instance.strip(".\\").split("/")[-3:]),
                 "Label": "Correct",
                 "Annotated": "No",
-                "Neuron_ID": "None"
-                if current_app.selected_neuron_id is None
-                else current_app.selected_neuron_id,
+                "neuron_id": current_app.selected_neuron_id
+                if current_app.selected_neuron_id is not None
+                else "No Neuron Selected...",
                 "Error_Description": "None",
                 "X_Index": coordinate_order.index("x"),
                 "Y_Index": coordinate_order.index("y"),
@@ -332,7 +376,7 @@ def retrieve_instance_metadata(
         futures = [
             executor.submit(
                 run_with_app_context,
-                app,
+                current_app._get_current_object(),
                 process_instance,
                 item,
                 create_dir(img_dir, str(item["Image_Index"])),
@@ -415,100 +459,20 @@ def update_slice_number(data: dict) -> None:
             ]
 
 
-def process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) -> None:
-    """Process the synapse and EM images for a single instance.
+def adjust_synapse_points(
+    item: dict, crop_box_dict: dict, img_padding: list, coord_order: list
+) -> tuple[int, int, int, int, int, int]:
+    """Adjust the pre and post synapse points to the cropped out section.
 
     Args:
-        item (dict): the dictionary containing the metadata of the current instance.
-        img_dir_instance (str): the path to the directory for saving the EM images.
-        syn_dir_instance (str): the path to the directory for saving the synapse images.
+        item: Dictionary containing the metadata of the current instance.
+        crop_box_dict: Dictionary containing the bounding box coordinates.
+        img_padding: List containing the padding values.
+        coord_order: List containing the coordinate order.
 
+    Returns:
+        Tuple containing the adjusted pre and post synapse points.
     """
-
-    crop_bbox = item["Adjusted_Bbox"]
-    img_padding = item["Padding"]
-
-    # retrieve the coordinate order of the cloud volume | xyz, xzy, yxz, yzx, zxy, zyx
-    coord_order = list(current_app.coordinate_order.keys())
-
-    # map the bounding box coordinates to a dictionary using the provided coordinate order
-    crop_box_dict = {
-        coord_order[0] + "1": crop_bbox[0],
-        coord_order[0] + "2": crop_bbox[1],
-        coord_order[1] + "1": crop_bbox[2],
-        coord_order[1] + "2": crop_bbox[3],
-        coord_order[2] + "1": crop_bbox[4],
-        coord_order[2] + "2": crop_bbox[5],
-    }
-
-    # create the bounding box for the current synapse based on the order of the coordinates
-    bound_target = Bbox(
-        [crop_box_dict[coord_order[i] + "1"] for i in range(3)],
-        [crop_box_dict[coord_order[i] + "2"] for i in range(3)],
-    )
-
-    # scale the bounding box to the resolution of the source cloud volume
-    bound_source = Bbox(
-        (bound_target.minpt * list(current_app.scale.values())).astype(int),
-        (bound_target.maxpt * list(current_app.scale.values())).astype(int),
-    )
-
-    # retrieve the source and target images from the cloud volume
-    cropped_img = current_app.source_cv.download(
-        bound_source,
-        coord_resolution=current_app.coord_resolution_source,
-        mip=0,
-        parallel=True,
-    )
-    cropped_gt = current_app.target_cv.download(
-        bound_target,
-        coord_resolution=current_app.coord_resolution_target,
-        mip=0,
-        parallel=True,
-    )
-
-    # remove the singleton dimension, take care as the z dimension might be singleton
-    cropped_img = cropped_img.squeeze(axis=3)
-    cropped_gt = cropped_gt.squeeze(axis=3)
-
-    # adjust the scale of the label volume
-    if sum(cropped_img.shape) > sum(cropped_gt.shape):  # up-sampling
-        cropped_gt = resize(
-            cropped_gt,
-            cropped_img.shape,
-            mode="constant",
-            preserve_range=True,
-            anti_aliasing=False,
-        )
-        cropped_gt = (cropped_gt > 0.5).astype(int)  # convert to binary mask
-    elif sum(cropped_img.shape) < sum(cropped_gt.shape):  # down-sampling
-        cropped_gt = resize(
-            cropped_gt,
-            cropped_img.shape,
-            mode="constant",
-            preserve_range=True,
-            anti_aliasing=True,
-        )
-        cropped_gt = (cropped_gt > 0.5).astype(int)  # convert to binary mask
-
-    # process the 3D gt segmentation by removing small objects and converting it to instance-level segmentation.
-    cropped_seg = process_syn(cropped_gt)
-
-    # pad the images and synapse segmentation to fit the crop size (sz)
-    cropped_img_pad = np.pad(
-        cropped_img, img_padding, mode="constant", constant_values=148
-    )
-    cropped_seg_pad = np.pad(
-        cropped_seg, img_padding, mode="constant", constant_values=0
-    )
-
-    assert (
-        cropped_img_pad.shape == cropped_seg_pad.shape
-    ), "The shape of the source and target images do not match."
-
-    ### mark the position of the post and pre synapses using pre_pt and post_pt
-
-    # adjust pre_pt and post_pt to cropped out section
     pre_pt_x = (
         item["pre_pt_x"] - crop_box_dict["x1"] + img_padding[coord_order.index("x")][0]
     )
@@ -529,7 +493,30 @@ def process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) -
         item["post_pt_z"] - crop_box_dict["z1"] + img_padding[coord_order.index("z")][0]
     )
 
-    # scale the the points to the resolution of the source cloud volume
+    return pre_pt_x, pre_pt_y, pre_pt_z, post_pt_x, post_pt_y, post_pt_z
+
+
+def scale_synapse_points(
+    pre_pt_x: int,
+    pre_pt_y: int,
+    pre_pt_z: int,
+    post_pt_x: int,
+    post_pt_y: int,
+    post_pt_z: int,
+) -> tuple[int, int, int, int, int, int]:
+    """Scale the pre and post synapse points to the resolution of the source cloud volume.
+
+    Args:
+        pre_pt_x: X coordinate of the pre synapse point.
+        pre_pt_y: Y coordinate of the pre synapse point.
+        pre_pt_z: Z coordinate of the pre synapse point.
+        post_pt_x: X coordinate of the post synapse point.
+        post_pt_y: Y coordinate of the post synapse point.
+        post_pt_z: Z coordinate of the post synapse point.
+
+    Returns:
+        Tuple containing the scaled pre and post synapse points.
+    """
     pre_pt_x = int(pre_pt_x * current_app.scale["x"])
     pre_pt_y = int(pre_pt_y * current_app.scale["y"])
     pre_pt_z = int(pre_pt_z * current_app.scale["z"])
@@ -538,11 +525,144 @@ def process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) -
     post_pt_y = int(post_pt_y * current_app.scale["y"])
     post_pt_z = int(post_pt_z * current_app.scale["z"])
 
-    # create an RGB mask of the synapse from the single channel binary mask
-    # colors all non zero values turquoise
-    vis_label = syn2rgb(cropped_seg_pad)  # coord_0, coord_1, coord_2, c, e.g., x,y,z,3
+    return pre_pt_x, pre_pt_y, pre_pt_z, post_pt_x, post_pt_y, post_pt_z
 
-    # draw a bright circle at the position of the pre and post synapse
+
+def save_slices(
+    cropped_img_pad: np.ndarray,
+    vis_label: np.ndarray,
+    img_dir_instance: str,
+    syn_dir_instance: str,
+    item: dict,
+    coord_order: list,
+) -> None:
+    """Save the slices of the cropped image and synapse segmentation.
+
+    Args:
+        cropped_img_pad: Padded cropped image.
+        vis_label: Visual label of the synapse segmentation.
+        img_dir_instance: Path to the directory for saving the EM images.
+        syn_dir_instance: Path to the directory for saving the synapse images.
+        item: Dictionary containing the metadata of the current instance.
+        coord_order: List containing the coordinate order.
+    """
+    slice_axis = coord_order.index("z")
+
+    for s in range(cropped_img_pad.shape[slice_axis]):
+        img_name = str(item["Adjusted_Bbox"][slice_axis * 2] + s) + ".png"
+
+        slicing_img = [s if idx == slice_axis else slice(None) for idx in range(3)]
+        slicing_seg = [s if idx == slice_axis else slice(None) for idx in range(4)]
+
+        img_c = Image.fromarray(adjust_image_range(cropped_img_pad[tuple(slicing_img)]))
+        img_c.save(os.path.join(img_dir_instance, img_name), "PNG")
+
+        lab_c = apply_transparency(vis_label[tuple(slicing_seg)])
+        lab_c.save(os.path.join(syn_dir_instance, img_name), "PNG")
+
+
+def process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) -> None:
+    """Process the synapse and EM images for a single instance.
+
+    Args:
+        item: Dictionary containing the metadata of the current instance.
+        img_dir_instance: Path to the directory for saving the EM images.
+        syn_dir_instance: Path to the directory for saving the synapse images.
+    """
+    crop_bbox = item["Adjusted_Bbox"]
+    img_padding = item["Padding"]
+
+    coord_order = list(current_app.coordinate_order.keys())
+
+    crop_box_dict = {
+        coord_order[0] + "1": crop_bbox[0],
+        coord_order[0] + "2": crop_bbox[1],
+        coord_order[1] + "1": crop_bbox[2],
+        coord_order[1] + "2": crop_bbox[3],
+        coord_order[2] + "1": crop_bbox[4],
+        coord_order[2] + "2": crop_bbox[5],
+    }
+
+    bound_target = Bbox(
+        [crop_box_dict[coord_order[i] + "1"] for i in range(3)],
+        [crop_box_dict[coord_order[i] + "2"] for i in range(3)],
+    )
+
+    bound_source = Bbox(
+        (bound_target.minpt * list(current_app.scale.values())).astype(int),
+        (bound_target.maxpt * list(current_app.scale.values())).astype(int),
+    )
+
+    cropped_img = current_app.source_cv.download(
+        bound_source,
+        coord_resolution=current_app.coord_resolution_source,
+        mip=0,
+        parallel=True,
+    )
+    cropped_gt = current_app.target_cv.download(
+        bound_target,
+        coord_resolution=current_app.coord_resolution_target,
+        mip=0,
+        parallel=True,
+    )
+
+    cropped_img = cropped_img.squeeze(axis=3)
+    cropped_gt = cropped_gt.squeeze(axis=3)
+
+    if sum(cropped_img.shape) > sum(cropped_gt.shape):
+        cropped_gt = resize(
+            cropped_gt,
+            cropped_img.shape,
+            mode="constant",
+            preserve_range=True,
+            anti_aliasing=False,
+        )
+        cropped_gt = (cropped_gt > 0.5).astype(int)
+    elif sum(cropped_img.shape) < sum(cropped_gt.shape):
+        cropped_gt = resize(
+            cropped_gt,
+            cropped_img.shape,
+            mode="constant",
+            preserve_range=True,
+            anti_aliasing=True,
+        )
+        cropped_gt = (cropped_gt > 0.5).astype(int)
+
+    cropped_seg = process_syn(cropped_gt)
+
+    cropped_img_pad = np.pad(
+        cropped_img, img_padding, mode="constant", constant_values=148
+    )
+    cropped_seg_pad = np.pad(
+        cropped_seg, img_padding, mode="constant", constant_values=0
+    )
+
+    assert (
+        cropped_img_pad.shape == cropped_seg_pad.shape
+    ), "The shape of the source and target images do not match."
+
+    (
+        pre_pt_x,
+        pre_pt_y,
+        pre_pt_z,
+        post_pt_x,
+        post_pt_y,
+        post_pt_z,
+    ) = adjust_synapse_points(item, crop_box_dict, img_padding, coord_order)
+
+    (
+        pre_pt_x,
+        pre_pt_y,
+        pre_pt_z,
+        post_pt_x,
+        post_pt_y,
+        post_pt_z,
+    ) = scale_synapse_points(
+        pre_pt_x, pre_pt_y, pre_pt_z, post_pt_x, post_pt_y, post_pt_z
+    )
+
+    vis_label = syn2rgb(cropped_seg_pad)
+
     vis_label = draw_cylinder(
         vis_label,
         pre_pt_x,
@@ -564,24 +684,14 @@ def process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) -
         layout=coord_order,
     )
 
-    # Determine the slice axis index based on the first entry in coord_order
-    slice_axis = coord_order.index("z")
-
-    for s in range(cropped_img_pad.shape[slice_axis]):
-        img_name = str(item["Adjusted_Bbox"][slice_axis * 2] + s) + ".png"
-
-        # Create a dynamic slicing tuple based on the determined slice axis
-        # slice(None) is equivalent to the colon (:) operator
-        slicing_img = [s if idx == slice_axis else slice(None) for idx in range(3)]
-        slicing_seg = [s if idx == slice_axis else slice(None) for idx in range(4)]
-
-        # image
-        img_c = Image.fromarray(adjust_image_range(cropped_img_pad[tuple(slicing_img)]))
-        img_c.save(os.path.join(img_dir_instance, img_name), "PNG")
-
-        # label
-        lab_c = apply_transparency(vis_label[tuple(slicing_seg)])
-        lab_c.save(os.path.join(syn_dir_instance, img_name), "PNG")
+    save_slices(
+        cropped_img_pad,
+        vis_label,
+        img_dir_instance,
+        syn_dir_instance,
+        item,
+        coord_order,
+    )
 
 
 def apply_transparency(image: np.ndarray, color: tuple = None) -> Image:
@@ -617,38 +727,18 @@ def apply_transparency(image: np.ndarray, color: tuple = None) -> Image:
     return Image.fromarray(np.dstack([r, g, b, a]), "RGBA")
 
 
-def neuron_centric_3d_data_processing(
-    app,
-    source_url: str,
-    target_url: str,
-    neuropil_url: str,
-    table_name: str,
-    preid: int = None,
-    postid: int = None,
-    bucket_secret_json: json = "~/.cloudvolume/secrets",
-    mode: str = "annotate",
-    view_style: str = None,
-) -> Union[str, Tuple[np.ndarray, np.ndarray]]:
-    """Retrieve the bounding boxes and instances indexes from the table and call the render function to render the 3D data as 2D images.
+def load_cloud_volumes(
+    source_url: str, target_url: str, neuropil_url: str, bucket_secret_json: str
+) -> None:
+    """
+    Load the cloud volumes for source, target, and optionally neuropil.
 
     Args:
-        app (Flask): an handle to the application context
-        source_url (str): the url to the source cloud volume (EM).
-        target_url (str): the url to the target cloud volume (synapse).
-        neuropil_url (str): the url to the neuropil cloud volume (neuron segmentation).
-        table_name (str): the path to the JSON file.
-        preid (int): the id of the pre synaptic region.
-        postid (int): the id of the post synaptic region.
-        bucket_secret_json (json): the path to the JSON file.
-        patch_size (int): the size of the 2D patch.
+        source_url: URL to the source cloud volume (EM).
+        target_url: URL to the target cloud volume (synapse).
+        neuropil_url: URL to the neuropil cloud volume (neuron segmentation).
+        bucket_secret_json: Path to the JSON file with bucket secrets.
     """
-    # create the handles to the global materialization data object
-    global materialization
-
-    # retrieve the order of the coordinates (xyz, xzy, yxz, yzx, zxy, zyx)
-    coordinate_order = list(current_app.coordinate_order.keys())
-
-    # load the cloud volumes
     current_app.source_cv = CloudVolume(
         source_url,
         secrets=bucket_secret_json,
@@ -665,7 +755,7 @@ def neuron_centric_3d_data_processing(
         progress=False,
         use_https=True,
     )
-    if neuropil_url is not None:
+    if neuropil_url:
         current_app.neuropil_cv = CloudVolume(
             neuropil_url,
             secrets=bucket_secret_json,
@@ -675,88 +765,79 @@ def neuron_centric_3d_data_processing(
             use_https=True,
         )
 
-    # assert that both the source and target volumes have the same dimensions
+
+def determine_volume_dimensions() -> tuple:
+    """
+    Determine the dimensions of the volume based on the source and target cloud volumes.
+
+    Returns:
+        Tuple representing the volume dimensions.
+    """
     if list(current_app.source_cv.volume_size) == list(
         current_app.target_cv.volume_size
     ):
-        vol_dim = tuple([s - 1 for s in current_app.source_cv.volume_size])
+        return tuple([s - 1 for s in current_app.source_cv.volume_size])
     else:
-        # print a warning if the dimensions do not match, stating that we use the smaller size of the two volumes
-        print(
-            f"The dimensions of the source ({current_app.source_cv.volume_size}) and target ({current_app.target_cv.volume_size}) volumes do not match. We use the smaller size of the two volumes."
+        logger.warning(
+            f"The dimensions of the source ({current_app.source_cv.volume_size}) and target ({current_app.target_cv.volume_size}) volumes do not match. Using the smaller size of the two volumes."
         )
-
-        # test which size is smaller
         if np.prod(current_app.source_cv.volume_size) < np.prod(
             current_app.target_cv.volume_size
         ):
-            vol_dim = tuple([s - 1 for s in current_app.source_cv.volume_size])
+            return tuple([s - 1 for s in current_app.source_cv.volume_size])
         else:
-            vol_dim = tuple([s - 1 for s in current_app.target_cv.volume_size])
+            return tuple([s - 1 for s in current_app.target_cv.volume_size])
 
+
+def calculate_number_of_pages(n_images: int, per_page: int) -> int:
+    """
+    Calculate the number of pages needed for the given number of images and images per page.
+
+    Args:
+        n_images: Total number of images.
+        per_page: Number of images per page.
+
+    Returns:
+        Number of pages.
+    """
+    number_pages = n_images // per_page
+    if n_images % per_page != 0:
+        number_pages += 1
+    return number_pages
+
+
+def neuron_centric_3d_data_processing(
+    source_url: str,
+    target_url: str,
+    neuropil_url: str,
+    bucket_secret_json: str = "~/.cloudvolume/secrets",
+    mode: str = "annotate",
+) -> Union[str, tuple[np.ndarray, np.ndarray]]:
+    """
+    Retrieve the bounding boxes and instance indexes from the table and call the render function to render the 3D data as 2D images.
+
+    Args:
+        source_url: URL to the source cloud volume (EM).
+        target_url: URL to the target cloud volume (synapse).
+        neuropil_url: URL to the neuropil cloud volume (neuron segmentation).
+        bucket_secret_json: Path to the JSON file with bucket secrets.
+        mode: Mode of operation, either "annotate" or "draw".
+
+    Returns:
+        Union[str, tuple[np.ndarray, np.ndarray]]: Result of the processing.
+    """
+
+    load_cloud_volumes(source_url, target_url, neuropil_url, bucket_secret_json)
+
+    vol_dim = determine_volume_dimensions()
     current_app.vol_dim = vol_dim
     current_app.vol_dim_scaled = tuple(
         int(a * b) for a, b in zip(vol_dim, current_app.scale.values())
     )
 
-    # Read the CSV file
-    df = pd.read_csv(table_name)
+    session["n_images"] = len(current_app.synapse_data.index)
+    session["n_pages"] = calculate_number_of_pages(
+        session["n_images"], session["per_page"]
+    )
 
-    if view_style == "neuron":
-        neuron_id = int(current_app.selected_neuron_id)  # Get the selected neuron ID
-
-        if neuron_id is None:
-            print("No neuron selected.")
-            return
-
-        # filter the materialization DataFrame for matching pre/post neuron IDs
-        df = df.query("pre_neuron_id == @neuron_id or post_neuron_id == @neuron_id")
-
-        print(f"Found {len(df)} synapses connected to neuron ID {neuron_id}")
-
-    if view_style == "synapse":
-        # TODO: This is currently a dummy solution.
-        # query the dataframe for all instances with an index between preid and postid
-        if preid is None:
-            preid = 0
-
-        if postid is None:
-            postid = len(df.index)
-
-        # query the dataframe for all instances with an index between preid and postid
-        df = df.query("index >= @preid and index <= @postid")
-
-    # select only the necessary columns, save the real materialization table index as column 'index'
-    df = df.reset_index()
-    df = df[
-        [
-            "index",
-            "pre_pt_x",
-            "pre_pt_y",
-            "pre_pt_z",
-            "post_pt_x",
-            "post_pt_y",
-            "post_pt_z",
-            "x",
-            "y",
-            "z",
-        ]
-    ]
-
-    # Convert the DataFrame to a dictionary
-    bbox_dict = df.to_dict("index")
-
-    # save the materialization to the global variable
-    materialization = bbox_dict
-
-    # number of rows in df
-    session["n_images"] = len(bbox_dict.keys())
-
-    # calculate the number of pages needed for the instance count in the JSON
-    number_pages = session.get("n_images") // session.get("per_page")
-    if not (session.get("n_images") % session.get("per_page") == 0):
-        number_pages = number_pages + 1
-
-    session["n_pages"] = number_pages
-
-    return retrieve_instance_metadata(app, page=0, mode=mode)
+    retrieve_instance_metadata(page=0, mode=mode)

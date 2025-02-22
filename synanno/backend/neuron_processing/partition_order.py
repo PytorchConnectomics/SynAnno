@@ -102,9 +102,11 @@ def assign_section_order_index(
             (synapse["x"] * 8, synapse["y"] * 8, synapse["z"] * 33)
         )
         _, node_id = neuron_tree.query(synapse_coords)
-        section_idx, order_idx = neuron_section_lookup[node_id]
+        # the neuron node ID is 1-based
+        section_idx, order_idx, traversal_index = neuron_section_lookup[node_id + 1]
         materialization_pd.at[index, "section_index"] = int(section_idx)
         materialization_pd.at[index, "section_order_index"] = int(order_idx)
+        materialization_pd.at[index, "tree_traversal_index"] = int(traversal_index)
 
     # Convert to Python int for later JSON serialization
     materialization_pd["section_index"] = materialization_pd["section_index"].astype(
@@ -114,12 +116,21 @@ def assign_section_order_index(
         "section_order_index"
     ].astype(int)
 
+    materialization_pd["tree_traversal_index"] = materialization_pd[
+        "tree_traversal_index"
+    ].astype(int)
+
+    # print section and synapse count and the associated section id
+
+    section_count = materialization_pd["section_index"].value_counts().sort_index()
+    print(f"Sections: {section_count}")
+
 
 def neuron_section_lookup(
-    sections: list[list[int]], section_order: dict[int, int]
-) -> dict[int, tuple[int, int]]:
+    sections: list[list[int]], section_order: dict[int, int], tree_traversal: list[int]
+) -> dict[int, tuple[int, int, int]]:
     """
-    Match each neuron with a section index and section order index.
+    Match each neuron with a section, section order, and tree traversal order index.
 
     Args:
         sections: List of lists, where each inner list represents a section of nodes.
@@ -133,6 +144,10 @@ def neuron_section_lookup(
     for section_index, section in enumerate(sections):
         for node_id in section:
             section_order_index = section_order[section_index]
-            lookup[node_id] = (section_index, section_order_index)
+            lookup[node_id] = (
+                section_index,
+                section_order_index,
+                tree_traversal.index(node_id),
+            )
 
     return lookup

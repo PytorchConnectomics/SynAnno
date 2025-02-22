@@ -3,6 +3,8 @@ import SynapseShader from "./shaders/SynapseShader.js";
 
 $(document).ready(function () {
 
+    window.maxVolumeSize = 1000000;
+
     const neuronReady = $("script[src*='viewer.js']").data("neuron-ready") === true;
     const initialLoad = $("script[src*='viewer.js']").data("initial-load") === true;
     const neuronPath = $("script[src*='viewer.js']").data("neuron-path");
@@ -21,7 +23,7 @@ $(document).ready(function () {
 
         console.log("Neuron data is ready. Initializing viewer...");
         try {
-            initializeViewer($sharkContainerMinimap[0]);
+            initializeViewer($sharkContainerMinimap[0], maxVolumeSize);
 
             if (neuronPath) {
                 loadSwcFile(neuronPath, neuronSection);
@@ -30,7 +32,7 @@ $(document).ready(function () {
             }
 
             if (synapseCloudPath) {
-                loadSynapseCloud(synapseCloudPath);
+                loadSynapseCloud(synapseCloudPath, maxVolumeSize);
             } else {
                 console.error("No synapse cloud path provided.");
             }
@@ -48,11 +50,11 @@ $(document).ready(function () {
 /**
  * Initializes the SharkViewer instance.
  */
-function initializeViewer(sharkContainerMinimap) {
+function initializeViewer(sharkContainerMinimap, maxVolumeSize) {
     window.s = new SharkViewer({
         mode: 'particle',
         dom_element: sharkContainerMinimap,
-        maxVolumeSize: 1000000,
+        maxVolumeSize: maxVolumeSize,
     });
     console.log("Viewer initialized successfully.");
     s.init();
@@ -128,7 +130,7 @@ function loadSwcFile(swcPath, neuronSection) {
  *
  * @param {string} jsonPath - The path to the JSON file.
  */
-function loadSynapseCloud(jsonPath) {
+function loadSynapseCloud(jsonPath, maxVolumeSize) {
     fetch(jsonPath)
         .then(response => response.json())
         .then(data => {
@@ -150,8 +152,17 @@ function loadSynapseCloud(jsonPath) {
 
                 // Create buffer attributes for position, color, and size
                 const positions = new Float32Array(points.length * 3);
-                const colors = new Float32Array(points.length * 4); // Updated to include alpha
+                const colors = new Float32Array(points.length * 4);
+                const alphas = new Float32Array(points.length); // Separate alpha array
                 const sizes = new Float32Array(points.length);
+
+
+                // create array of the IDs of the currently selected synapses
+                const selectedSynapses = [];
+                $(".image-card-btn").each(function () {
+                    selectedSynapses.push($(this).attr("data_id"));
+                });
+
 
                 for (let i = 0; i < points.length; i++) {
                     positions[i * 3] = points[i].x + Math.random() * 50;
@@ -170,9 +181,17 @@ function loadSynapseCloud(jsonPath) {
                     colors[i * 4] = color.r;
                     colors[i * 4 + 1] = color.g;
                     colors[i * 4 + 2] = color.b;
-                    colors[i * 4 + 3] = window.synapseColors[i] === "yellow" ? 0.2 : 0.9; // Set alpha
+                    colors[i * 4 + 3] = 1.0; // Alpha
 
-                    sizes[i] = 500;
+                    // if selectedSynapses is not empty, set the size of the synapse to maxVolumeSize if it is selected
+                    if (selectedSynapses.length > 0) {
+                        sizes[i] = selectedSynapses.includes(i.toString()) ? maxVolumeSize : 10;
+                        alphas[i] = selectedSynapses.includes(i.toString()) ? 0.8 : 0.3;
+                    } else {
+                        sizes[i] = 10;
+                        alphas[i] = 0.8;
+                    }
+
                 }
 
                 // Store updated synapseColors in sessionStorage
@@ -183,6 +202,7 @@ function loadSynapseCloud(jsonPath) {
                 geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
                 geometry.setAttribute("color", new THREE.BufferAttribute(colors, 4)); // Updated to include alpha
                 geometry.setAttribute("radius", new THREE.BufferAttribute(sizes, 1));
+                geometry.setAttribute("alpha", new THREE.BufferAttribute(alphas, 1)); // Store as a separate attribute
 
                 // Use SharkViewer's Sphere Texture
                 const image = document.createElement("img");

@@ -84,7 +84,7 @@ def navis_neuron(swc_file: str) -> tuple[navis.TreeNeuron, str]:
 
     # Prune the neuron
     neuron_pruned = navis.prune_twigs(
-        neuron, size="8192 nm", inplace=False, recursive=True
+        neuron, size="4096 nm", inplace=False, recursive=True
     )
 
     # Save the pruned neuron to SWC

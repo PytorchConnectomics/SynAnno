@@ -94,6 +94,7 @@ def initialize_global_variables(app):
         "materialization_index",
         "section_index",
         "section_order_index",
+        "tree_traversal_index",
         "GT",
         "EM",
         "Label",
@@ -127,6 +128,7 @@ def initialize_global_variables(app):
         "materialization_index": int,  # Example: 0
         "section_index": int,  # Example: 0
         "section_order_index": int,  # Example: 0,
+        "tree_traversal_index": int,  # Example
         "GT": int,  # Example: 1
         "EM": str,  # Example: 'Images/Syn/1'
         "Label": str,  # Example: 'Images/Img/1'

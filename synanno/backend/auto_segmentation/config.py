@@ -86,9 +86,9 @@ SLURM_CONFIG = {
         "num_epochs": 400,
         "early_stop_patience": 100,
         "train_range": (0, 10000),
-        "select_nr_train_samples": 20,
+        "select_nr_train_samples": 2000,
         "val_range": (10000, 15000),
-        "select_nr_val_samples": 8,
+        "select_nr_val_samples": 200,
         "checkpoints": "/mmfs1/data/lauenbur/syn_anno_checkpoints/",
     },
 }

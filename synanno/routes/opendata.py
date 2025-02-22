@@ -1,49 +1,51 @@
 # flask util functions
-from flask import render_template, flash, request, jsonify, session, flash
+# load existing json
+import json
+import logging
+
+# access and remove files
+import os
+from typing import Optional
+
+import numpy as np
+import pandas as pd
+from flask import (
+    Blueprint,
+    current_app,
+    flash,
+    jsonify,
+    render_template,
+    request,
+    session,
+)
 
 # flask ajax requests
 from flask_cors import cross_origin
 
-# backend package
-import synanno.backend.processing as ip
-from synanno.backend.neuron_processing.load_neuron import (
-    load_neuron_skeleton,
-    navis_neuron,
-    compute_sections,
-)
-from synanno.backend.neuron_processing.load_synapse_point_cloud import (
-    load_synapse_point_cloud,
-    get_neuron_coordinates,
-    create_neuron_tree,
-)
-
-from synanno.backend.neuron_processing.partition_order import (
-    compute_section_order,
-    assign_section_order_index,
-    neuron_section_lookup,
-)
-
-# load existing json
-import json
+# for type hinting
+from jinja2 import Template
+from werkzeug.datastructures import MultiDict
 
 # setup and configuration of Neuroglancer instances
 import synanno.backend.ng_util as ng_util
 
-# access and remove files
-import os
-
-# for type hinting
-from jinja2 import Template
-from werkzeug.datastructures import MultiDict
-from typing import Dict
-
-import pandas as pd
-
-import numpy as np
-
-from flask import Blueprint
-from flask import current_app
-import logging
+# backend package
+import synanno.backend.processing as ip
+from synanno.backend.neuron_processing.load_neuron import (
+    compute_sections,
+    load_neuron_skeleton,
+    navis_neuron,
+)
+from synanno.backend.neuron_processing.load_synapse_point_cloud import (
+    create_neuron_tree,
+    get_neuron_coordinates,
+    load_synapse_point_cloud,
+)
+from synanno.backend.neuron_processing.partition_order import (
+    assign_section_order_index,
+    compute_section_order,
+    neuron_section_lookup,
+)
 
 # setup logging
 logging.basicConfig(level="INFO")
@@ -53,14 +55,14 @@ logger = logging.getLogger(__name__)
 blueprint = Blueprint("open_data", __name__)
 
 # global variables
-global draw_or_annotate  # defines the downstream task; either draw or annotate - default to annotate
+global draw_or_annotate  # draw or annotate - default to annotate
 draw_or_annotate = "annotate"
 
 
 @blueprint.route("/open_data", defaults={"task": "annotate"})
 @blueprint.route("/open_data/<string:task>", methods=["GET"], endpoint="open_data_task")
 def open_data(task: str) -> Template:
-    """Renders the open-data view that lets the user specify the source, target, and json file.
+    """Renders open-data view that lets user specify the source, target, and json file.
 
     Args:
         task: Defined through the path chosen by the user |  'draw', 'annotate'
@@ -80,7 +82,8 @@ def open_data(task: str) -> Template:
         )
     ):
         flash(
-            'Click "Reset Backend" to clear the memory, start a new task, and start up a Neuroglancer instance.'
+            "Click 'Reset Backend' to clear the memory, start a new task, "
+            "and start up a Neuroglancer instance."
         )
         return render_template(
             "opendata.html",
@@ -122,7 +125,7 @@ def remove_old_json_file() -> None:
 
 
 def save_coordinate_order_and_crop_size(form: MultiDict) -> None:
-    """Save the coordinate order and crop size from the form to the session and current_app.
+    """Save the coordinate order and crop size to the session and current_app.
 
     Args:
         form: The form data from the request.
@@ -153,7 +156,8 @@ def save_coordinate_order_and_crop_size(form: MultiDict) -> None:
         or session["crop_size_z"] == 0
     ):
         flash(
-            "The crop sizes have to be larger than zero, the current setting will result in a crash of the backend!",
+            "The crop sizes have to be larger than zero, the current setting will "
+            "result in a crash of the backend!",
             "error",
         )
         raise ValueError(
@@ -195,7 +199,7 @@ def set_coordinate_resolution() -> None:
 def calculate_scale_factor() -> None:
     """Calculate the scale factor for the source and target cloud volumes."""
     coordinate_order = list(current_app.coordinate_order.keys())
-    current_app.scale = {
+    current_app.scale = {  # noqa: C416
         c: v
         for c, v in zip(
             coordinate_order,
@@ -246,7 +250,8 @@ def validate_neuron_id() -> int:
         return neuron_id
     except (TypeError, ValueError) as e:
         flash(
-            "Please select a valid neuron under 'Synapse Selection' by clicking 'Choose a Neuron'.",
+            "Please select a valid neuron under 'Synapse Selection' "
+            "by clicking 'Choose a Neuron'.",
             "error",
         )
         logger.error(f"Error: {e}")
@@ -259,18 +264,18 @@ def validate_neuron_id() -> int:
         )
 
 
-def handle_neuron_view(neuropil_url: str) -> tuple[str, list[list[int]], str]:
+def handle_neuron_view(neuropil_url: str) -> tuple[str, str, list[list[int]]]:
     """Handle the neuron view processing.
 
     Args:
         neuropil_url: URL to the neuropil cloud volume.
     """
 
-    neuron_id = validate_neuron_id()  # used in pd query
+    neuron_id = validate_neuron_id()  # noqa: F841
 
-    current_app.synapse_data[
-        "materialization_index"
-    ] = current_app.synapse_data.index.to_series()
+    current_app.synapse_data["materialization_index"] = (
+        current_app.synapse_data.index.to_series()
+    )
     current_app.synapse_data = current_app.synapse_data.query(
         "pre_neuron_id == @neuron_id or post_neuron_id == @neuron_id"
     )
@@ -307,7 +312,7 @@ def handle_neuron_view(neuropil_url: str) -> tuple[str, list[list[int]], str]:
     )
     print(current_app.synapse_data[["section_order_index"]].head(10))
 
-    # reset the index -> this sets the Image_Index used in the annotation ordering via image.Image_Index
+    # reset index -> this sets image.Image_Index used in the annotation ordering
     print(current_app.synapse_data[["section_order_index"]].head(10))
     current_app.synapse_data.reset_index(drop=True, inplace=True)
     print(current_app.synapse_data[["section_order_index"]].head(10))
@@ -336,9 +341,9 @@ def handle_synapse_view() -> None:
     if postid is None:
         postid = len(current_app.synapse_data.index)
 
-    current_app.synapse_data[
-        "materialization_index"
-    ] = current_app.synapse_data.index.to_series()
+    current_app.synapse_data["materialization_index"] = (
+        current_app.synapse_data.index.to_series()
+    )
     current_app.synapse_data = current_app.synapse_data.query(
         "index >= @preid and index <= @postid"
     )
@@ -348,7 +353,8 @@ def handle_synapse_view() -> None:
 @blueprint.route("/upload", methods=["GET", "POST"])
 def upload_file() -> Template:
     """Upload the source, target, and json file specified by the user.
-    Rerender the open-data view, enabling the user to start the annotation or draw process.
+
+    Rerenders open-data view, enabling the user to start the annotation or draw process.
 
     Return:
         Renders the open-data view, with additional buttons enabled
@@ -395,14 +401,15 @@ def upload_file() -> Template:
             source_url,
             target_url,
             neuropil_url,
-            bucket_secret_json=bucket_secret
-            if bucket_secret
-            else "~/.cloudvolume/secrets",
+            bucket_secret_json=(
+                bucket_secret if bucket_secret else "~/.cloudvolume/secrets"
+            ),
             mode=draw_or_annotate,
         )
     else:
         flash(
-            "Please provide at least the paths to valid source and target cloud volume buckets!",
+            "Please provide at least the paths to valid source and target "
+            " cloud volume buckets!",
             "error",
         )
         return render_template(
@@ -438,7 +445,8 @@ def upload_file() -> Template:
 @blueprint.route("/set-data")
 def set_data(task: str = "annotate") -> Template:
     """Used by the annotation and the draw view to set up the session.
-    Annotation view: Setup the session, calculate the grid view, render the annotation view
+
+    Annotation view: Setup the session, calculate the grid view, render annotation view
     Draw view: Reload the updated JSON, render the draw view
 
     Args:
@@ -481,8 +489,8 @@ def set_data(task: str = "annotate") -> Template:
 
 @blueprint.route("/get_instance", methods=["POST"])
 @cross_origin()
-def get_instance() -> Dict[str, object]:
-    """Serves one of two Ajax calls from annotation.js, passing instance specific information
+def get_instance() -> dict[str, object]:
+    """Serves one of two Ajax calls from annotation.js, passing instance specific info
 
     Return:
         The instance specific data
@@ -507,7 +515,8 @@ def get_instance() -> Dict[str, object]:
             slices_len = len(
                 os.listdir(
                     os.path.join(
-                        current_app.root_path, current_app.config["STATIC_FOLDER"]
+                        current_app.root_path,
+                        current_app.config["STATIC_FOLDER"],
                     )
                     + current_app.df_metadata.loc[
                         (current_app.df_metadata["Page"] == page)
@@ -644,7 +653,7 @@ def get_instance() -> Dict[str, object]:
                         + ".png",
                     )
 
-                    # retrieve the path to the autogenerated mask if it exists, else the hand drawn mask
+                    # retrieve the autogenerated mask path if it exists
                     if os.path.exists(current_app.root_path + path_mask):
                         custom_mask_path_curve = path_mask
                     elif os.path.exists(current_app.root_path + path_curve):
@@ -669,9 +678,10 @@ def get_instance() -> Dict[str, object]:
 
 @blueprint.route("/neuro", methods=["POST"])
 @cross_origin()
-def neuro() -> Dict[str, object]:
-    """Serves an Ajax request from annotation.js or draw_module.js, shifting the view focus with
-    in the running NG instance and passing the link for the instance to the frontend.
+def neuro() -> dict[str, object]:
+    """Serves an Ajax request from annotation.js or draw_module.js, shifting the view
+    focus with in the running NG instance and passing the link for the instance to the
+    frontend.
 
     Return:
         Passes the link to the NG instance as json.
@@ -713,7 +723,10 @@ def neuro() -> Dict[str, object]:
         raise Exception("No NG instance running")
 
     logger.info(
-        f"Neuroglancer instance running at {current_app.ng_viewer}, centered at {coordinate_order[0]},{coordinate_order[1]},{coordinate_order[2]}: {center[coordinate_order[0]], center[coordinate_order[1]], center[coordinate_order[2]]}"
+        f"Neuroglancer instance running at {current_app.ng_viewer}, centered at "
+        f"{coordinate_order[0]},{coordinate_order[1]},{coordinate_order[2]}: "
+        f"{center[coordinate_order[0]], center[coordinate_order[1]]}, "
+        f"{center[coordinate_order[2]]}."
     )
 
     final_json = jsonify(
@@ -732,8 +745,8 @@ def neuro() -> Dict[str, object]:
 def save_file(
     file: MultiDict,
     filename: str,
-    path: str = None,
-) -> str:
+    path: Optional[str] = None,
+) -> Optional[str]:
     """Saves the provided file at the specified location.
 
     Args:
@@ -802,7 +815,10 @@ def launch_neuroglancer():
             neuropil="precomputed://" + neuropil_url,
         )
 
-    ng_url = f"http://{current_app.config['NG_IP']}:{current_app.config['NG_PORT']}/v/{current_app.ng_viewer.token}/"
+    ng_url = (
+        f"http://{current_app.config['NG_IP']}:"
+        f"{current_app.config['NG_PORT']}/v/{current_app.ng_viewer.token}/"
+    )
     return jsonify({"ng_url": ng_url})
 
 

@@ -1,6 +1,7 @@
+import logging
+
 import numpy as np
 from cloudvolume import CloudVolume
-import logging
 
 # Retrieve logger
 logger = logging.getLogger(__name__)
@@ -13,11 +14,11 @@ def retrieve_smallest_volume_dim(
     Retrieve the smallest volume dimension from the source and target volumes.
 
     Args:
-        source_cv (CloudVolume): The source cloud volume.
-        target_cv (CloudVolume): The target cloud volume.
+        source_cv: The source cloud volume.
+        target_cv: The target cloud volume.
 
     Returns:
-        tuple: The smallest volume dimension.
+        The smallest volume dimension.
     """
     source_size = source_cv.volume_size
     target_size = target_cv.volume_size
@@ -26,7 +27,8 @@ def retrieve_smallest_volume_dim(
         vol_dim = tuple([s - 1 for s in source_size])
     else:
         logger.info(
-            f"The dimensions of the source ({source_size}) and target ({target_size}) volumes do not match. Using the smaller size of the two volumes."
+            f"The dimensions of the source ({source_size}) and target ({target_size}) "
+            "volumes do not match. Using the smaller size of the two volumes."
         )
         vol_dim = tuple([s - 1 for s in min(source_size, target_size, key=np.prod)])
 
@@ -40,13 +42,13 @@ def compute_scale_factor(
     Compute the scale factor for the source and target cloud volume.
 
     Args:
-        coord_resolution_target (np.ndarray): The target coordinate resolution.
-        coord_resolution_source (np.ndarray): The source coordinate resolution.
+        coord_resolution_target: The target coordinate resolution.
+        coord_resolution_source: The source coordinate resolution.
 
     Returns:
-        dict: The scale factor for the source and target cloud volume.
+        The scale factor for the source and target cloud volume.
     """
-    scale = {
+    scale = {  # noqa: C416
         c: v
         for c, v in zip(
             ["x", "y", "z"],

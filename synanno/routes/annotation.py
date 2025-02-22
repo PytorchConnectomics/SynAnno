@@ -1,30 +1,23 @@
 # import global configs
-import synanno
-
-# flask util functions
-from flask import render_template, session, request, jsonify
-
-# flask ajax requests
-from flask_cors import cross_origin
-
-# retrieve list of all files with in a directory
-import os
-
 # track the annotation time
 import datetime
 
 # ajax json response
 import json
 
-# for type hinting
-from jinja2 import Template
+# retrieve list of all files with in a directory
 from typing import Dict
 
+# flask util functions
+from flask import Blueprint, current_app, jsonify, render_template, request, session
+
+# flask ajax requests
+from flask_cors import cross_origin
+
+# for type hinting
+from jinja2 import Template
+
 import synanno.backend.processing as ip
-
-from flask import Blueprint
-from flask import current_app
-
 
 # define a Blueprint for annotation routes
 blueprint = Blueprint("annotation", __name__)
@@ -75,7 +68,7 @@ def annotation(page: int = 0) -> Template:
 
 @blueprint.route("/set_grid_opacity", methods=["POST"])
 @cross_origin()
-def set_grid_opacity() -> Dict[str, object]:
+def set_grid_opacity() -> tuple[str, int, Dict[str, str]]:
     """Serves and Ajax request from annotation.js updating the grid's opacity value
 
     Return:
@@ -84,13 +77,17 @@ def set_grid_opacity() -> Dict[str, object]:
     # retrieve the current opacity value, only keep first decimal
     current_app.grid_opacity = int(float(request.form["grid_opacity"]) * 10) / 10
     # returning a JSON formatted response to trigger the ajax success logic
-    return json.dumps({"success": True}), 200, {"ContentType": "application/json"}
+    return (
+        json.dumps({"success": True}),
+        200,
+        {"ContentType": "application/json"},
+    )
 
 
 @blueprint.route("/update-card", methods=["POST"])
 @cross_origin()
 def update_card() -> Dict[str, object]:
-    """Updates the label of an instance. The labels switch from Correct, Incorrect to Unsure
+    """Updates the label of an instance - switch between Correct, Incorrect to Unsure
 
     Return:
         Passes the updated label to the frontend

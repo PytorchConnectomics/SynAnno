@@ -1,26 +1,21 @@
 # flask util functions
-from flask import render_template, session, send_file, flash
-
-# for type hinting
-from jinja2 import Template
-
-# enable multiple return types
-from typing import Union
+import datetime
+import json
 
 # manage paths and files
 import os
 
 # to zip folder
 import shutil
-
-import json
-
-import datetime
-
 import time
 
-from flask import Blueprint
-from flask import current_app
+from flask import Blueprint, current_app, flash, render_template, send_file, session
+
+# for type hinting
+from jinja2 import Template
+
+# enable multiple return types
+
 
 # define a Blueprint for finish routes
 blueprint = Blueprint("finish", __name__)
@@ -28,32 +23,34 @@ blueprint = Blueprint("finish", __name__)
 
 @blueprint.route("/export_annotate")
 def export_annotate() -> Template:
-    """Renders final view of the annotation process that lets the user download the JSON.
+    """Renders final view of the annotation process.
 
     Return:
         Export-annotate view
     """
 
-    # disable the 'Start New Process' button as long as the user did not download the masks or JSON
-    # the user can always interrupt a process using the home button, but we want to prevent data loss
+    # disable the 'Start New Process' button as long as the user
+    # did not download the masks or JSON the user can always interrupt a
+    # process using the home button, but we want to prevent data loss
     return render_template("export_annotate.html", disable_snp="disabled")
 
 
 @blueprint.route("/export_draw")
 def export_draw() -> Template:
-    """Renders final view of the draw process that lets the user download the custom masks.
+    """Renders final view of the draw process.
 
     Return:
         Export-draw view
     """
 
-    # disable the 'Start New Process' button as long as the user did not download the masks or JSON
-    # the user can always interrupt a process using the home button, but we want to prevent data loss
+    # disable the 'Start New Process' button as long as the user did
+    # not download the masks or JSON the user can always interrupt a
+    # process using the home button, but we want to prevent data loss
     return render_template("export_draw.html", disable_snp="disabled")
 
 
 @blueprint.route("/export_data/<string:data_type>", methods=["GET"])
-def export_data(data_type) -> Union[Template, current_app.response_class]:
+def export_data(data_type) -> Template:
     """Download the JSON or the custom masks.
 
     Args:
@@ -74,14 +71,17 @@ def export_data(data_type) -> Union[Template, current_app.response_class]:
     ) as f:
         # TODO: What to do with the timing data?
         # write the metadata to a json file
-        final_file = dict()
+        final_file = {}
         final_file["Proofread Time"] = current_app.proofread_time
 
         json.dump(
-            current_app.df_metadata.to_dict("records"), f, indent=4, default=json_serial
+            current_app.df_metadata.to_dict("records"),
+            f,
+            indent=4,
+            default=json_serial,
         )
 
-        # provide sufficient time for the json update dependent on the length df_metadata
+        # provide sufficient time for the json update dependent on df_metadata
         time.sleep(0.1 * len(current_app.df_metadata))
 
     if data_type == "json":
@@ -90,7 +90,8 @@ def export_data(data_type) -> Union[Template, current_app.response_class]:
             return send_file(
                 os.path.join(
                     os.path.join(
-                        current_app.root_path, current_app.config["UPLOAD_FOLDER"]
+                        current_app.root_path,
+                        current_app.config["UPLOAD_FOLDER"],
                     ),
                     current_app.config["JSON"],
                 ),
@@ -117,7 +118,8 @@ def export_data(data_type) -> Union[Template, current_app.response_class]:
             )
         else:
             flash(
-                "The folder containing custom masks is empty. Did you draw custom masks?",
+                "The folder containing custom masks is empty. "
+                "Did you draw custom masks?",
                 "error",
             )
             # rerender export-draw and enable the 'Start New Process' button
@@ -126,8 +128,8 @@ def export_data(data_type) -> Union[Template, current_app.response_class]:
 
 @blueprint.route("/reset")
 def reset() -> Template:
-    """Resets all process by pooping all the session content, resting the process bar, resting the timer,
-    deleting deleting the JSON, the images, masks and zip folder.
+    """Resets all process by pooping the session content, resting the process bar,
+    resting the timer, deleting deleting the JSON, the images, masks and zip folder.
 
     Return:
         Renders the landing-page view.

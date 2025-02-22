@@ -1,31 +1,26 @@
 # import global configs
-import synanno
+# track the annotation time
+import datetime
 
+# update the json file
+import json
+from typing import Dict
 
 # flask util functions
-from flask import render_template, request, jsonify
+from flask import Blueprint
+from flask import current_app as app
+from flask import jsonify, render_template, request
 
 # flask ajax requests
 from flask_cors import cross_origin
 
-# update the json file
-import json
-
-# track the annotation time
-import datetime
-
 # for type hinting
 from jinja2 import Template
-from typing import Dict
-
 
 # global variable defining if instances marked as false positives are directly discarded
 global delete_fps
 
 delete_fps = False
-
-from flask import Blueprint
-from flask import current_app as app
 
 
 # define a Blueprint for categorize routes
@@ -34,19 +29,19 @@ blueprint = Blueprint("categorize", __name__)
 
 @blueprint.route("/categorize")
 def categorize() -> Template:
-    """Stop the annotation timer, start the categorization timer, and render the categorize view
+    """Render the categorize view
 
     Return:
-        Categorization view that enables the user the specify the fault of instance masks
-        marked as "Incorrect" or "Unsure".
+        Categorization view that enables the user the specify the fault
+        of instance masks marked as "Incorrect" or "Unsure".
     """
 
     # stop the annotation timer
     if app.proofread_time["finish_grid"] is None:
         if app.proofread_time["start_grid"] is None:
-            app.proofread_time[
-                "difference_grid"
-            ] = "Non linear execution of the grid process - time invalid"
+            app.proofread_time["difference_grid"] = (
+                "Non linear execution of the grid process - time invalid"
+            )
         else:
             app.proofread_time["finish_grid"] = datetime.datetime.now()
             app.proofread_time["difference_grid"] = (
@@ -66,7 +61,7 @@ def categorize() -> Template:
 
 @blueprint.route("/pass_flags", methods=["GET", "POST"])
 @cross_origin()
-def pass_flags() -> Dict[str, object]:
+def pass_flags() -> tuple[str, int, Dict[str, str]]:
     """Serves an Ajax request from categorize.js, retrieving the new error tags from the
     frontend and updating metadata data frame.
 
@@ -109,13 +104,17 @@ def pass_flags() -> Dict[str, object]:
         )
 
     # returning a JSON formatted response to trigger the ajax success logic
-    return json.dumps({"success": True}), 200, {"ContentType": "application/json"}
+    return (
+        json.dumps({"success": True}),
+        200,
+        {"ContentType": "application/json"},
+    )
 
 
 @blueprint.route("/custom_flag", methods=["GET", "POST"])
 @cross_origin()
 def custom_flag() -> Dict[str, object]:
-    """Serves an Ajax request from categorize.js, retrieving the custom error message."""
+    """Serves Ajax request, retrieving the custom error message."""
 
     # used by frontend to retrieve custom error messages from the JSON
     page = request.get_json()["page"]

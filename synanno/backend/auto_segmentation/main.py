@@ -1,18 +1,20 @@
-import pandas as pd
-from synanno.backend.auto_segmentation.dataset import SynapseDataset, RandomRotation90
-from synanno.backend.auto_segmentation.match_source_and_target import (
-    retrieve_smallest_volume_dim,
-    compute_scale_factor,
-)
-from synanno.backend.auto_segmentation.retrieve_instances import setup_cloud_volume
-from synanno.backend.auto_segmentation.visualize_instances import visualize_instances
-from synanno.backend.auto_segmentation.trainer import Trainer
-from synanno.backend.auto_segmentation.config import get_config
-from cloudvolume import CloudVolume
-from typing import Any
 import logging
 import os
+from typing import Any
+
+import pandas as pd
 import torchvision.transforms as transforms
+from cloudvolume import CloudVolume
+
+from synanno.backend.auto_segmentation.config import get_config
+from synanno.backend.auto_segmentation.dataset import RandomRotation90, SynapseDataset
+from synanno.backend.auto_segmentation.match_source_and_target import (
+    compute_scale_factor,
+    retrieve_smallest_volume_dim,
+)
+from synanno.backend.auto_segmentation.retrieve_instances import setup_cloud_volume
+from synanno.backend.auto_segmentation.trainer import Trainer
+from synanno.backend.auto_segmentation.visualize_instances import visualize_instances
 
 # Initialize logger
 logging.basicConfig(level=logging.INFO)
@@ -94,7 +96,9 @@ if __name__ == "__main__":
         logger.info("Loading test dataset...")
 
         test_dataset = SynapseDataset(
-            materialization_df, meta_data, CONFIG["TRAINING_CONFIG"]["test_range"]
+            materialization_df,
+            meta_data,
+            CONFIG["TRAINING_CONFIG"]["test_range"],
         )
         logger.info("Running inference...")
         targets, predictions = trainer.run_inference(

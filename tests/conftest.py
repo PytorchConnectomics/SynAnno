@@ -1,4 +1,5 @@
 import pytest
+
 from synanno import create_app
 
 app = create_app()

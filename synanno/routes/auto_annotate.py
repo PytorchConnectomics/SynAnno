@@ -1,11 +1,14 @@
-from flask import Blueprint, current_app, request, jsonify
+import logging
 import os
 from glob import glob
-import torch
-from PIL import Image
+
 import numpy as np
+import torch
+from flask import Blueprint, current_app, jsonify, request
+from PIL import Image
+
 from synanno.backend.auto_segmentation.config import get_config
-from synanno.backend.auto_segmentation.dataset import normalize_tensor, binarize_tensor
+from synanno.backend.auto_segmentation.dataset import binarize_tensor, normalize_tensor
 from synanno.backend.auto_segmentation.trainer import Trainer
 from synanno.backend.auto_segmentation.visualize_instances import visualize_instances
 from synanno.backend.processing import apply_transparency
@@ -14,7 +17,6 @@ from synanno.backend.processing import apply_transparency
 blueprint = Blueprint("auto_annotate", __name__)
 
 CONFIG = get_config()
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -34,19 +36,19 @@ def load_images_and_masks(
         tuple[dict, np.ndarray, np.ndarray]: Loaded images and masks as 3D numpy arrays.
     """
     img_sub_folder = os.path.join(image_folder, str(data_id))
-    img_path = glob(img_sub_folder + "/*.png")
+    img_paths = glob(img_sub_folder + "/*.png")
 
     mask_sub_folder = os.path.join(mask_folder, str(data_id))
     curve_masks_path = glob(mask_sub_folder + "/curve_*.png")
 
     # Sort both images and masks to ensure they are in the same order
     curve_masks_path.sort()
-    img_path.sort()
+    img_paths.sort()
 
     map_slice_to_idx = {}
     image_np_list = []
 
-    for i, img_path in enumerate(img_path):
+    for i, img_path in enumerate(img_paths):
         img_name = img_path.split("/")[-1]
         slice_number = img_name.split(".")[0]
         map_slice_to_idx[slice_number] = i
@@ -157,7 +159,7 @@ def save_auto_masks(
         mask_folder (str): Path to the mask folder.
         map_slice_to_idx (dict): Mapping from slice number to index.
         prediction (torch.Tensor): The mask prediction for the given sample.
-        non_zero (bool): Only save the image slice if max value is larger than some epsilon noise.
+        non_zero (bool): Only save the image slice if max value is large enough
     """
     mask_sub_folder = os.path.join(mask_folder, str(data_id))
     map_idx_to_slice = {v: k for k, v in map_slice_to_idx.items()}

@@ -1,8 +1,10 @@
-import os
-from cloudvolume import CloudVolume
 import logging
+import os
+
 import navis
 import networkx as nx
+from cloudvolume import CloudVolume
+
 from synanno.backend.neuron_processing.partition_neuron import (
     df_degree_based_partitioning,
     merge_segments_traversal_order,
@@ -56,7 +58,7 @@ def load_neuron_skeleton(
 
 def navis_neuron(swc_file: str) -> tuple[navis.TreeNeuron, str]:
     """
-    Load the neuron skeleton into a navis.TreeNeuron object, prune it, and save the pruned neuron.
+    Load the neuron skeleton prune it, and save the pruned neuron as navis TreeNeuron.
 
     Args:
         swc_file: The path to the SWC file.
@@ -127,7 +129,8 @@ def compute_sections(
 
     segments = df_degree_based_partitioning(tree_traversal, undirected_graph)
     logger.info(
-        f"{len((segments))} segments with a joint length of {sum([len(s) for s in segments])}."
+        f"{len((segments))} segments with a joint length "
+        f" of {sum([len(s) for s in segments])}."
     )
 
     num_sections = (
@@ -142,7 +145,8 @@ def compute_sections(
             segments, tree_traversal, undirected_graph, num_sections
         )
         logger.info(
-            f"{len((segments))} merged segments with a joint length of {sum([len(s) for s in segments])}."
+            f"{len((segments))} merged segments with a joint length"
+            " of {sum([len(s) for s in segments])}."
         )
 
     return segments, tree_traversal

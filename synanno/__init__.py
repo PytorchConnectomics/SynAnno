@@ -1,9 +1,10 @@
-from flask import Flask
-from flask_session import Session
-from flask_cors import CORS
-import pandas as pd
 import os
 from threading import Lock
+
+import pandas as pd
+from flask import Flask
+from flask_cors import CORS
+from flask_session import Session
 
 
 def create_app():
@@ -136,7 +137,7 @@ def initialize_global_variables(app):
         "X_Index": int,  # Example: 1
         "Z_Index": int,  # Example: 0
         "Middle_Slice": int,  # Example: 2
-        "Original_Bbox": int,  # Example: 256
+        "Original_Bbox": object,  # Example: [290204, 290460, 114415, 114671, 256, 257]
         "cz0": int,  # Example: 290204
         "cy0": int,  # Example: 290460
         "cx0": int,  # Example: 114415
@@ -163,15 +164,15 @@ def initialize_global_variables(app):
 
 
 def register_routes(app):
-    """Register routes to avoid circular imports and ensure proper Blueprint registration."""
-    from synanno.routes.file_access import blueprint as file_access_blueprint
+    """Register routes to avoid circular imports."""
     from synanno.routes.annotation import blueprint as annotation_blueprint
-    from synanno.routes.finish import blueprint as finish_blueprint
-    from synanno.routes.opendata import blueprint as opendata_blueprint
+    from synanno.routes.auto_annotate import blueprint as auto_annotate_blueprint
     from synanno.routes.categorize import blueprint as categorize_blueprint
+    from synanno.routes.file_access import blueprint as file_access_blueprint
+    from synanno.routes.finish import blueprint as finish_blueprint
     from synanno.routes.landingpage import blueprint as landingpage_blueprint
     from synanno.routes.manual_annotate import blueprint as manual_annotate_blueprint
-    from synanno.routes.auto_annotate import blueprint as auto_annotate_blueprint
+    from synanno.routes.opendata import blueprint as opendata_blueprint
 
     # Register the Blueprints with the app object.
     app.register_blueprint(file_access_blueprint)
@@ -189,4 +190,4 @@ def setup_context_processors(app):
 
     @app.context_processor
     def handle_context():
-        return dict(os=os)
+        return dict(os=os)  # noqa: C408

@@ -1,9 +1,10 @@
+import argparse
 import os
+from typing import Any, Optional
+
 import fastavro
 import pandas as pd
 from tqdm import tqdm
-from typing import Optional, Any
-import argparse
 
 
 def safe_int(value: Optional[Any]) -> int:
@@ -24,7 +25,10 @@ def initialize_csv(output_csv_path: str):
     Args:
         output_csv_path (str): Path to the output CSV file.
     """
-    headers = "pre_pt_x,pre_pt_y,pre_pt_z,post_pt_x,post_pt_y,post_pt_z,x,y,z,pre_neuron_id,post_neuron_id\n"
+    headers = (
+        "pre_pt_x,pre_pt_y,pre_pt_z,post_pt_x,post_pt_y,post_pt_z,"
+        "x,y,z,pre_neuron_id,post_neuron_id\n"
+    )
     with open(output_csv_path, "w") as f:
         f.write(headers)
 

@@ -1,13 +1,14 @@
 import torch
 import torch.nn as nn
 from torchsummary import summary
+
 from synanno.backend.auto_segmentation.config import get_config
 
 CONFIG = get_config()
 
 
 class ConvBlock(nn.Module):
-    """Basic convolutional block with two 3D convolutions, batch normalization, and ReLU."""
+    """Basic conv block with two 3D convolutions, batch norm, and ReLU."""
 
     def __init__(self, in_channels: int, out_channels: int):
         """

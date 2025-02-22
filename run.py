@@ -1,5 +1,6 @@
-from synanno import create_app
 from dotenv import load_dotenv
+
+from synanno import create_app
 
 load_dotenv()  # Load environment variables from .env
 

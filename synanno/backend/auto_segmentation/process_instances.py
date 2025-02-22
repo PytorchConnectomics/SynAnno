@@ -1,9 +1,11 @@
-import numpy as np
-from skimage.transform import resize
-from cloudvolume import Bbox
-from synanno.backend.processing import calculate_crop_pad, process_syn
-import pandas as pd
 from typing import Any
+
+import numpy as np
+import pandas as pd
+from cloudvolume import Bbox
+from skimage.transform import resize
+
+from synanno.backend.processing import calculate_crop_pad, process_syn
 
 
 def compute_instance_metadata(
@@ -62,6 +64,9 @@ def compute_instance_metadata(
         "crop_size_x": crop_size_x,
         "crop_size_y": crop_size_y,
         "crop_size_z": crop_size_z,
+        "Original_Bbox": [],
+        "Adjusted_Bbox": [],
+        "Padding": [],
     }
 
     z1, z2 = item["cz0"] - crop_size_z // 2, item["cz0"] + crop_size_z // 2
@@ -70,15 +75,15 @@ def compute_instance_metadata(
 
     bbox_org = list(map(int, [z1, z2, y1, y2, x1, x2]))
 
-    item["Original_Bbox"] = [
-        bbox_org[coordinate_order.index(coord) * 2 + i]
-        for coord in ["z", "y", "x"]
-        for i in range(2)
-    ]
+    item["Original_Bbox"] = []
 
-    crop_bbox, img_padding = calculate_crop_pad(
-        item["Original_Bbox"], vol_dim, coordinate_order
-    )
+    for coord in ["z", "y", "x"]:
+        for i in range(2):
+            item["Original_Bbox"].append(
+                bbox_org[coordinate_order.index(coord) * 2 + i]
+            )
+
+    crop_bbox, img_padding = calculate_crop_pad(item["Original_Bbox"], vol_dim)
 
     item["Adjusted_Bbox"], item["Padding"] = crop_bbox, img_padding
 
@@ -92,11 +97,11 @@ def retrieve_instance_from_cv(
     Process the synapse and EM images for a single instance, returning numpy arrays.
 
     Args:
-        item (dict[str, Any]): Metadata dictionary for the instance.
-        meta_data (dict[str, Any]): Metadata dictionary for the volume.
+        item: Metadata dictionary for the instance.
+        meta_data: Metadata dictionary for the volume.
 
     Returns:
-        dict[str, np.ndarray]: Dictionary containing the source image and ground truth target.
+        Dictionary containing the source image and ground truth target.
     """
     crop_bbox, img_padding = item["Adjusted_Bbox"], item["Padding"]
     coord_order = meta_data["coordinate_order"]
@@ -126,10 +131,16 @@ def retrieve_instance_from_cv(
     )
 
     cropped_img = source_cv.download(
-        bound_source, coord_resolution=coord_resolution_source, mip=0, parallel=True
+        bound_source,
+        coord_resolution=coord_resolution_source,
+        mip=0,
+        parallel=True,
     )
     cropped_gt = target_cv.download(
-        bound_target, coord_resolution=coord_resolution_target, mip=0, parallel=True
+        bound_target,
+        coord_resolution=coord_resolution_target,
+        mip=0,
+        parallel=True,
     )
 
     cropped_img = cropped_img.squeeze(axis=3)

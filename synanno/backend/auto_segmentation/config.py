@@ -1,13 +1,16 @@
+# noqa: E501
+
 import os
+
 import numpy as np
 
 if "EXECUTION_ENV" not in os.environ:
     os.environ["EXECUTION_ENV"] = "local"
 
 LOCAL_CONFIG = {
-    "source_bucket_url": "gs://h01-release/data/20210601/4nm_raw",
-    "target_bucket_url": "gs://h01-release/data/20210729/c3/synapses/whole_ei_onlyvol",
-    "materialization_csv": "/Users/lando/Code/SynAnno/h01/synapse-export_000000000000.csv",
+    "source_bucket_url": "gs://h01-release/data/20210601/4nm_raw",  # noqa: E501
+    "target_bucket_url": "gs://h01-release/data/20210729/c3/synapses/whole_ei_onlyvol",  # noqa: E501
+    "materialization_csv": "/Users/lando/Code/SynAnno/h01/synapse-export_000000000000.csv",  # noqa: E501
     "cv_secret": "~/.cloudvolume/secrets",
     "coordinate_order": ["x", "y", "z"],
     "coord_resolution_target": np.array([8, 8, 33]),
@@ -45,14 +48,14 @@ LOCAL_CONFIG = {
         "select_nr_val_samples": 50,
         "test_range": (1500, 2000),
         "select_nr_test_samples": 1,
-        "checkpoints": "/Users/lando/Code/SynAnno/synanno/backend/auto_segmentation/syn_anno_checkpoints/",
+        "checkpoints": "/Users/lando/Code/SynAnno/synanno/backend/auto_segmentation/syn_anno_checkpoints/",  # noqa: E501
     },
 }
 
 SLURM_CONFIG = {
-    "source_bucket_url": "gs://h01-release/data/20210601/4nm_raw",
-    "target_bucket_url": "gs://h01-release/data/20210729/c3/synapses/whole_ei_onlyvol",
-    "materialization_csv": "/mmfs1/data/lauenbur/synapse-export_000000000000.csv",
+    "source_bucket_url": "gs://h01-release/data/20210601/4nm_raw",  # noqa: E501
+    "target_bucket_url": "gs://h01-release/data/20210729/c3/synapses/whole_ei_onlyvol",  # noqa: E501
+    "materialization_csv": "/mmfs1/data/lauenbur/synapse-export_000000000000.csv",  # noqa: E501
     "cv_secret": "/mmfs1/data/lauenbur/secrets",
     "coordinate_order": ["x", "y", "z"],
     "coord_resolution_target": np.array([8, 8, 33]),
@@ -88,12 +91,17 @@ SLURM_CONFIG = {
         "select_nr_train_samples": 300,
         "val_range": (5000, 6000),
         "select_nr_val_samples": 50,
-        "checkpoints": "/mmfs1/data/lauenbur/syn_anno_checkpoints/",
+        "checkpoints": "/mmfs1/data/lauenbur/syn_anno_checkpoints/",  # noqa: E501
     },
 }
 
 
-def get_config():
+def get_config() -> dict:
+    """Get the configuration based on the execution environment.
+
+    Returns:
+        dict: The configuration dictionary.
+    """
     env = os.getenv("EXECUTION_ENV", "local")
     if env == "slurm":
         return SLURM_CONFIG

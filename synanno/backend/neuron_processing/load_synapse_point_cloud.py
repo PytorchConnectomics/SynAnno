@@ -1,10 +1,11 @@
-from scipy.spatial import KDTree
-import numpy as np
+import json
 import logging
 import os
+
+import numpy as np
 import pandas as pd
 from navis import TreeNeuron
-import json
+from scipy.spatial import KDTree
 
 logging.basicConfig(level="INFO")
 logger = logging.getLogger(__name__)
@@ -16,7 +17,7 @@ def load_synapse_point_cloud(
     neuron_tree: KDTree,
     materialization_pd: pd.DataFrame,
     swc_path: str,
-) -> np.ndarray:
+) -> tuple[np.ndarray, str, KDTree]:
     """
     Load synapse point cloud, snap points to neuron skeleton, and save the results.
 
@@ -39,7 +40,11 @@ def load_synapse_point_cloud(
     snapped_points = snap_points_to_neuron(neuron_coords, point_cloud, neuron_tree)
     save_point_clouds(neuron_id, point_cloud, snapped_points, swc_path)
 
-    return snapped_points, f"snapped_synapse_point_cloud_{neuron_id}.json", neuron_tree
+    return (
+        snapped_points,
+        f"snapped_synapse_point_cloud_{neuron_id}.json",
+        neuron_tree,
+    )
 
 
 def get_neuron_coordinates(neuron: TreeNeuron) -> np.ndarray:
@@ -66,7 +71,7 @@ def filter_synapse_data(
         materialization_pd (pd.DataFrame): DataFrame containing synapse information.
 
     Returns:
-        pd.DataFrame: Filtered DataFrame containing synapse information for the given neuron ID.
+        Filtered DataFrame containing synapse info for the given neuron ID.
     """
     return materialization_pd[
         (materialization_pd["pre_neuron_id"] == neuron_id)
@@ -90,7 +95,8 @@ def convert_to_point_cloud(filtered_df: pd.DataFrame) -> np.ndarray:
         )
     except KeyError as e:
         logger.error(
-            f"Error: Column '{e}' not found in the DataFrame. Please check the column names."
+            f"Error: Column '{e}' not found in the DataFrame. "
+            "Please check the column names."
         )
         return None
     except Exception as e:
@@ -130,7 +136,10 @@ def snap_points_to_neuron(
 
 
 def save_point_clouds(
-    neuron_id: int, point_cloud: np.ndarray, snapped_points: np.ndarray, swc_path: str
+    neuron_id: int,
+    point_cloud: np.ndarray,
+    snapped_points: np.ndarray,
+    swc_path: str,
 ) -> None:
     """
     Save the point cloud and snapped points to JSON files.

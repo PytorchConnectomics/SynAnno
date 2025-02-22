@@ -71,7 +71,7 @@ class Trainer:
         """
         Saves the best model based on the training and validation loss. The model is saved with a filename
         that includes the decimal parts of the training and validation losses. If there are more than 3 models
-        in the target directory, the oldest model is removed.
+        in the target directory, the model with the worst validation loss is removed.
 
         Args:
             model (torch.nn.Module): The model to be saved.
@@ -92,7 +92,7 @@ class Trainer:
         )
 
         if len(model_files) >= 3:
-            logger.info(f"Removing oldest model: {model_files[-1]}")
+            logger.info(f"Removing wort performing model: {model_files[-1]}")
             os.remove(model_files[-1])
 
         # Save new model
@@ -131,24 +131,29 @@ class Trainer:
             pos_weight=torch.tensor(CONFIG["TRAINING_CONFIG"]["pos_weight"]).to(device)
         )
         optimizer = torch.optim.Adam(
-            model.parameters(), lr=CONFIG["TRAINING_CONFIG"]["learning_rate"]
+            model.parameters(), lr=CONFIG["TRAINING_CONFIG"]["learning_rate_start"]
         )
 
         # Use ReduceLROnPlateau to reduce the learning rate if no improvement in validation loss
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
             optimizer,
-            mode="min",
-            factor=CONFIG["TRAINING_CONFIG"]["scheduler_gamma"],
-            patience=CONFIG["TRAINING_CONFIG"]["scheduler_patience"],
-            threshold=CONFIG["TRAINING_CONFIG"].get("scheduler_threshold", 1e-4),
-            verbose=True,
+            T_max=CONFIG["TRAINING_CONFIG"]["num_epochs"] // 4,
+            eta_min=CONFIG["TRAINING_CONFIG"]["learning_rate_stop"],
         )
+        # torch.optim.lr_scheduler.ReduceLROnPlateau(
+        #    optimizer,
+        #    mode="min",
+        #    factor=CONFIG["TRAINING_CONFIG"]["scheduler_gamma"],
+        #    patience=CONFIG["TRAINING_CONFIG"]["scheduler_patience"],
+        #    threshold=CONFIG["TRAINING_CONFIG"].get("scheduler_threshold", 1e-4),
+        #    verbose=True,
+        # )
 
         num_epochs = CONFIG["TRAINING_CONFIG"]["num_epochs"]
         best_val_loss = float("inf")
 
         # Trigger early stop if no improvement for #patience epochs
-        patience = CONFIG["TRAINING_CONFIG"].get("patience", 5)
+        patience = CONFIG["TRAINING_CONFIG"].get("early_stop_patience", 5)
         patience_counter = 0
 
         for epoch in range(num_epochs):

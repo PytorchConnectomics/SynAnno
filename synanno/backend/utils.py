@@ -1,9 +1,13 @@
 import concurrent.futures
 import json
+import logging
 import os
 from typing import Callable, Dict, Tuple
 
 import numpy as np
+
+logging.basicConfig(level="INFO")
+logger = logging.getLogger(__name__)
 
 
 class NpEncoder(json.JSONEncoder):
@@ -119,8 +123,8 @@ def submit_with_retry(
             _ = future.result(timeout=15)  # adjust timeout as needed
             return future
         except Exception as e:
-            print(f"Attempt {attempt+1} failed with error: {str(e)}")
-    print(f"All {retries} attempts failed.")
+            logger.error(f"Attempt {attempt+1} failed with error: {str(e)}")
+    logger.error(f"All {retries} attempts failed.")
     return None
 
 

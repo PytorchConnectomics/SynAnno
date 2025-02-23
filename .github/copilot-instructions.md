@@ -9,3 +9,4 @@ You are a developer working on SynAnno, a Flask application using Python 3.9.14 
 - Use Jinja2 for rendering HTML.
 - Use Flask for routing and request handling.
 - Write single-purpose functions.
+- Use the `logging` module to log messages.

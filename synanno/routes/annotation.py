@@ -51,12 +51,6 @@ def annotation(page: int = 0) -> Template:
         .sort_values(by=["Image_Index"])
         .to_dict("records")
     )
-    for value in data:
-        print(
-            value["section_index"],
-            value["section_order_index"],
-            value["tree_traversal_index"],
-        )
 
     return render_template(
         "annotation.html",

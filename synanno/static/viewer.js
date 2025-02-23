@@ -11,6 +11,7 @@ $(document).ready(function () {
     const neuronSection = $("script[src*='viewer.js']").data("neuron-section");
     const synapseCloudPath = $("script[src*='viewer.js']").data("synapse-cloud-path");
 
+
     const $sharkContainerMinimap = $("#shark_container_minimap");
 
     if (neuronReady) {
@@ -131,15 +132,17 @@ function loadSwcFile(swcPath, neuronSection) {
  * @param {string} jsonPath - The path to the JSON file.
  */
 function loadSynapseCloud(jsonPath, maxVolumeSize) {
+    console.log("Loading synapse cloud from:", jsonPath);
     fetch(jsonPath)
-        .then(response => response.json())
-        .then(data => {
-            try {
+    .then(response => response.json())
+    .then(data => {
+        try {
 
-                if (!Array.isArray(data) || data.length % 3 !== 0) {
-                    console.error("JSON data is not an Array or length is not a multiple of 3.");
-                    return;
-                }
+            if (!Array.isArray(data) || data.length % 3 !== 0) {
+                console.error("JSON data is not an Array or length is not a multiple of 3.");
+                return;
+            }
+            console.log("Data", data);
 
                 // Load existing synapseColors from sessionStorage or initialize a new one
                 window.synapseColors = JSON.parse(sessionStorage.getItem("synapseColors")) || {};
@@ -353,6 +356,9 @@ window.updateSynapse = function(index, newPosition = null, newColor = null, newS
         sizes.setX(index, newSize);
         sizes.needsUpdate = true;
     }
+
+    // sanity check log the coordinates an index of the synapse
+    console.log("Synapse index: ", index, "Position: ", positions.getX(index), positions.getY(index), positions.getZ(index));
 
     s.render();
 };

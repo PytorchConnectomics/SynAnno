@@ -41,44 +41,44 @@ const ConeShader = {
             depthScale = radius * foreshortening; // correct depth for foreshortening
         }
     `,
-
     fragmentShader: /* glsl */ `
-        uniform sampler2D sphereTexture; // Imposter image of sphere
-        uniform float abstraction_threshold;
-        uniform int grey_out;
-        uniform vec3 color;
-        uniform mat4 projectionMatrix;
+    uniform sampler2D sphereTexture;
+    uniform int grey_out;
+    uniform mat4 projectionMatrix;
 
-        varying vec2 sphereUv;
-        varying vec4 mvPosition;
-        varying float depthScale;
-        varying vec3 vColor;
+    varying vec2 sphereUv;
+    varying vec4 mvPosition;
+    varying float depthScale;
+    varying vec3 vColor;
 
-        void main()
-        {
-            vec4 sphereColors = texture2D(sphereTexture, sphereUv);
+    void main()
+    {
+        vec4 sphereColors = texture2D(sphereTexture, sphereUv);
 
+        if (sphereColors.a < 0.3) discard;
 
-            if (sphereColors.a < 0.3) discard;
+        vec3 baseColor = vColor * sphereColors.r;
+        vec3 highlightColor = baseColor + sphereColors.ggg;
 
-            vec3 baseColor = vColor * sphereColors.r;
-            vec3 highlightColor = baseColor + sphereColors.ggg;
-            gl_FragColor = vec4(highlightColor, sphereColors.a);
+        float finalAlpha = sphereColors.a;
 
-            // Greyscale effect if activated
-            if (grey_out == 1) {
-                highlightColor = vec3(dot(highlightColor, vec3(0.299, 0.587, 0.114))); // Convert to grayscale
-            }
-
-            float dz = sphereColors.b * depthScale;
-            vec4 mvp = mvPosition + vec4(0, 0, dz, 0);
-            vec4 clipPos = projectionMatrix * mvp;
-            float ndc_depth = clipPos.z/clipPos.w;
-            float far = gl_DepthRange.far; float near = gl_DepthRange.near;
-            float depth = (((far-near) * ndc_depth) + near + far) / 2.0;
-            gl_FragDepth = depth;
+        // Apply greying out effect by reducing alpha
+        if (grey_out == 1) {
+            highlightColor = vec3(dot(highlightColor, vec3(0.299, 0.587, 0.114)));
+            finalAlpha *= 0.3; // Reduce visibility
         }
-    `,
+
+        gl_FragColor = vec4(highlightColor, finalAlpha);
+
+        float dz = sphereColors.b * depthScale;
+        vec4 mvp = mvPosition + vec4(0, 0, dz, 0);
+        vec4 clipPos = projectionMatrix * mvp;
+        float ndc_depth = clipPos.z/clipPos.w;
+        float far = gl_DepthRange.far; float near = gl_DepthRange.near;
+        float depth = (((far-near) * ndc_depth) + near + far) / 2.0;
+        gl_FragDepth = depth;
+    }
+`,
 };
 
 export { ConeShader };

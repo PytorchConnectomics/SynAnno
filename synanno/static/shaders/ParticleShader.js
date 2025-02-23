@@ -27,29 +27,35 @@ const ParticleShader = {
     `,
 
     fragmentShader: /* glsl */ `
-        uniform sampler2D sphereTexture; // Sphere imposter texture
+    uniform sampler2D sphereTexture;
+    uniform int grey_out;
 
-        varying vec3 vColor;
-        varying vec4 mvPosition;
-        varying float vRadius;
+    varying vec3 vColor;
+    varying vec4 mvPosition;
 
-        void main()
-        {
-            vec3 baseColor = vColor;
+    void main()
+    {
+        vec3 baseColor = vColor;
 
-            // Check if texture is available, else use color directly
-            vec2 uv = vec2(gl_PointCoord.x, 1.0 - gl_PointCoord.y);
-            vec4 sphereColors = texture2D(sphereTexture, uv);
+        vec2 uv = vec2(gl_PointCoord.x, 1.0 - gl_PointCoord.y);
+        vec4 sphereColors = texture2D(sphereTexture, uv);
 
-            if (sphereColors.a < 0.3) discard; // Remove invisible corners
+        if (sphereColors.a < 0.3) discard;
 
-            // Increase influence of sphere texture shading
-            baseColor = mix(baseColor, baseColor * sphereColors.r, 0.75); // Larger number = more shading
-            baseColor += sphereColors.ggg * 0.6; // Larger number = stronger highlights
+        baseColor = mix(baseColor, baseColor * sphereColors.r, 0.75);
+        baseColor += sphereColors.ggg * 0.6;
 
-            gl_FragColor = vec4(baseColor, sphereColors.a);
+        float finalAlpha = sphereColors.a;
+
+        // If grey_out is active, reduce visibility
+        if (grey_out == 1) {
+            baseColor = vec3(dot(baseColor, vec3(0.299, 0.587, 0.114)));
+            finalAlpha *= 0.3;
         }
-    `,
+
+        gl_FragColor = vec4(baseColor, finalAlpha);
+    }
+`
 };
 
 export { ParticleShader };

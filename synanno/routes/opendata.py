@@ -294,7 +294,7 @@ def handle_neuron_view(neuropil_url: str) -> tuple[str, str, list[list[int]]]:
     )
 
     pruned_navis_swc_file_path = navis_neuron(neuron_skeleton_swc_path)
-    sections, tree_traversal, neuron_pruned, node_traversal_lookup = compute_sections(
+    sections, neuron_pruned, node_traversal_lookup = compute_sections(
         pruned_navis_swc_file_path, merge=True
     )
 

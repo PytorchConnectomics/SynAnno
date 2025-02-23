@@ -34,6 +34,8 @@ $(document).ready(function () {
 
             if (synapseCloudPath) {
                 loadSynapseCloud(synapseCloudPath, maxVolumeSize);
+                setTimeout(() => greyOutSectionsAlpha(s, neuronSection, [0, 1]), 1000);
+
             } else {
                 console.error("No synapse cloud path provided.");
             }
@@ -107,7 +109,7 @@ function loadSwcFile(swcPath, neuronSection) {
 
                 if (neuron) {
                     console.log("Neuron found! Proceeding with color update.");
-                    updateNodeAndEdgeColors(s, neuronSection, neuronSection);
+                    updateNodeAndEdgeColors(s, neuronSection);
                     setTimeout(() => adjustCameraForNeuron(s), 500); // Ensure camera resets after neuron is loaded
                 } else {
                     console.warn("Neuron still not found in the scene.");
@@ -189,7 +191,7 @@ function loadSynapseCloud(jsonPath, maxVolumeSize) {
                     // if selectedSynapses is not empty, set the size of the synapse to maxVolumeSize if it is selected
                     if (selectedSynapses.length > 0) {
                         sizes[i] = selectedSynapses.includes(i.toString()) ? maxVolumeSize : 10;
-                        alphas[i] = selectedSynapses.includes(i.toString()) ? 0.8 : 0.3;
+                        alphas[i] = selectedSynapses.includes(i.toString()) ? 0.8 : 0.1;
                     } else {
                         sizes[i] = 10;
                         alphas[i] = 0.8;
@@ -249,68 +251,142 @@ function loadSynapseCloud(jsonPath, maxVolumeSize) {
  * Updates the colors of nodes and edges in a 3D neuron visualization.
  *
  * @param {Object} viewer - The viewer object containing the scene.
- * @param {Array} nodes_array - The array of nodes to be updated.
- * @param {Array} edge_array - The array of edges to be updated.
+ * @param {Array} sectionArray - The array of node indices that should be updated.
  * @param {Array} sectionColors - The colors to apply to the sections.
  */
-function updateNodeAndEdgeColors(viewer, nodes_array, edge_array, sectionColors) {
-    const neuron = viewer.scene.getObjectByName('neuron');
+function updateNodeAndEdgeColors(viewer, sectionArray, sectionColors) {
+    const neuron = viewer.scene.getObjectByName("neuron");
     if (!neuron) {
         console.error("Neuron object not found.");
         return;
     }
 
     if (!sectionColors) {
-        sectionColors = generateSectionColors(nodes_array.length);
+        sectionColors = generateSectionColors(sectionArray.length);
     }
 
+    // Retrieve skeleton vertex and edge objects
     const skeletonVertex = neuron.children.find(child => child.name === "skeleton-vertex");
     const skeletonEdge = neuron.children.find(child => child.name === "skeleton-edge");
 
-    if (skeletonVertex && skeletonVertex.geometry && skeletonVertex.geometry.attributes.position) {
-        const numVertices = skeletonVertex.geometry.attributes.position.count;
-        const colors = new Float32Array(numVertices * 3);
-
-        nodes_array.forEach((nodeGroup, index) => {
-            const color = new THREE.Color(sectionColors[index] || 0xffffff);
-            nodeGroup.forEach(nodeIndex => {
-                if (nodeIndex < numVertices) {
-                    colors.set([color.r, color.g, color.b], nodeIndex * 3);
-                }
-            });
-        });
-
-        skeletonVertex.geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
-        skeletonVertex.geometry.attributes.color.needsUpdate = true;
-        console.log("Node colors applied successfully.");
-    } else {
-        console.warn("skeleton-vertex not found or has no geometry.");
+    if (!skeletonVertex || !skeletonVertex.geometry || !skeletonEdge || !skeletonEdge.geometry) {
+        console.warn("skeleton-vertex or skeleton-edge not found or missing geometry.");
+        return;
     }
 
-    if (skeletonEdge && skeletonEdge.geometry && skeletonEdge.geometry.attributes.position) {
-        const numEdges = skeletonEdge.geometry.attributes.position.count / 2;
-        const colors = new Float32Array(numEdges * 6 * 3);
+    // Get vertex and edge color attributes
+    const numVertices = skeletonVertex.geometry.attributes.position.count;
+    const numEdges = skeletonEdge.geometry.attributes.position.count / 2;
 
-        edge_array.forEach((edgeGroup, index) => {
-            const color = new THREE.Color(sectionColors[index] || 0xffffff);
-            edgeGroup.forEach(edgeIndex => {
-                if (edgeIndex < numEdges) {
-                    for (let j = 0; j < 6; j++) {
-                        colors.set([color.r, color.g, color.b], (edgeIndex * 6 + j) * 3);
-                    }
+    // Shared color buffer arrays
+    const vertexColors = new Float32Array(numVertices * 3);
+    const edgeColors = new Float32Array(numEdges * 6 * 3);
+
+    sectionArray.forEach((nodeGroup, index) => {
+        const color = new THREE.Color(sectionColors[index] || 0xffffff);
+
+        nodeGroup.forEach(nodeIndex => {
+            if (nodeIndex < numVertices) {
+                vertexColors.set([color.r, color.g, color.b], nodeIndex * 3);
+            }
+
+            if (nodeIndex < numEdges) {
+                for (let j = 0; j < 6; j++) {
+                    edgeColors.set([color.r, color.g, color.b], (nodeIndex * 6 + j) * 3);
                 }
-            });
+            }
         });
+    });
 
-        skeletonEdge.geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
-        skeletonEdge.geometry.attributes.color.needsUpdate = true;
-        console.log("Edge colors applied successfully.");
-    } else {
-        console.warn("skeleton-edge not found or has no geometry.");
-    }
+    // Apply color updates in batch for better performance
+    skeletonVertex.geometry.setAttribute("color", new THREE.Float32BufferAttribute(vertexColors, 3));
+    skeletonEdge.geometry.setAttribute("color", new THREE.Float32BufferAttribute(edgeColors, 3));
+
+    skeletonVertex.geometry.attributes.color.needsUpdate = true;
+    skeletonEdge.geometry.attributes.color.needsUpdate = true;
+
+    console.log("Node and edge colors applied successfully.");
 
     viewer.render();
 }
+
+/**
+ * Adjusts the transparency (alpha) of specific neuron sections.
+ *
+ * @param {Object} viewer - The SharkViewer instance.
+ * @param {Array} sectionArray - The array of neuron sections (each a sublist of indices).
+ * @param {Array} greyOutIndices - The indices of sectionArray sublists to grey out.
+ * @param {boolean} greyOut - Whether to grey out (true) or restore transparency (false).
+ */
+window.greyOutSectionsAlpha = function(viewer, sectionArray, greyOutIndices, greyOut = true) {
+    const neuron = viewer.scene.getObjectByName("neuron");
+    if (!neuron) {
+        console.error("Neuron object not found.");
+        return;
+    }
+
+    // Retrieve skeleton vertex and edge objects
+    const skeletonVertex = neuron.children.find(child => child.name === "skeleton-vertex");
+    const skeletonEdge = neuron.children.find(child => child.name === "skeleton-edge");
+
+    if (!skeletonVertex || !skeletonVertex.geometry || !skeletonEdge || !skeletonEdge.geometry) {
+        console.warn("skeleton-vertex or skeleton-edge not found or missing geometry.");
+        return;
+    }
+
+    const numVertices = skeletonVertex.geometry.attributes.position.count;
+    const numEdges = skeletonEdge.geometry.attributes.position.count / 2;
+
+    let vertexAlphas = skeletonVertex.geometry.attributes.alpha
+        ? skeletonVertex.geometry.attributes.alpha.array
+        : new Float32Array(numVertices).fill(1.0);
+
+    let edgeAlphas = skeletonEdge.geometry.attributes.alpha
+        ? skeletonEdge.geometry.attributes.alpha.array
+        : new Float32Array(numEdges * 6).fill(1.0);
+
+    const greySet = new Set();
+    greyOutIndices.forEach(index => {
+        if (index < sectionArray.length) {
+            sectionArray[index].forEach(nodeIndex => greySet.add(nodeIndex));
+        }
+    });
+
+    // Set alpha values
+    const alphaValue = greyOut ? 0.2 : 1.0; // 0.2 for greyed out, 1.0 for normal
+    for (let i = 0; i < numVertices; i++) {
+        if (greySet.has(i)) {
+            vertexAlphas[i] = alphaValue;
+        }
+    }
+    for (let i = 0; i < numEdges; i++) {
+        if (greySet.has(i)) {
+            for (let j = 0; j < 6; j++) {
+                edgeAlphas[i * 6 + j] = alphaValue;
+            }
+        }
+    }
+
+    // Apply attribute updates
+    skeletonVertex.geometry.setAttribute("alpha", new THREE.Float32BufferAttribute(vertexAlphas, 1));
+    skeletonEdge.geometry.setAttribute("alpha", new THREE.Float32BufferAttribute(edgeAlphas, 1));
+
+    skeletonVertex.geometry.attributes.alpha.needsUpdate = true;
+    skeletonEdge.geometry.attributes.alpha.needsUpdate = true;
+
+    // Set the `grey_out` uniform for both shaders
+    if (skeletonVertex.material.uniforms.grey_out) {
+        skeletonVertex.material.uniforms.grey_out.value = greyOut ? 1 : 0;
+    }
+    if (skeletonEdge.material.uniforms.grey_out) {
+        skeletonEdge.material.uniforms.grey_out.value = greyOut ? 1 : 0;
+    }
+
+    console.log("Updated alpha for sections:", greyOutIndices.map(i => sectionArray[i]));
+
+    viewer.render();
+}
+
 
 window.updateSynapse = function(index, newPosition = null, newColor = null, newSize = null, save_in_session = true) {
     const pointsMesh = s.scene.getObjectByName("synapse-cloud");

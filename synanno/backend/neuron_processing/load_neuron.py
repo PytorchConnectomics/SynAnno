@@ -132,7 +132,7 @@ def prune_and_save_neuron(neuron: navis.TreeNeuron, swc_file: str) -> str:
 
 def compute_sections(
     pruned_swc_file: str, merge: bool = True
-) -> tuple[list[list[int]], list[int], navis.TreeNeuron, dict[int, int]]:
+) -> tuple[list[list[int]], navis.TreeNeuron, dict[int, int]]:
     """Compute the sections of the pruned neuron.
 
     Args:
@@ -153,7 +153,7 @@ def compute_sections(
         tree_traversal, undirected_graph, merge, node_traversal_lookup
     )
     validate_segments(segments, undirected_graph)
-    return segments, tree_traversal, neuron_pruned, node_traversal_lookup
+    return segments, neuron_pruned, node_traversal_lookup
 
 
 def convert_to_undirected_graph(neuron_pruned: navis.TreeNeuron) -> nx.Graph:

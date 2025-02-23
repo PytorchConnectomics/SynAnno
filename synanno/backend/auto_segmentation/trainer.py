@@ -135,12 +135,18 @@ class Trainer:
         )
 
         # Use ReduceLROnPlateau to reduce the learning rate if no improvement in validation loss
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+        scheduler = torch.optim.lr_scheduler.CosineAnnealing(
             optimizer,
-            T_0=CONFIG["TRAINING_CONFIG"]["num_epochs"] // 4,
-            T_mult=2,
+            T_max=CONFIG["TRAINING_CONFIG"]["num_epochs"],
             eta_min=CONFIG["TRAINING_CONFIG"]["learning_rate_stop"],
         )
+
+        # scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+        #    optimizer,
+        #    T_0=CONFIG["TRAINING_CONFIG"]["num_epochs"] // 4,
+        #    T_mult=2,
+        #    eta_min=CONFIG["TRAINING_CONFIG"]["learning_rate_stop"],
+        # )
         # torch.optim.lr_scheduler.ReduceLROnPlateau(
         #    optimizer,
         #    mode="min",

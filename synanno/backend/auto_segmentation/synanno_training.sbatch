@@ -4,8 +4,8 @@
 #SBATCH --ntasks=1                            # Number of tasks
 #SBATCH --cpus-per-task=4                     # Number of CPU cores per task
 #SBATCH --gpus-per-task=1                     # Number of GPUs per task
-#SBATCH --mem=128GB                           # Memory per node
-#SBATCH --time=02:00:00                       # Time limit (hrs:min:sec)
+#SBATCH --mem=256GB                           # Memory per node
+#SBATCH --time=48:00:00                       # Time limit (hrs:min:sec)
 #SBATCH --mail-type=ALL                       # Email notifications (NONE, BEGIN, END, FAIL, ALL)
 #SBATCH --mail-user="lauenbur@bc.edu"         # Where to send email notifications
 #SBATCH --partition=weidf                     # Partition to run your job on

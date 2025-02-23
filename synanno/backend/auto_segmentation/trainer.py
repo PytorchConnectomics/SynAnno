@@ -135,7 +135,7 @@ class Trainer:
         )
 
         # Use ReduceLROnPlateau to reduce the learning rate if no improvement in validation loss
-        scheduler = torch.optim.lr_scheduler.CosineAnnealing(
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer,
             T_max=CONFIG["TRAINING_CONFIG"]["num_epochs"],
             eta_min=CONFIG["TRAINING_CONFIG"]["learning_rate_stop"],

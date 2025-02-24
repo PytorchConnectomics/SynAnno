@@ -13,7 +13,7 @@ const SynapseShader = {
         void main() {
             vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
             float depthScale = -mvPosition.z / 1000.0; // Normalize depth scale
-            gl_PointSize = clamp(radius * (particleScale / depthScale), 10.0, 25.0);
+            gl_PointSize = clamp(radius * (particleScale / depthScale), 10.0, 20.0);
 
             gl_Position = projectionMatrix * mvPosition;
 

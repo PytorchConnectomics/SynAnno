@@ -324,14 +324,14 @@ function updateNodeAndEdgeColors(viewer, sectionArray, sectionColors) {
             }
 
             if (collectSectionIndices.includes(index.toString())) {
-                console.log("Node index: ", nodeIndex);
-                    vertexGreyOut[nodeIndex] = 0.0;
-                    edgeGreyOut[nodeIndex * 6] = 0.0;
-                    edgeGreyOut[nodeIndex * 6 + 1] = 0.0;
-                    edgeGreyOut[nodeIndex * 6 + 2] = 0.0;
-                    edgeGreyOut[nodeIndex * 6 + 3] = 0.0;
-                    edgeGreyOut[nodeIndex * 6 + 4] = 0.0;
-                    edgeGreyOut[nodeIndex * 6 + 5] = 0.0;
+                    // the node id starts at 1, so we need to subtract 1 to get the correct index
+                    vertexGreyOut[(nodeIndex - 1)] = 0.0;
+                    edgeGreyOut[(nodeIndex - 1) * 6] = 0.0;
+                    edgeGreyOut[(nodeIndex - 1) * 6 + 1] = 0.0;
+                    edgeGreyOut[(nodeIndex - 1) * 6 + 2] = 0.0;
+                    edgeGreyOut[(nodeIndex - 1) * 6 + 3] = 0.0;
+                    edgeGreyOut[(nodeIndex - 1) * 6 + 4] = 0.0;
+                    edgeGreyOut[(nodeIndex - 1) * 6 + 5] = 0.0;
             }
         });
     });
@@ -387,14 +387,15 @@ window.greyOutSectionsAlpha = function(viewer, sectionArray, greyOutSections) {
     // Apply grey-out effect to selected sections
     greyOutSections.forEach(sectionIndex => {
             sectionArray[sectionIndex].forEach(vertexIndex => {
-                vertexGreyOut[vertexIndex] = 1.0;
+                // the node id starts at 1, so we need to subtract 1 to get the correct index
+                vertexGreyOut[vertexIndex - 1] = 1.0;
 
-                edgeGreyOut[vertexIndex * 6] = 1.0;
-                edgeGreyOut[vertexIndex * 6 + 1] = 1.0;
-                edgeGreyOut[vertexIndex * 6 + 2] = 1.0;
-                edgeGreyOut[vertexIndex * 6 + 3] = 1.0;
-                edgeGreyOut[vertexIndex * 6 + 4] = 1.0;
-                edgeGreyOut[vertexIndex * 6 + 5] = 1.0;
+                edgeGreyOut[(vertexIndex - 1) * 6] = 1.0;
+                edgeGreyOut[(vertexIndex - 1) * 6 + 1] = 1.0;
+                edgeGreyOut[(vertexIndex - 1) * 6 + 2] = 1.0;
+                edgeGreyOut[(vertexIndex - 1) * 6 + 3] = 1.0;
+                edgeGreyOut[(vertexIndex - 1) * 6 + 4] = 1.0;
+                edgeGreyOut[(vertexIndex - 1) * 6 + 5] = 1.0;
             }
         );
     });

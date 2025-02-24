@@ -34,7 +34,6 @@ $(document).ready(function () {
 
             if (synapseCloudPath) {
                 loadSynapseCloud(synapseCloudPath, maxVolumeSize);
-                setTimeout(() => greyOutSectionsAlpha(s, neuronSection, [0, 1]), 1000);
 
             } else {
                 console.error("No synapse cloud path provided.");
@@ -168,7 +167,6 @@ function loadSynapseCloud(jsonPath, maxVolumeSize) {
                     selectedSynapses.push($(this).attr("data_id"));
                 });
 
-
                 for (let i = 0; i < points.length; i++) {
                     positions[i * 3] = points[i].x + Math.random() * 50;
                     positions[i * 3 + 1] = points[i].y + Math.random() * 50;
@@ -264,7 +262,6 @@ function updateNodeAndEdgeColors(viewer, sectionArray, sectionColors) {
     if (!sectionColors) {
         sectionColors = generateSectionColors(sectionArray.length);
     }
-
     // Retrieve skeleton vertex and edge objects
     const skeletonVertex = neuron.children.find(child => child.name === "skeleton-vertex");
     const skeletonEdge = neuron.children.find(child => child.name === "skeleton-edge");
@@ -276,11 +273,37 @@ function updateNodeAndEdgeColors(viewer, sectionArray, sectionColors) {
 
     // Get vertex and edge color attributes
     const numVertices = skeletonVertex.geometry.attributes.position.count;
-    const numEdges = skeletonEdge.geometry.attributes.position.count / 2;
+    const itemSizeVertices = skeletonVertex.geometry.attributes.position.itemSize;
+
+    const numEdges = skeletonEdge.geometry.attributes.position.count;
+    const itemSizeEdges = skeletonEdge.geometry.attributes.position.itemSize;
 
     // Shared color buffer arrays
-    const vertexColors = new Float32Array(numVertices * 3);
-    const edgeColors = new Float32Array(numEdges * 6 * 3);
+    // if we have N vertices, we have nearly 6N edges (missing only a couple of edges)
+    // we have three coordinates for each vertex
+    const vertexColors = new Float32Array(numVertices * itemSizeVertices);
+    const edgeColors = new Float32Array(numVertices * 6 * itemSizeEdges);
+
+    const collectSectionIndices = [];
+    $(".image-card-btn").each(function () {
+        collectSectionIndices.push($(this).attr("sectionIdx"));
+    });
+
+
+    let vertexGreyOut = [];
+    let edgeGreyOut = [];
+    console.log("collectSectionIndices", collectSectionIndices);
+    if (collectSectionIndices.length > 0) {
+        console.log("Some sections get greyed out");
+        // we have a single grey out value for each vertex and edge
+        vertexGreyOut = new Float32Array(numVertices).fill(1.0);
+        edgeGreyOut = new Float32Array(numVertices * 6).fill(1.0);
+    } else {
+        console.log("No part gets greyed out");
+        // we have a single grey out value for each vertex and edge
+        vertexGreyOut = new Float32Array(numVertices).fill(0.0);
+        edgeGreyOut = new Float32Array(numVertices * 6).fill(0.0);
+    }
 
     sectionArray.forEach((nodeGroup, index) => {
         const color = new THREE.Color(sectionColors[index] || 0xffffff);
@@ -291,16 +314,36 @@ function updateNodeAndEdgeColors(viewer, sectionArray, sectionColors) {
             }
 
             if (nodeIndex < numEdges) {
-                for (let j = 0; j < 6; j++) {
-                    edgeColors.set([color.r, color.g, color.b], (nodeIndex * 6 + j) * 3);
-                }
+                // the node Id start at 1, so we need to subtract 1 to get the correct index
+                edgeColors.set([color.r, color.g, color.b], (nodeIndex-1) * 6 * 3);
+                edgeColors.set([color.r, color.g, color.b], (nodeIndex-1) * 6 * 3 + 3);
+                edgeColors.set([color.r, color.g, color.b], (nodeIndex-1) * 6 * 3 + 6);
+                edgeColors.set([color.r, color.g, color.b], (nodeIndex-1) * 6 * 3 + 9);
+                edgeColors.set([color.r, color.g, color.b], (nodeIndex-1) * 6 * 3 + 12);
+                edgeColors.set([color.r, color.g, color.b], (nodeIndex-1) * 6 * 3 + 15);
+            }
+
+            if (collectSectionIndices.includes(index.toString())) {
+                console.log("Node index: ", nodeIndex);
+                    vertexGreyOut[nodeIndex] = 0.0;
+                    edgeGreyOut[nodeIndex * 6] = 0.0;
+                    edgeGreyOut[nodeIndex * 6 + 1] = 0.0;
+                    edgeGreyOut[nodeIndex * 6 + 2] = 0.0;
+                    edgeGreyOut[nodeIndex * 6 + 3] = 0.0;
+                    edgeGreyOut[nodeIndex * 6 + 4] = 0.0;
+                    edgeGreyOut[nodeIndex * 6 + 5] = 0.0;
             }
         });
     });
 
-    // Apply color updates in batch for better performance
     skeletonVertex.geometry.setAttribute("color", new THREE.Float32BufferAttribute(vertexColors, 3));
     skeletonEdge.geometry.setAttribute("color", new THREE.Float32BufferAttribute(edgeColors, 3));
+
+    skeletonVertex.geometry.attributes.color.needsUpdate = true;
+    skeletonEdge.geometry.attributes.color.needsUpdate = true;
+
+    skeletonVertex.geometry.setAttribute("grey_out", new THREE.Float32BufferAttribute(vertexGreyOut, 1));
+    skeletonEdge.geometry.setAttribute("grey_out", new THREE.Float32BufferAttribute(edgeGreyOut, 1));
 
     skeletonVertex.geometry.attributes.color.needsUpdate = true;
     skeletonEdge.geometry.attributes.color.needsUpdate = true;
@@ -318,74 +361,56 @@ function updateNodeAndEdgeColors(viewer, sectionArray, sectionColors) {
  * @param {Array} greyOutIndices - The indices of sectionArray sublists to grey out.
  * @param {boolean} greyOut - Whether to grey out (true) or restore transparency (false).
  */
-window.greyOutSectionsAlpha = function(viewer, sectionArray, greyOutIndices, greyOut = true) {
+window.greyOutSectionsAlpha = function(viewer, sectionArray, greyOutSections) {
     const neuron = viewer.scene.getObjectByName("neuron");
     if (!neuron) {
         console.error("Neuron object not found.");
         return;
     }
 
-    // Retrieve skeleton vertex and edge objects
     const skeletonVertex = neuron.children.find(child => child.name === "skeleton-vertex");
     const skeletonEdge = neuron.children.find(child => child.name === "skeleton-edge");
 
-    if (!skeletonVertex || !skeletonVertex.geometry || !skeletonEdge || !skeletonEdge.geometry) {
-        console.warn("skeleton-vertex or skeleton-edge not found or missing geometry.");
+    if (!skeletonVertex || !skeletonEdge) {
+        console.error("Skeleton vertex or edge objects not found.");
         return;
     }
 
+    // Get vertex and edge color attributes
     const numVertices = skeletonVertex.geometry.attributes.position.count;
-    const numEdges = skeletonEdge.geometry.attributes.position.count / 2;
+    const numEdges = skeletonEdge.geometry.attributes.position.count;
 
-    let vertexAlphas = skeletonVertex.geometry.attributes.alpha
-        ? skeletonVertex.geometry.attributes.alpha.array
-        : new Float32Array(numVertices).fill(1.0);
+    const vertexGreyOut = new Float32Array(numVertices).fill(0.0);
+    const edgeGreyOut = new Float32Array(numVertices * 6).fill(0.0); // 6 per edge
 
-    let edgeAlphas = skeletonEdge.geometry.attributes.alpha
-        ? skeletonEdge.geometry.attributes.alpha.array
-        : new Float32Array(numEdges * 6).fill(1.0);
 
-    const greySet = new Set();
-    greyOutIndices.forEach(index => {
-        if (index < sectionArray.length) {
-            sectionArray[index].forEach(nodeIndex => greySet.add(nodeIndex));
-        }
+    // Apply grey-out effect to selected sections
+    greyOutSections.forEach(sectionIndex => {
+            sectionArray[sectionIndex].forEach(vertexIndex => {
+                vertexGreyOut[vertexIndex] = 1.0;
+
+                edgeGreyOut[vertexIndex * 6] = 1.0;
+                edgeGreyOut[vertexIndex * 6 + 1] = 1.0;
+                edgeGreyOut[vertexIndex * 6 + 2] = 1.0;
+                edgeGreyOut[vertexIndex * 6 + 3] = 1.0;
+                edgeGreyOut[vertexIndex * 6 + 4] = 1.0;
+                edgeGreyOut[vertexIndex * 6 + 5] = 1.0;
+            }
+        );
     });
 
-    // Set alpha values
-    const alphaValue = greyOut ? 0.2 : 1.0; // 0.2 for greyed out, 1.0 for normal
-    for (let i = 0; i < numVertices; i++) {
-        if (greySet.has(i)) {
-            vertexAlphas[i] = alphaValue;
-        }
-    }
-    for (let i = 0; i < numEdges; i++) {
-        if (greySet.has(i)) {
-            for (let j = 0; j < 6; j++) {
-                edgeAlphas[i * 6 + j] = alphaValue;
-            }
-        }
-    }
+    skeletonVertex.geometry.setAttribute("grey_out", new THREE.Float32BufferAttribute(vertexGreyOut, 1));
+    skeletonEdge.geometry.setAttribute("grey_out", new THREE.Float32BufferAttribute(edgeGreyOut, 1));
 
-    // Apply attribute updates
-    skeletonVertex.geometry.setAttribute("alpha", new THREE.Float32BufferAttribute(vertexAlphas, 1));
-    skeletonEdge.geometry.setAttribute("alpha", new THREE.Float32BufferAttribute(edgeAlphas, 1));
+    console.log("Length of vertexGreyOut:", vertexGreyOut.length);
+    console.log("Length of edgeGreyOut:", edgeGreyOut.length);
 
-    skeletonVertex.geometry.attributes.alpha.needsUpdate = true;
-    skeletonEdge.geometry.attributes.alpha.needsUpdate = true;
-
-    // Set the `grey_out` uniform for both shaders
-    if (skeletonVertex.material.uniforms.grey_out) {
-        skeletonVertex.material.uniforms.grey_out.value = greyOut ? 1 : 0;
-    }
-    if (skeletonEdge.material.uniforms.grey_out) {
-        skeletonEdge.material.uniforms.grey_out.value = greyOut ? 1 : 0;
-    }
-
-    console.log("Updated alpha for sections:", greyOutIndices.map(i => sectionArray[i]));
+    skeletonVertex.geometry.attributes.color.needsUpdate = true;
+    skeletonEdge.geometry.attributes.color.needsUpdate = true;
 
     viewer.render();
 }
+
 
 
 window.updateSynapse = function(index, newPosition = null, newColor = null, newSize = null, save_in_session = true) {

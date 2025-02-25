@@ -298,12 +298,20 @@ import {
       this.motifQuery = motifQuery;
     }
 
+    // TODO: Clean up this function
     // calculates color based on node type
+    //nodeColor(node) {
+    //  if (node.type < this.three_colors.length) {
+    //    return this.three_colors[node.type];
+    //  }
+    //  return this.three_colors[0];
+    //}
+
     nodeColor(node) {
-      if (node.type < this.three_colors.length) {
-        return this.three_colors[node.type];
+      if (node.type < this.colors.length) {
+          return this.colors[node.type]; // Use section-based colors
       }
-      return this.three_colors[0];
+      return this.colors[0]; // Default fallback color
     }
 
     // generates cone properties for node, parent pair
@@ -1008,10 +1016,12 @@ import {
       filename,
       color,
       nodes,
+      sectionArray,
       updateCamera = true,
       onTopable = false,
       frontToBack = false
     ) {
+
       const [neuron, motif_path] = this.createNeuron(filename, nodes, color);
       const boundingBox = calculateBoundingBox(nodes);
       const boundingSphere = calculateBoundingSphere(nodes, boundingBox);
@@ -1023,6 +1033,8 @@ import {
         this.maxVolumeSize
       );
 
+      nodes = assignSectionsToNodes(nodes, sectionArray); // Assign section IDs to nodes
+
       if (updateCamera) {
         this.trackControls.update();
         this.trackControls.target.set(target.x, target.y, target.z);
@@ -1032,6 +1044,21 @@ import {
       neuron.name = filename;
       neuron.isNeuron = true;
       neuron.boundingSphere = boundingSphere;
+
+
+      function assignSectionsToNodes(nodes, sectionArray) {
+        // Create a map of node IDs to their respective section index
+        sectionArray.forEach((section, sectionIndex) => {
+            section.forEach(nodeId => {
+                if (nodes[nodeId]) {
+                    nodes[nodeId].type = sectionIndex;  // Assign section as "type"
+                }
+            });
+        });
+
+          return nodes;
+      }
+
       return [neuron, motif_path];
     }
 

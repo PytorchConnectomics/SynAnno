@@ -64,8 +64,18 @@ function initializeViewer(sharkContainerMinimap, maxVolumeSize, sectionArray) {
     s.init();
     s.animate();
 
-    console.log("Section colors:", window.sectionColors);
-    const mElement = createMetadataElement(sectionMetadata, window.sectionColors);
+    let collectSectionIndices = [];
+    let sectionIdx = -1;
+    $(".image-card-btn").each(function () {
+        sectionIdx = parseInt($(this).attr("sectionIdx"))
+        if (!collectSectionIndices.includes(sectionIdx)) {
+            collectSectionIndices.push(sectionIdx);
+        }
+    });
+
+    console.log("Collect section indices:", collectSectionIndices);
+
+    const mElement = createMetadataElement(sectionMetadata, window.sectionColors, collectSectionIndices);
     const oldElement = document.getElementById("node_key");
     if (oldElement) {
         oldElement.remove();
@@ -518,11 +528,11 @@ window.onWindowResize = function(sharkContainerMinimap) {
     s.render();
 }
 
-function createMetadataElement(metadata, colors) {
+function createMetadataElement(metadata, colors, activeSections) {
     const metadiv = document.createElement("div");
     metadiv.id = "node_key";
     metadiv.style.position = "absolute";
-    metadiv.style.top = "40px"; // Adjusted from 10px to 40px (10px + 30px)
+    metadiv.style.top = "40px";
     metadiv.style.right = "10px";
     metadiv.style.background = "white";
     metadiv.style.border = "solid 1px #aaaaaa";
@@ -539,8 +549,12 @@ function createMetadataElement(metadata, colors) {
             ? `rgb(${colors[index].r * 255}, ${colors[index].g * 255}, ${colors[index].b * 255})`
             : convertToHexColor(colors[index]);
 
-        toinnerhtml += `<div>
-            <span style='display:inline-block;width:12px;height:12px;background:${cssColor};margin-right:5px;border-radius:3px;'></span>
+        let isActive = activeSections.includes(index)
+            ? "font-weight: bold; background: rgba(229, 218, 6, 0.41);"
+            : "";
+
+        toinnerhtml += `<div style='padding: 3px; ${isActive}'>
+            <span style='display: inline-block; width: 12px; height: 12px; background: ${cssColor}; margin-right: 5px; border-radius: 4px; position: relative; top: 2px;'></span>
             ${m.label}
         </div>`;
     });

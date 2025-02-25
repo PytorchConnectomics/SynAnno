@@ -300,18 +300,11 @@ import {
 
     // TODO: Clean up this function
     // calculates color based on node type
-    //nodeColor(node) {
-    //  if (node.type < this.three_colors.length) {
-    //    return this.three_colors[node.type];
-    //  }
-    //  return this.three_colors[0];
-    //}
-
     nodeColor(node) {
-      if (node.type < this.colors.length) {
-          return this.colors[node.type]; // Use section-based colors
+      if (node.type < this.three_colors.length) {
+        return this.three_colors[node.type];
       }
-      return this.colors[0]; // Default fallback color
+      return this.three_colors[0];
     }
 
     // generates cone properties for node, parent pair

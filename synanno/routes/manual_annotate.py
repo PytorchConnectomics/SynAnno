@@ -268,7 +268,7 @@ def ng_bbox_fn_save() -> dict:
     item["Image_Index"] = len(current_app.df_metadata) + 1
     item["materialization_index"] = -1
     item["section_index"] = -1
-    item["section_order_index"] = -1
+    item["tree_traversal_index"] = -1
 
     # crop out and save the relevant gt and im
     idx_dir = create_dir(

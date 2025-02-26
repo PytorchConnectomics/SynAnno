@@ -338,4 +338,5 @@ function updateSynapseColors() {
       sessionStorage.setItem("synapseColors", JSON.stringify(window.synapseColors));
   }
 }
+
 });

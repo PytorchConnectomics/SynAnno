@@ -1,6 +1,7 @@
 # flask util functions
 import datetime
 import json
+import logging
 
 # manage paths and files
 import os
@@ -14,7 +15,8 @@ from flask import Blueprint, current_app, flash, render_template, send_file, ses
 # for type hinting
 from jinja2 import Template
 
-# enable multiple return types
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 # define a Blueprint for finish routes
@@ -170,13 +172,13 @@ def reset() -> Template:
         try:
             shutil.rmtree(os.path.join(image_folder, "Img"))
         except Exception as e:
-            print("Failed to delete %s. Reason: %s" % (image_folder, e))
+            logger.error("Failed to delete %s. Reason: %s" % (image_folder, e))
 
     if os.path.exists(os.path.join(image_folder, "Syn")):
         try:
             shutil.rmtree(os.path.join(image_folder, "Syn"))
         except Exception as e:
-            print("Failed to delete %s. Reason: %s" % (image_folder, e))
+            logger.error("Failed to delete %s. Reason: %s" % (image_folder, e))
 
     # delete masks zip file.
     if os.path.isfile(os.path.join(image_folder, "Mask.zip")):
@@ -188,7 +190,7 @@ def reset() -> Template:
         try:
             shutil.rmtree(mask_folder)
         except Exception as e:
-            print("Failed to delete %s. Reason: %s" % (mask_folder, e))
+            logger.error("Failed to delete %s. Reason: %s" % (mask_folder, e))
 
     # set the metadataframe back to null
     current_app.df_metadata.drop(current_app.df_metadata.index, inplace=True)

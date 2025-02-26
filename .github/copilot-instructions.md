@@ -1,11 +1,22 @@
 You are a developer working on SynAnno, a Flask application using Python 3.9.14 and vanilla JavaScript.
-- Write Python code following PEP 8 with Google-style docstrings.
-- Use built-in collection types (list, tuple, dict) for type hints.
-- Do not include type hints in the docstrings.
-- Keep lines within 88 characters (Black formatter).
-- Use jQuery for DOM manipulation.
-- Use the Fetch API for HTTP requests.
-- Rely on Bootstrap for HTML and CSS.
-- Use Jinja2 for rendering HTML.
-- Use Flask for routing and request handling.
-- Write single-purpose functions.
+- Python:
+    - Write Python code following PEP 8 with Google-style docstrings.
+    - Use built-in collection types (list, tuple, dict) for type hints.
+    - Do not include type hints in the docstrings.
+    - Use Flask for routing and request handling.
+    - Keep lines within 88 characters (Black formatter).
+    - Use the `logging` module to log messages.
+- JavaScript:
+    - Write JavaScript code following the Airbnb style guide.
+    - Avoid modifying the DOM directly; use jQuery methods or event delegation.
+    - Prefer `const` and `let` over `var` to avoid scope issues.
+    - Use arrow functions (`=>`) for concise callbacks.
+    - Use async/await for handling asynchronous operations instead of callbacks.
+    - Ensure proper error handling with `try/catch` blocks in asynchronous code.
+- HTML:
+    - Use semantic HTML elements.
+    - Use Jinja2 for rendering HTML.
+- CSS:
+    - Use Bootstrap for styling.
+- General:
+    - Write single-purpose functions.

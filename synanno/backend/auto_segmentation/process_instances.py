@@ -64,9 +64,6 @@ def compute_instance_metadata(
         "crop_size_x": crop_size_x,
         "crop_size_y": crop_size_y,
         "crop_size_z": crop_size_z,
-        "Original_Bbox": [],
-        "Adjusted_Bbox": [],
-        "Padding": [],
     }
 
     z1, z2 = item["cz0"] - crop_size_z // 2, item["cz0"] + crop_size_z // 2
@@ -83,7 +80,9 @@ def compute_instance_metadata(
                 bbox_org[coordinate_order.index(coord) * 2 + i]
             )
 
-    crop_bbox, img_padding = calculate_crop_pad(item["Original_Bbox"], vol_dim)
+    crop_bbox, img_padding = calculate_crop_pad(
+        item["Original_Bbox"], vol_dim, coordinate_order
+    )
 
     item["Adjusted_Bbox"], item["Padding"] = crop_bbox, img_padding
 

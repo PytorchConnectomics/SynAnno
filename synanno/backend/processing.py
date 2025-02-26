@@ -191,12 +191,12 @@ def free_page() -> None:
             try:
                 shutil.rmtree(syn_dir_idx)
             except Exception as e:
-                print("Failed to delete %s. Reason: %s" % (syn_dir_idx, e))
+                logger.error("Failed to delete %s. Reason: %s" % (syn_dir_idx, e))
         if os.path.exists(img_dir_idx):
             try:
                 shutil.rmtree(img_dir_idx)
             except Exception as e:
-                print("Failed to delete %s. Reason: %s" % (img_dir_idx, e))
+                logger.error("Failed to delete %s. Reason: %s" % (img_dir_idx, e))
 
 
 def retrieve_materialization_data() -> dict:
@@ -226,7 +226,7 @@ def retrieve_materialization_data() -> dict:
             [
                 "materialization_index",
                 "section_index",
-                "section_order_index",
+                "tree_traversal_index",
                 "pre_pt_x",
                 "pre_pt_y",
                 "pre_pt_z",
@@ -303,9 +303,9 @@ def retrieve_instance_metadata(page: int = 0, mode: str = "annotate"):
                     if "section_index" in bbox_dict[idx]
                     else -1
                 ),
-                "section_order_index": (
-                    bbox_dict[idx]["section_order_index"]
-                    if "section_order_index" in bbox_dict[idx]
+                "tree_traversal_index": (
+                    bbox_dict[idx]["tree_traversal_index"]
+                    if "tree_traversal_index" in bbox_dict[idx]
                     else -1
                 ),
                 "GT": "/".join(syn_dir_instance.strip(".\\").split("/")[-3:]),
@@ -432,7 +432,7 @@ def update_slice_number(data: dict) -> None:
             missing_nr_slices = current_app.crop_size_z_draw - nr_slices
 
             if missing_nr_slices < 0:
-                print("We already should have more slices than the model can handle.")
+                logger.warning("We already have more slices than the model can handle.")
                 break
 
             og_bb[coord_order.index("z") * 2] = z1 - missing_nr_slices // 2

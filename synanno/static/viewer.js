@@ -1,7 +1,7 @@
 import SharkViewer, { swcParser, Color, NODE_PARTICLE_IMAGE } from "./SharkViewer/shark_viewer.js";
 import SynapseShader from "./shaders/SynapseShader.js";
 
-$(document).ready(() => {
+window.onload = async () => {
     window.maxVolumeSize = 1000000;
 
     const neuronReady = $("script[src*='viewer.js']").data("neuron-ready") === true;
@@ -18,21 +18,22 @@ $(document).ready(() => {
         if (initialLoad) {
             window.synapseColors = {};
             sessionStorage.removeItem("synapseColors");
-            console.log("Initial load, synapseColors cleared.");
         }
 
-        console.log("Neuron data is ready. Initializing viewer...");
         try {
-            initializeViewer($sharkContainerMinimap[0], maxVolumeSize, sectionArray);
+            await initializeViewer($sharkContainerMinimap[0], maxVolumeSize, sectionArray);
 
             if (neuronPath) {
-                loadSwcFile(neuronPath, sectionArray);
+                const swcTxt = await loadSwcFile(neuronPath);
+                processSwcFile(swcTxt, sectionArray);
             } else {
                 console.error("No neuron path provided.");
             }
 
             if (synapseCloudPath) {
-                loadSynapseCloud(synapseCloudPath, maxVolumeSize);
+                const data = await loadSynapseCloud(synapseCloudPath);
+                updateLoadingBar(parseInt(data.length / 3));
+                processSynapseCloudData(data, maxVolumeSize);
             } else {
                 console.error("No synapse cloud path provided.");
             }
@@ -44,15 +45,12 @@ $(document).ready(() => {
     } else {
         console.log("Neuron data is not available. Viewer will not be initialized.");
     }
-});
+};
 
-/**
- * Initializes the SharkViewer instance.
- */
-function initializeViewer(sharkContainerMinimap, maxVolumeSize, sectionArray) {
+async function initializeViewer(sharkContainerMinimap, maxVolumeSize, sectionArray) {
     const sectionMetadata = generateSectionMetadata(sectionArray);
 
-    window.s = new SharkViewer({
+    window.window.shark = new SharkViewer({
         mode: 'particle',
         dom_element: sharkContainerMinimap,
         maxVolumeSize: maxVolumeSize,
@@ -61,19 +59,11 @@ function initializeViewer(sharkContainerMinimap, maxVolumeSize, sectionArray) {
     });
 
     console.log("Viewer initialized with section-based metadata.");
-    s.init();
-    s.animate();
+    await window.shark.init();
+    window.shark.animate();
 
-    let collectSectionIndices = [];
-    let sectionIdx = -1;
-    $(".image-card-btn").each(function () {
-        sectionIdx = parseInt($(this).attr("sectionIdx"))
-        if (!collectSectionIndices.includes(sectionIdx)) {
-            collectSectionIndices.push(sectionIdx);
-        }
-    });
-
-    console.log("Collect section indices:", collectSectionIndices);
+    let collectSectionIndices = getDisplayedSectionIndices(true);
+    console.log("Displayed section indices:", collectSectionIndices);
 
     const mElement = createMetadataElement(sectionMetadata, window.sectionColors, collectSectionIndices);
     const oldElement = document.getElementById("node_key");
@@ -83,171 +73,157 @@ function initializeViewer(sharkContainerMinimap, maxVolumeSize, sectionArray) {
     sharkContainerMinimap.appendChild(mElement);
 }
 
-/**
- * Sets up the window resize handler to adjust the viewer size.
- */
 window.setupWindowResizeHandler = (sharkContainerMinimap) => {
     $(window).on('resize', () => onWindowResize(sharkContainerMinimap));
     setTimeout(() => {
         onWindowResize(sharkContainerMinimap);
-        s.render();
+        window.window.shark.render();
     }, 100);
 };
 
-/**
- * Loads and processes an SWC file from the given path.
- */
-function loadSwcFile(swcPath, sectionArray) {
-    fetch(swcPath)
-        .then(response => response.text())
-        .then(swcTxt => {
-            try {
-                const swc = swcParser(swcTxt);
-
-                if (!swc || Object.keys(swc).length === 0) {
-                    console.error("SWC parsing failed. The SWC object is empty.");
-                    return;
-                }
-
-                s.swc = swc;
-
-                const neuronData = s.loadNeuron('neuron', 'red', swc, sectionArray, true, false, true);
-                const neuronObject = neuronData[0];
-
-                if (neuronObject && neuronObject.isObject3D) {
-                    s.scene.add(neuronObject);
-                    console.log("Neuron object successfully added to the scene.");
-                } else {
-                    console.warn("Neuron object is missing or invalid.");
-                }
-
-                const neuron = s.scene.getObjectByName('neuron');
-
-                if (neuron) {
-                    console.log("Neuron found! Proceeding with color update.");
-                    updateNodeAndEdgeColors(s, sectionArray);
-                    setTimeout(() => adjustCameraForNeuron(s), 500);
-                } else {
-                    console.warn("Neuron still not found in the scene.");
-                }
-
-                addLights(s.scene);
-                s.render();
-            } catch (error) {
-                console.error("Error parsing SWC file:", error);
-                alert("An error occurred while processing the SWC file.");
-            }
-        })
-        .catch(error => {
-            console.error("Error fetching SWC file:", error);
-            alert("An error occurred while fetching the SWC file.");
-        });
+async function loadSwcFile(swcPath) {
+    try {
+        const response = await fetch(swcPath);
+        const swcTxt = await response.text();
+        return swcTxt;
+    } catch (error) {
+        console.error("Error fetching SWC file:", error);
+        alert("An error occurred while fetching the SWC file.");
+        throw error;
+    }
 }
 
-/**
- * Loads and processes a synapse cloud JSON file from the given path.
- */
-function loadSynapseCloud(jsonPath, maxVolumeSize) {
-    console.log("Loading synapse cloud from:", jsonPath);
-    fetch(jsonPath)
-        .then(response => response.json())
-        .then(data => {
-            try {
-                if (!Array.isArray(data) || data.length % 3 !== 0) {
-                    console.error("JSON data is not an Array or length is not a multiple of 3.");
-                    return;
-                }
-                console.log("Data", data);
+function processSwcFile(swcTxt, sectionArray) {
+    const swc = swcParser(swcTxt);
 
-                window.synapseColors = JSON.parse(sessionStorage.getItem("synapseColors")) || {};
+    if (!swc || Object.keys(swc).length === 0) {
+        console.error("SWC parsing failed. The SWC object is empty.");
+        return;
+    }
 
-                const points = [];
-                for (let i = 0; i < data.length; i += 3) {
-                    points.push(new THREE.Vector3(data[i], data[i + 1], data[i + 2]));
-                }
+    window.window.shark.swc = swc;
 
-                const positions = new Float32Array(points.length * 3);
-                const colors = new Float32Array(points.length * 4);
-                const alphas = new Float32Array(points.length);
-                const sizes = new Float32Array(points.length);
+    const neuronData = window.shark.loadNeuron('neuron', 'red', swc, sectionArray, true, false, true);
+    const neuronObject = neuronData[0];
 
-                const selectedSynapses = [];
-                $(".image-card-btn").each(function () {
-                    selectedSynapses.push($(this).attr("data_id"));
-                });
+    if (neuronObject && neuronObject.isObject3D) {
+        window.shark.scene.add(neuronObject);
+        console.log("Neuron object successfully added to the scene.");
+    } else {
+        console.warn("Neuron object is missing or invalid.");
+    }
 
-                for (let i = 0; i < points.length; i++) {
-                    positions[i * 3] = points[i].x + Math.random() * 50;
-                    positions[i * 3 + 1] = points[i].y + Math.random() * 50;
-                    positions[i * 3 + 2] = points[i].z + Math.random() * 50;
+    const neuron = window.shark.scene.getObjectByName('neuron');
 
-                    if (!window.synapseColors[i]) {
-                        window.synapseColors[i] = "yellow";
-                    }
+    if (neuron) {
+        console.log("Neuron found! Proceeding with color update.");
+        updateNodeAndEdgeColors(window.shark, sectionArray);
+        setTimeout(() => adjustCameraForNeuron(window.shark), 500);
+    } else {
+        console.warn("Neuron still not found in the scene.");
+    }
 
-                    const colorHex = window.synapseColors[i] === "green" ? 0x00ff00 :
-                                     window.synapseColors[i] === "red" ? 0xff0000 : 0xffff00;
-
-                    const color = new THREE.Color(colorHex);
-                    colors[i * 4] = color.r;
-                    colors[i * 4 + 1] = color.g;
-                    colors[i * 4 + 2] = color.b;
-                    colors[i * 4 + 3] = 1.0;
-
-                    if (selectedSynapses.length > 0) {
-                        sizes[i] = selectedSynapses.includes(i.toString()) ? maxVolumeSize : 10;
-                        alphas[i] = selectedSynapses.includes(i.toString()) ? 0.8 : 0.1;
-                    } else {
-                        sizes[i] = 10;
-                        alphas[i] = 0.8;
-                    }
-                }
-
-                sessionStorage.setItem("synapseColors", JSON.stringify(window.synapseColors));
-
-                const geometry = new THREE.BufferGeometry();
-                geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-                geometry.setAttribute("color", new THREE.BufferAttribute(colors, 4));
-                geometry.setAttribute("radius", new THREE.BufferAttribute(sizes, 1));
-                geometry.setAttribute("alpha", new THREE.BufferAttribute(alphas, 1));
-
-                const image = document.createElement("img");
-                const sphereTexture = new THREE.Texture(image);
-                image.onload = () => {
-                    sphereTexture.needsUpdate = true;
-                };
-                image.src = NODE_PARTICLE_IMAGE;
-
-                SynapseShader.uniforms["sphereTexture"].value = sphereTexture;
-
-                const material = new THREE.ShaderMaterial({
-                    uniforms: SynapseShader.uniforms,
-                    vertexShader: SynapseShader.vertexShader,
-                    fragmentShader: SynapseShader.fragmentShader,
-                    transparent: true,
-                    vertexColors: true,
-                });
-
-                const pointsMesh = new THREE.Points(geometry, material);
-                pointsMesh.name = "synapse-cloud";
-
-                s.scene.add(pointsMesh);
-                s.scene.needsUpdate = true;
-
-                s.render();
-                console.log("Synapse cloud successfully added.");
-            } catch (error) {
-                console.error("Error processing synapse cloud:", error);
-            }
-        })
-        .catch(error => {
-            console.error("Error fetching synapse cloud data:", error);
-        });
+    addLights(window.shark.scene);
+    window.shark.render();
 }
 
-/**
- * Updates the colors of nodes and edges in a 3D neuron visualization.
- */
+async function loadSynapseCloud(jsonPath) {
+    try {
+        const response = await fetch(jsonPath);
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error("Error fetching synapse cloud data:", error);
+        throw error;
+    }
+}
+
+function processSynapseCloudData(data, maxVolumeSize) {
+    if (!Array.isArray(data) || data.length % 3 !== 0) {
+        console.error("JSON data is not an Array or length is not a multiple of 3.");
+        return;
+    }
+    console.log("Data", data);
+
+    window.synapseColors = JSON.parse(sessionStorage.getItem("synapseColors")) || {};
+
+    const points = [];
+    for (let i = 0; i < data.length; i += 3) {
+        points.push(new THREE.Vector3(data[i], data[i + 1], data[i + 2]));
+    }
+
+    const positions = new Float32Array(points.length * 3);
+    const colors = new Float32Array(points.length * 4);
+    const alphas = new Float32Array(points.length);
+    const sizes = new Float32Array(points.length);
+
+    const selectedSynapses = [];
+    $(".image-card-btn").each(function () {
+        selectedSynapses.push($(this).attr("data_id"));
+    });
+
+    for (let i = 0; i < points.length; i++) {
+        positions[i * 3] = points[i].x + Math.random() * 50;
+        positions[i * 3 + 1] = points[i].y + Math.random() * 50;
+        positions[i * 3 + 2] = points[i].z + Math.random() * 50;
+
+        if (!window.synapseColors[i]) {
+            window.synapseColors[i] = "yellow";
+        }
+
+        const colorHex = window.synapseColors[i] === "green" ? 0x00ff00 :
+                         window.synapseColors[i] === "red" ? 0xff0000 : 0xffff00;
+
+        const color = new THREE.Color(colorHex);
+        colors[i * 4] = color.r;
+        colors[i * 4 + 1] = color.g;
+        colors[i * 4 + 2] = color.b;
+        colors[i * 4 + 3] = 1.0;
+
+        if (selectedSynapses.length > 0) {
+            sizes[i] = selectedSynapses.includes(i.toString()) ? maxVolumeSize : 10;
+            alphas[i] = selectedSynapses.includes(i.toString()) ? 0.8 : 0.1;
+        } else {
+            sizes[i] = 10;
+            alphas[i] = 0.8;
+        }
+    }
+
+    sessionStorage.setItem("synapseColors", JSON.stringify(window.synapseColors));
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute("color", new THREE.BufferAttribute(colors, 4));
+    geometry.setAttribute("radius", new THREE.BufferAttribute(sizes, 1));
+    geometry.setAttribute("alpha", new THREE.BufferAttribute(alphas, 1));
+
+    const image = document.createElement("img");
+    const sphereTexture = new THREE.Texture(image);
+    image.onload = () => {
+        sphereTexture.needsUpdate = true;
+    };
+    image.src = NODE_PARTICLE_IMAGE;
+
+    SynapseShader.uniforms["sphereTexture"].value = sphereTexture;
+
+    const material = new THREE.ShaderMaterial({
+        uniforms: SynapseShader.uniforms,
+        vertexShader: SynapseShader.vertexShader,
+        fragmentShader: SynapseShader.fragmentShader,
+        transparent: true,
+        vertexColors: true,
+    });
+
+    const pointsMesh = new THREE.Points(geometry, material);
+    pointsMesh.name = "synapse-cloud";
+
+    window.shark.scene.add(pointsMesh);
+    window.shark.scene.needsUpdate = true;
+
+    window.shark.render();
+    console.log("Synapse cloud successfully added.");
+}
+
 function updateNodeAndEdgeColors(viewer, sectionArray) {
     const neuron = viewer.scene.getObjectByName("neuron");
     if (!neuron) {
@@ -272,10 +248,8 @@ function updateNodeAndEdgeColors(viewer, sectionArray) {
     const vertexColors = new Float32Array(numVertices * itemSizeVertices);
     const edgeColors = new Float32Array(numVertices * 6 * itemSizeEdges);
 
-    const collectSectionIndices = [];
-    $(".image-card-btn").each(function () {
-        collectSectionIndices.push($(this).attr("sectionIdx"));
-    });
+    const collectSectionIndices = getDisplayedSectionIndices();
+    console.log("Displayed section indices:", collectSectionIndices);
 
     let vertexGreyOut = [];
     let edgeGreyOut = [];
@@ -335,9 +309,6 @@ function updateNodeAndEdgeColors(viewer, sectionArray) {
     viewer.render();
 }
 
-/**
- * Adjusts the transparency (alpha) of specific neuron sections.
- */
 window.greyOutSectionsAlpha = (viewer, sectionArray, greyOutSections) => {
     const neuron = viewer.scene.getObjectByName("neuron");
     if (!neuron) {
@@ -384,11 +355,8 @@ window.greyOutSectionsAlpha = (viewer, sectionArray, greyOutSections) => {
     viewer.render();
 };
 
-/**
- * Updates a specific synapse's properties.
- */
 window.updateSynapse = (index, newPosition = null, newColor = null, newSize = null, save_in_session = true) => {
-    const pointsMesh = s.scene.getObjectByName("synapse-cloud");
+    const pointsMesh = window.shark.scene.getObjectByName("synapse-cloud");
     if (!pointsMesh) {
         console.error("Synapse cloud not found in the scene.");
         return;
@@ -430,12 +398,9 @@ window.updateSynapse = (index, newPosition = null, newColor = null, newSize = nu
 
     console.log("Synapse index:", index, "Position:", positions.getX(index), positions.getY(index), positions.getZ(index));
 
-    s.render();
+    window.shark.render();
 };
 
-/**
- * Adjusts the camera position and settings to focus on a neuron object in the scene.
- */
 function adjustCameraForNeuron(viewer) {
     const neuron = viewer.scene.getObjectByName('neuron');
     if (!neuron) {
@@ -463,9 +428,6 @@ function adjustCameraForNeuron(viewer) {
     viewer.camera.updateProjectionMatrix();
 }
 
-/**
- * Adds ambient and directional lights to the given scene if they do not already exist.
- */
 function addLights(scene) {
     if (!scene.getObjectByName("ambient-light")) {
         const ambientLight = new THREE.AmbientLight(Color.white, 1.0);
@@ -478,14 +440,6 @@ function addLights(scene) {
         scene.add(directionalLight);
     }
 }
-
-/**
- * Generates an array of high-contrast colors for a given number of sections.
- * The colors are spread across the full hue spectrum for better distinction.
- *
- * @param {number} numSections - The number of sections to generate colors for.
- * @returns {THREE.Color[]} An array of THREE.Color objects representing the colors for each section.
- */
 
 function generateSectionColors(sectionArray) {
     const colors = [];
@@ -505,12 +459,14 @@ function generateSectionMetadata(sectionArray) {
     }));
 }
 
-/**
- * Handles window resize events to adjust the viewer's size and camera aspect ratio.
- */
 window.onWindowResize = function(sharkContainerMinimap) {
+    if (!window.window.shark || !window.window.shark.camera) {
+        console.error("SharkViewer not initialized yet. Skipping resize.");
+        return;
+    }
+
     if (!sharkContainerMinimap) {
-        console.error("Shark container not found.");
+        console.error("window.shark container not found.");
         return;
     }
 
@@ -519,20 +475,20 @@ window.onWindowResize = function(sharkContainerMinimap) {
     console.log("Resizing viewer to:", width, "x", height);
 
     if (width > 0 && height > 0) {
-        s.camera.aspect = width / height;
-        s.camera.updateProjectionMatrix();
-        s.renderer.setSize(width, height);
-        s.renderer.setPixelRatio(window.devicePixelRatio); // Improves scaling on high-res screens
+        window.window.shark.camera.aspect = width / height;
+        window.window.shark.camera.updateProjectionMatrix();
+        window.window.shark.renderer.setSize(width, height);
+        window.window.shark.renderer.setPixelRatio(window.devicePixelRatio); // Improves scaling on high-res screens
     }
 
-    s.render();
+    window.window.shark.render();
 }
 
 function createMetadataElement(metadata, colors, activeSections) {
     const metadiv = document.createElement("div");
     metadiv.id = "node_key";
-    metadiv.style.position = "absolute";
-    metadiv.style.top = "40px";
+    metadiv.style.position = "absolute";  // Ensure positioning does not affect layout
+    metadiv.style.top = "60px";
     metadiv.style.right = "10px";
     metadiv.style.background = "white";
     metadiv.style.border = "solid 1px #aaaaaa";
@@ -541,7 +497,12 @@ function createMetadataElement(metadata, colors, activeSections) {
     metadiv.style.fontFamily = "Arial, sans-serif";
     metadiv.style.fontSize = "12px";
     metadiv.style.maxWidth = "150px";
-    metadiv.style.overflow = "auto";
+
+    // Must-have styles for scrolling & visibility
+    metadiv.style.maxHeight = "calc(75%)"; // Subtract header height if needed
+    metadiv.style.overflowY = "auto"; // Enable scrolling inside the div
+    metadiv.style.zIndex = "1000"; // Move above SharkViewer
+    metadiv.style.pointerEvents = "auto"; // Ensure it captures mouse input
 
     let toinnerhtml = "<strong>Neuron Sections</strong><br>";
     metadata.forEach((m, index) => {
@@ -560,5 +521,55 @@ function createMetadataElement(metadata, colors, activeSections) {
     });
 
     metadiv.innerHTML = toinnerhtml;
+
+    // Prevent scroll propagation to SharkViewer
+    metadiv.addEventListener("wheel", (e) => {
+        e.stopPropagation(); // Stops scroll from affecting the parent (SharkViewer)
+    });
+
+    // Append metadata div inside minimap container
+    const minimapContainer = document.getElementById("shark_container_minimap");
+    minimapContainer.appendChild(metadiv);
+
     return metadiv;
+}
+
+
+function getDisplayedSectionIndices(parse_int = false) {
+    const collectSectionIndices = [];
+    $(".image-card-btn").each(function () {
+        let sectionIdx = $(this).attr("sectionIdx");
+        if (parse_int) {
+            sectionIdx = parseInt(sectionIdx);
+        }
+        if (!isNaN(sectionIdx)) {
+            collectSectionIndices.push(sectionIdx);
+        }
+    });
+
+    return [...new Set(collectSectionIndices)]; // Remove duplicates
+}
+
+function getDisplayedDataID() {
+    const collectSectionIndices = [];
+    $(".image-card-btn").each(function () {
+        let data_id = $(this).attr("data_id");
+        if (!isNaN(data_id)) {
+            collectSectionIndices.push(data_id);
+        }
+    });
+
+    return [...new Set(collectSectionIndices)]; // Remove duplicates
+}
+
+function updateLoadingBar(synapse_count) {
+    const displayedSectionIndices = getDisplayedDataID(); // Retrieve sections from UI
+
+    if (displayedSectionIndices.length === 0) return;
+
+    // Simplified progress calculation
+    const lowestDisplayedSectionIdx = Math.min(...displayedSectionIndices);
+    const progressPercent = (lowestDisplayedSectionIdx / synapse_count) * 100;
+
+    document.getElementById("loading_progress").style.width = `${progressPercent}%`;
 }

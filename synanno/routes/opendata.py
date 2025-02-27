@@ -37,14 +37,16 @@ from synanno.backend.neuron_processing.load_neuron import (
     navis_neuron,
 )
 from synanno.backend.neuron_processing.load_synapse_point_cloud import (
+    convert_to_point_cloud,
     create_neuron_tree,
+    filter_synapse_data,
     get_neuron_coordinates,
-    load_synapse_point_cloud,
-)
-from synanno.backend.neuron_processing.partition_order import (
-    assign_section_order_index,
-    compute_section_order,
     neuron_section_lookup,
+    save_point_clouds,
+    snap_points_to_neuron,
+)
+from synanno.backend.neuron_processing.partition_neuron import (
+    sort_sections_by_traversal_order,
 )
 
 # setup logging
@@ -269,65 +271,85 @@ def handle_neuron_view(neuropil_url: str) -> tuple[str, str, list[list[int]]]:
 
     Args:
         neuropil_url: URL to the neuropil cloud volume.
+
+    Returns:
+        Tuple containing the pruned navis SWC file path, snapped points JSON file name,
+        and sections.
     """
-
-    neuron_id = validate_neuron_id()  # noqa: F841
-
-    current_app.synapse_data["materialization_index"] = (
-        current_app.synapse_data.index.to_series()
-    )
-    current_app.synapse_data = current_app.synapse_data.query(
-        "pre_neuron_id == @neuron_id or post_neuron_id == @neuron_id"
-    )
-    current_app.synapse_data.reset_index(drop=True, inplace=True)
+    neuron_id = validate_neuron_id()
 
     static_folder = os.path.join(
         current_app.root_path, current_app.config["STATIC_FOLDER"]
     )
     swc_path = os.path.join(static_folder, "swc")
 
+    current_app.synapse_data["materialization_index"] = (
+        current_app.synapse_data.index.to_series()
+    )
+    current_app.synapse_data = filter_synapse_data(neuron_id, current_app.synapse_data)
+    current_app.synapse_data.reset_index(drop=True, inplace=True)
+
     neuron_skeleton_swc_path = load_neuron_skeleton(
         neuropil_url, current_app.selected_neuron_id, swc_path
     )
 
-    # compute the neuron skelton and sections
-    neuron_pruned, pruned_navis_swc_file_path = navis_neuron(neuron_skeleton_swc_path)
-    sections, tree_traversal = compute_sections(pruned_navis_swc_file_path)
+    pruned_navis_swc_file_path = navis_neuron(neuron_skeleton_swc_path)
+    sections, neuron_pruned, node_traversal_lookup = compute_sections(
+        pruned_navis_swc_file_path, merge=True
+    )
 
-    # get the neuron coordinates and create a KDTree
+    sorted_sections = sort_sections_by_traversal_order(sections, node_traversal_lookup)
+
     neuron_coords = get_neuron_coordinates(neuron_pruned)
     neuron_tree = create_neuron_tree(neuron_coords)
+    neuron_sec_lookup = neuron_section_lookup(sorted_sections, node_traversal_lookup)
 
-    # derive the path for how to traverse the neuron sections
-    section_order = compute_section_order(tree_traversal, sections)
-    logger.info(f"Section order: {section_order}")
+    # retrieve initial synapse to neuron node mapping
+    point_cloud = convert_to_point_cloud(current_app.synapse_data)
+    indices_of_near_neuron = snap_points_to_neuron(point_cloud, neuron_tree)
 
-    neuron_sec_lookup = neuron_section_lookup(sections, section_order)
-    assign_section_order_index(current_app.synapse_data, neuron_sec_lookup, neuron_tree)
-    print(current_app.synapse_data[["section_order_index"]].isnull().values.any())
-    # reorder the synapse data based on the section order
-    print(current_app.synapse_data[["section_order_index"]].head(10))
-    current_app.synapse_data.sort_values(
-        ["section_order_index"], ascending=[True], inplace=True
+    # associate synapse data with the neuron sorted_sections and tree traversal order
+    for index in current_app.synapse_data.index:
+        node_id = indices_of_near_neuron[index] + 1  # neuron ID is 1-indexed
+        section_idx, traversal_index = neuron_sec_lookup[node_id]
+        current_app.synapse_data.at[index, "node_id"] = int(node_id)
+        current_app.synapse_data.at[index, "section_index"] = int(section_idx)
+        current_app.synapse_data.at[index, "tree_traversal_index"] = int(
+            traversal_index
+        )
+
+    current_app.synapse_data["node_id"] = current_app.synapse_data["node_id"].astype(
+        int
     )
-    print(current_app.synapse_data[["section_order_index"]].head(10))
+    current_app.synapse_data["section_index"] = current_app.synapse_data[
+        "section_index"
+    ].astype(int)
+    current_app.synapse_data["tree_traversal_index"] = current_app.synapse_data[
+        "tree_traversal_index"
+    ].astype(int)
 
-    # reset index -> this sets image.Image_Index used in the annotation ordering
-    print(current_app.synapse_data[["section_order_index"]].head(10))
+    # reorder the synapse data by section index and tree traversal index
+    current_app.synapse_data = current_app.synapse_data.sort_values(
+        ["section_index", "tree_traversal_index"],
+        ascending=[True, True],
+        inplace=False,
+    )
     current_app.synapse_data.reset_index(drop=True, inplace=True)
-    print(current_app.synapse_data[["section_order_index"]].head(10))
 
-    _, snapped_points_json_file_name, neuron_tree = load_synapse_point_cloud(
-        current_app.selected_neuron_id,
-        neuron_coords,
-        neuron_tree,
-        current_app.synapse_data,
-        swc_path,
+    # reset the synapse to neuron node mapping
+    point_cloud = convert_to_point_cloud(current_app.synapse_data)
+    indices_of_near_neuron = snap_points_to_neuron(point_cloud, neuron_tree)
+
+    # retrieve the associated neuron coordinates for the synapse data
+    snapped_point_coordinates = neuron_coords[indices_of_near_neuron]
+    _, snapped_points_json_file_name = save_point_clouds(
+        neuron_id, point_cloud, snapped_point_coordinates, swc_path
     )
+
     return (
         os.path.basename(pruned_navis_swc_file_path),
         snapped_points_json_file_name,
-        sections,
+        sorted_sections,
     )
 
 

@@ -298,6 +298,7 @@ import {
       this.motifQuery = motifQuery;
     }
 
+    // TODO: Clean up this function
     // calculates color based on node type
     nodeColor(node) {
       if (node.type < this.three_colors.length) {
@@ -447,6 +448,7 @@ import {
         radius: { type: "fv1", value: [] },
         vertices: { type: "f", value: [] },
         label: { type: "fv1", value: [] },
+        grey_out: { type: "fv1", value: [] },
       };
 
       let threshold = Object.assign({}, this.maxLabel);
@@ -458,7 +460,6 @@ import {
       particleShader.uniforms["sphereTexture"].value = sphereImg;
       particleShader.uniforms["particleScale"].value = particleScale;
       particleShader.uniforms["abstraction_threshold"].value = threshold;
-      particleShader.uniforms["grey_out"].value = 0;
 
       let material = new THREE.ShaderMaterial({
           uniforms: particleShader.uniforms,
@@ -492,6 +493,7 @@ import {
         customAttributes.vertices.value.push(particleVertex.y);
         customAttributes.vertices.value.push(particleVertex.z);
         customAttributes.label.value.push(label);
+        customAttributes.grey_out.value.push(0);
 
         indexLookup[customAttributes.radius.value.length - 1] =
           swcJSON[node].sampleNumber;
@@ -509,6 +511,10 @@ import {
         "label",
         new THREE.Float32BufferAttribute(customAttributes.label.value, 1)
       );
+      geometry.setAttribute(
+        "grey_out",
+        new THREE.Float32BufferAttribute(customAttributes.grey_out.value, 1)
+    );
 
       const particles = new THREE.Points(geometry, material);
       particles.name = "skeleton-vertex";
@@ -539,6 +545,7 @@ import {
           normals: { type: "f", value: [] },
           uv: { type: "f", value: [] },
           label: { type: "fv1", value: [] },
+          grey_out: { type: "fv1", value: [] },
         };
         const uvs = [
           new THREE.Vector2(0.5, 0),
@@ -582,6 +589,7 @@ import {
             coneAttributes.uv.value.push(uvs[0].y);
             coneAttributes.indices.value.push(ix21);
             coneAttributes.label.value.push(label);
+            coneAttributes.grey_out.value.push(0);
             ix21 += 1;
 
             // vertex 2
@@ -596,6 +604,7 @@ import {
             coneAttributes.uv.value.push(uvs[1].y);
             coneAttributes.indices.value.push(ix21);
             coneAttributes.label.value.push(label);
+            coneAttributes.grey_out.value.push(0);
             ix21 += 1;
 
             // vertex 3
@@ -610,6 +619,8 @@ import {
             coneAttributes.uv.value.push(uvs[2].y);
             coneAttributes.indices.value.push(ix21);
             coneAttributes.label.value.push(label);
+            coneAttributes.grey_out.value.push(0);
+
             ix21 += 1;
 
             // vertex 1
@@ -624,6 +635,8 @@ import {
             coneAttributes.uv.value.push(uvs[0].y);
             coneAttributes.indices.value.push(ix21);
             coneAttributes.label.value.push(label);
+            coneAttributes.grey_out.value.push(0);
+
             ix21 += 1;
 
             // vertex 2
@@ -638,6 +651,8 @@ import {
             coneAttributes.uv.value.push(uvs[1].y);
             coneAttributes.indices.value.push(ix21);
             coneAttributes.label.value.push(label);
+            coneAttributes.grey_out.value.push(0);
+
             ix21 += 1;
 
             // vertex 3
@@ -652,6 +667,8 @@ import {
             coneAttributes.uv.value.push(uvs[2].y);
             coneAttributes.indices.value.push(ix21);
             coneAttributes.label.value.push(label);
+            coneAttributes.grey_out.value.push(0);
+
             ix21 += 1;
           }
         });
@@ -678,11 +695,14 @@ import {
           "label",
           new THREE.Float32BufferAttribute(coneAttributes.label.value, 1)
         );
+        coneGeom.setAttribute(
+          "grey_out",
+          new THREE.Float32BufferAttribute(coneAttributes.grey_out.value, 1)
+      );
 
         let coneShader = structuredClone(ConeShader);
 
         coneShader.uniforms["sphereTexture"].value = sphereImg;
-        coneShader.uniforms["grey_out"].value = 0;
 
         const coneMaterial = new THREE.ShaderMaterial({
             uniforms: coneShader.uniforms,
@@ -989,10 +1009,12 @@ import {
       filename,
       color,
       nodes,
+      sectionArray,
       updateCamera = true,
       onTopable = false,
       frontToBack = false
     ) {
+
       const [neuron, motif_path] = this.createNeuron(filename, nodes, color);
       const boundingBox = calculateBoundingBox(nodes);
       const boundingSphere = calculateBoundingSphere(nodes, boundingBox);
@@ -1004,6 +1026,8 @@ import {
         this.maxVolumeSize
       );
 
+      nodes = assignSectionsToNodes(nodes, sectionArray); // Assign section IDs to nodes
+
       if (updateCamera) {
         this.trackControls.update();
         this.trackControls.target.set(target.x, target.y, target.z);
@@ -1013,6 +1037,21 @@ import {
       neuron.name = filename;
       neuron.isNeuron = true;
       neuron.boundingSphere = boundingSphere;
+
+
+      function assignSectionsToNodes(nodes, sectionArray) {
+        // Create a map of node IDs to their respective section index
+        sectionArray.forEach((section, sectionIndex) => {
+            section.forEach(nodeId => {
+                if (nodes[nodeId]) {
+                    nodes[nodeId].type = sectionIndex;  // Assign section as "type"
+                }
+            });
+        });
+
+          return nodes;
+      }
+
       return [neuron, motif_path];
     }
 

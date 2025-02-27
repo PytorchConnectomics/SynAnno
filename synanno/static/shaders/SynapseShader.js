@@ -6,18 +6,25 @@ const SynapseShader = {
     vertexShader: `
         uniform float particleScale;
         attribute float radius;
+        attribute float alpha;
         varying vec3 vColor;
+        varying float vAlpha;
 
         void main() {
             vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-            gl_PointSize = max(radius * ((particleScale * 2.5) / -mvPosition.z), 8.0); // 🔥 Ensure particles are visible
-            vColor = color;
+            float depthScale = -mvPosition.z / 1000.0; // Normalize depth scale
+            gl_PointSize = clamp(radius * (particleScale / depthScale), 10.0, 20.0);
+
             gl_Position = projectionMatrix * mvPosition;
+
+            vColor = color;
+            vAlpha = alpha;
         }
     `,
     fragmentShader: `
         uniform sampler2D sphereTexture;
         varying vec3 vColor;
+        varying float vAlpha;
 
         void main() {
             vec2 uv = vec2(gl_PointCoord.x, 1.0 - gl_PointCoord.y);
@@ -28,7 +35,7 @@ const SynapseShader = {
             vec3 baseColor = mix(vColor, vColor * sphereColors.r, 0.75);
             baseColor += sphereColors.ggg * 0.6;
 
-            gl_FragColor = vec4(baseColor, sphereColors.a);
+            gl_FragColor = vec4(baseColor, sphereColors.a * vAlpha);
         }
     `,
 };

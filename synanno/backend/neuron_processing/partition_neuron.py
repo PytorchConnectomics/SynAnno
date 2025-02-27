@@ -149,7 +149,7 @@ def _validate_segments(segments: list[list[int]], undirected_graph: nx.Graph) ->
 
 def merge_segments_traversal_order(
     segments: list[list[int]],
-    tree_traversal: list[int],
+    node_traversal_lookup: dict[int, int],
     undirected_graph: nx.Graph,
     num_sections: int,
 ) -> list[list[int]]:
@@ -160,8 +160,8 @@ def merge_segments_traversal_order(
     Args:
         segments (list[list[int]]): List of neuron skeleton segments (each a list
             of node indices).
-        tree_traversal (list[int]): A list of node indices representing the
-            depth-first traversal order.
+        node_traversal_lookup (dict[int, int]): Dictionary mapping node indices to
+            their position in the tree traversal.
         undirected_graph (nx.Graph): The neuron skeleton graph as an undirected
             NetworkX graph.
         num_sections (int): The number of final sections to retain.
@@ -169,9 +169,6 @@ def merge_segments_traversal_order(
     Returns:
         list[list[int]]: List of `num_sections` connected segments.
     """
-    node_position_lookup: dict[int, int] = {
-        node: i for i, node in enumerate(tree_traversal)
-    }
 
     while len(segments) > num_sections:
         segments.sort(key=len)
@@ -183,7 +180,7 @@ def merge_segments_traversal_order(
             smallest_segment,
             connected_segments,
             segments,
-            node_position_lookup,
+            node_traversal_lookup,
         )
 
         if not merged:
@@ -266,3 +263,37 @@ def _extend_section(
         return True
 
     return False
+
+
+def node_tree_traversal_mapping(tree_traversal: list[int]) -> dict[int, int]:
+    """
+    Create a mapping of node indices to their position in the tree traversal.
+
+    Returns:
+        dict[int, int]: Dictionary mapping node indices to their position in the
+            tree traversal.
+    """
+    return {node: i for i, node in enumerate(tree_traversal)}
+
+
+def sort_sections_by_traversal_order(
+    sections: list[list[int]], node_traversal_lookup: dict[int, int]
+) -> list[list[int]]:
+    """
+    Sort sections based on the tree traversal order.
+
+    Args:
+        sections: List of neuron skeleton sections (each a list of node indices).
+        node_traversal_lookup: Dictionary mapping node indices to their position
+            in the tree traversal.
+
+    Returns:
+        List of sorted sections.
+    """
+
+    def section_mean_traversal_index(section: list[int]) -> float:
+        indices = [node_traversal_lookup[node] for node in section]
+        return sum(indices) / len(indices)
+
+    sorted_sections = sorted(sections, key=section_mean_traversal_index)
+    return sorted_sections

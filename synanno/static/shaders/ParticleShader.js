@@ -1,18 +1,20 @@
 const ParticleShader = {
     uniforms: {
         particleScale: { value: 1.0 },
-        sphereTexture: { value: null }, // Sphere texture for imposter shading
+        sphereTexture: { value: null },
         abstraction_threshold: { value: 0.0 },
-        grey_out: { value: 0 },
+
     },
 
     vertexShader: /* glsl */ `
         uniform float particleScale;
         attribute float radius;
+        attribute float grey_out; // Per-instance attribute
 
         varying vec4 mvPosition;
         varying vec3 vColor;
         varying float vRadius;
+        varying float vGreyOut; // Pass to fragment shader
 
         void main()
         {
@@ -21,35 +23,40 @@ const ParticleShader = {
 
             vColor = color;
             vRadius = radius;
+            vGreyOut = grey_out; // Pass grey-out status
 
             gl_Position = projectionMatrix * mvPosition;
         }
     `,
 
     fragmentShader: /* glsl */ `
-        uniform sampler2D sphereTexture; // Sphere imposter texture
+    uniform sampler2D sphereTexture;
+    varying vec3 vColor;
+    varying vec4 mvPosition;
+    varying float vGreyOut; // Get from vertex shader
 
-        varying vec3 vColor;
-        varying vec4 mvPosition;
-        varying float vRadius;
+    void main()
+    {
+        vec3 baseColor = vColor;
+        vec2 uv = vec2(gl_PointCoord.x, 1.0 - gl_PointCoord.y);
+        vec4 sphereColors = texture2D(sphereTexture, uv);
 
-        void main()
-        {
-            vec3 baseColor = vColor;
+        if (sphereColors.a < 0.3) discard;
 
-            // Check if texture is available, else use color directly
-            vec2 uv = vec2(gl_PointCoord.x, 1.0 - gl_PointCoord.y);
-            vec4 sphereColors = texture2D(sphereTexture, uv);
+        baseColor = mix(baseColor, baseColor * sphereColors.r, 0.75);
+        baseColor += sphereColors.ggg * 0.6;
 
-            if (sphereColors.a < 0.3) discard; // Remove invisible corners
+        float finalAlpha = sphereColors.a;
 
-            // Increase influence of sphere texture shading
-            baseColor = mix(baseColor, baseColor * sphereColors.r, 0.75); // Larger number = more shading
-            baseColor += sphereColors.ggg * 0.6; // Larger number = stronger highlights
-
-            gl_FragColor = vec4(baseColor, sphereColors.a);
+        // Apply greying out if vGreyOut is active
+        if (vGreyOut > 0.5) {
+            baseColor = vec3(dot(baseColor, vec3(0.299, 0.587, 0.114)));
+            finalAlpha *= 0.3;
         }
-    `,
+
+        gl_FragColor = vec4(baseColor, finalAlpha);
+    }
+`
 };
 
 export { ParticleShader };

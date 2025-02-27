@@ -16,7 +16,7 @@ from io import BytesIO
 import numpy as np
 import pandas as pd
 from cloudvolume import Bbox
-from flask import Blueprint, current_app, jsonify, render_template, request, session
+from flask import Blueprint, current_app, jsonify, render_template, request
 
 # flask ajax requests
 from flask_cors import cross_origin
@@ -123,9 +123,9 @@ def save_canvas() -> dict:
 
     im = Image.open(BytesIO(base64.b64decode(image_data)))
     crop_axes = (
-        (session["crop_size_y"], session["crop_size_x"])
+        (current_app.crop_size_y, current_app.crop_size_x)
         if coordinate_order.index("y") < coordinate_order.index("x")
-        else (session["crop_size_x"], session["crop_size_y"])
+        else (current_app.crop_size_x, current_app.crop_size_y)
     )
     im = im.resize((crop_axes[0], crop_axes[1]), Image.LANCZOS)
 
@@ -257,11 +257,11 @@ def ng_bbox_fn_save() -> dict:
     item = {}
 
     # calculate the number of pages needed for the instance count in the JSON
-    if not (len(current_app.df_metadata) % session.get("per_page") == 0):
+    if not (len(current_app.df_metadata) % current_app.per_page == 0):
         # index starts at one, adding item, therefore, incrementing by one
-        item["Page"] = len(current_app.df_metadata) // session.get("per_page") + 1
+        item["Page"] = len(current_app.df_metadata) // current_app.per_page + 1
     else:
-        item["Page"] = len(current_app.df_metadata) // session.get("per_page")
+        item["Page"] = len(current_app.df_metadata) // current_app.per_page
 
     # note that all dimensions are saved in then scale of the target (seg) volume
 
@@ -297,8 +297,8 @@ def ng_bbox_fn_save() -> dict:
     item["cx0"] = int(int(current_app.cx) / current_app.scale["x"])
 
     # define the bbox
-    expand_x = session["crop_size_x"] // 2
-    expand_y = session["crop_size_y"] // 2
+    expand_x = current_app.crop_size_x // 2
+    expand_y = current_app.crop_size_y // 2
 
     bb_x1 = int(current_app.cx) - expand_x if int(current_app.cx) - expand_x > 0 else 0
     bb_x2 = (
@@ -324,8 +324,8 @@ def ng_bbox_fn_save() -> dict:
     item["post_pt_y"] = None
     item["post_pt_x"] = None
 
-    item["crop_size_x"] = session["crop_size_x"]
-    item["crop_size_y"] = session["crop_size_y"]
+    item["crop_size_x"] = current_app.crop_size_x
+    item["crop_size_y"] = current_app.crop_size_y
     item["crop_size_z"] = current_app.crop_size_z_draw
 
     # save the original bounding box using the provided coordinate order

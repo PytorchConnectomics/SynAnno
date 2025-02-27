@@ -71,6 +71,7 @@ def initialize_global_variables(app):
         "finish_categorize": None,
         "difference_categorize": None,
     }
+    app.draw_or_annotate = "annotate"
     app.ng_viewer = None
     app.ng_version = None
     app.selected_neuron_id = None
@@ -80,6 +81,8 @@ def initialize_global_variables(app):
     app.vol_dim_scaled = (0, 0, 0)
     app.source = None
     app.cz1, app.cz2, app.cz, app.cy, app.cx = 0, 0, 0, 0, 0
+    app.n_pages = 0
+    app.per_page = 24  # Number of images per page
     # Neuron skeleton info/data
     app.sections = None
     app.neuron_ready = None
@@ -88,6 +91,9 @@ def initialize_global_variables(app):
     # The auto segmentation view needs a set number of slices per instance (depth)
     # see process_instances.py::load_missing_slices for more details
     app.crop_size_z_draw = 16
+    app.crop_size_z = 1
+    app.crop_size_x = 256
+    app.crop_size_y = 256
     app.columns = [
         "Page",
         "Image_Index",
@@ -155,7 +161,7 @@ def initialize_global_variables(app):
     }
 
     app.df_metadata = pd.DataFrame(columns=app.columns).astype(dtypes)
-    app.materialization = {}
+    app.synapse_data = {}
 
     app.pre_id_color_main = (0, 255, 0)
     app.pre_id_color_sub = (200, 255, 200)

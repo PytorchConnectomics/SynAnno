@@ -9,7 +9,7 @@ import json
 from typing import Dict
 
 # flask util functions
-from flask import Blueprint, current_app, jsonify, render_template, request, session
+from flask import Blueprint, current_app, jsonify, render_template, request
 
 # flask ajax requests
 from flask_cors import cross_origin
@@ -56,7 +56,7 @@ def annotation(page: int = 0) -> Template:
         "annotation.html",
         images=data,
         page=page,
-        n_pages=session.get("n_pages"),
+        n_pages=current_app.n_pages,
         grid_opacity=current_app.grid_opacity,
         neuron_id=current_app.selected_neuron_id,
         neuronReady=current_app.neuron_ready,

@@ -3,12 +3,12 @@ import os
 import shutil
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Callable, Optional, Union
+from typing import Callable, Optional
 
 import numpy as np
 import pandas as pd
 from cloudvolume import Bbox, CloudVolume
-from flask import Flask, current_app, session
+from flask import Flask, current_app
 from PIL import Image
 from scipy.ndimage import center_of_mass
 from skimage.measure import label as label_cc
@@ -272,7 +272,7 @@ def retrieve_instance_metadata(page: int = 0, mode: str = "annotate"):
         page_empty = current_app.df_metadata.query("Page == @page").empty
 
     crop_size_x = (
-        session["crop_size_z"] if mode == "annotate" else current_app.crop_size_z_draw
+        current_app.crop_size_z if mode == "annotate" else current_app.crop_size_z_draw
     )
 
     if page_empty and not (
@@ -280,8 +280,8 @@ def retrieve_instance_metadata(page: int = 0, mode: str = "annotate"):
     ):
         bbox_dict = get_sub_dict_within_range(
             materialization,
-            (page * session["per_page"]),
-            session["per_page"] + (page * session["per_page"]) - 1,
+            (page * current_app.per_page),
+            current_app.per_page + (page * current_app.per_page) - 1,
         )
 
         instance_list = []
@@ -331,8 +331,8 @@ def retrieve_instance_metadata(page: int = 0, mode: str = "annotate"):
                 "post_pt_x": int(bbox_dict[idx]["post_pt_x"]),
                 "post_pt_y": int(bbox_dict[idx]["post_pt_y"]),
                 "post_pt_z": int(bbox_dict[idx]["post_pt_z"]),
-                "crop_size_x": session["crop_size_x"],
-                "crop_size_y": session["crop_size_y"],
+                "crop_size_x": current_app.crop_size_x,
+                "crop_size_y": current_app.crop_size_y,
                 # The auto segmentation view needs a set number of slices per instance
                 # (depth) see process_instances.py::load_missing_slices for more details
                 "crop_size_z": crop_size_x,
@@ -343,10 +343,10 @@ def retrieve_instance_metadata(page: int = 0, mode: str = "annotate"):
                 item["cz0"] - crop_size_x // 2,
                 item["cz0"]
                 + max(1, (crop_size_x + 1) // 2),  # incase the depth was set to one.
-                item["cy0"] - session["crop_size_y"] // 2,
-                item["cy0"] + (session["crop_size_y"] + 1) // 2,
-                item["cx0"] - session["crop_size_x"] // 2,
-                item["cx0"] + (session["crop_size_x"] + 1) // 2,
+                item["cy0"] - current_app.crop_size_y // 2,
+                item["cy0"] + (current_app.crop_size_y + 1) // 2,
+                item["cx0"] - current_app.crop_size_x // 2,
+                item["cx0"] + (current_app.crop_size_x + 1) // 2,
             ]
 
             item["Original_Bbox"] = [
@@ -820,43 +820,3 @@ def calculate_number_of_pages(n_images: int, per_page: int) -> int:
     if n_images % per_page != 0:
         number_pages += 1
     return number_pages
-
-
-def neuron_centric_3d_data_processing(
-    source_url: str,
-    target_url: str,
-    neuropil_url: str,
-    bucket_secret_json: str = "~/.cloudvolume/secrets",
-    mode: str = "annotate",
-) -> Union[str, tuple[np.ndarray, np.ndarray]]:
-    """
-    Retrieve the bounding boxes and indexes to render the 3D data as 2D images.
-
-    Args:
-        source_url: URL to the source cloud volume (EM).
-        target_url: URL to the target cloud volume (synapse).
-        neuropil_url: URL to the neuropil cloud volume (neuron segmentation).
-        bucket_secret_json: Path to the JSON file with bucket secrets.
-        mode: Mode of operation, either "annotate" or "draw".
-
-    Returns:
-        Union[str, tuple[np.ndarray, np.ndarray]]: Result of the processing.
-    """
-
-    load_cloud_volumes(source_url, target_url, neuropil_url, bucket_secret_json)
-
-    vol_dim = determine_volume_dimensions()
-    current_app.vol_dim = vol_dim
-    current_app.vol_dim_scaled = tuple(
-        int(a * b) for a, b in zip(vol_dim, current_app.scale.values())
-    )
-
-    session["n_images"] = len(current_app.synapse_data.index)
-    session["n_pages"] = calculate_number_of_pages(
-        session["n_images"], session["per_page"]
-    )
-
-    retrieve_instance_metadata(page=0, mode=mode)
-    return (
-        "Processing completed" if mode == "annotate" else (np.array([]), np.array([]))
-    )

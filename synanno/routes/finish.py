@@ -15,6 +15,8 @@ from flask import Blueprint, current_app, flash, render_template, send_file, ses
 # for type hinting
 from jinja2 import Template
 
+from synanno import initialize_global_variables
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -88,7 +90,7 @@ def export_data(data_type) -> Template:
 
     if data_type == "json":
         # exporting the final json
-        if session.get("n_pages"):
+        if current_app.n_pages > 0:
             return send_file(
                 os.path.join(
                     os.path.join(
@@ -131,20 +133,15 @@ def export_data(data_type) -> Template:
 @blueprint.route("/reset")
 def reset() -> Template:
     """Resets all process by pooping the session content, resting the process bar,
-    resting the timer, deleting deleting the JSON, the images, masks and zip folder.
+    resting the timer, deleting the JSON, the images, the swcs, masks and zip folder.
 
     Return:
         Renders the landing-page view.
     """
+    initialize_global_variables(current_app)
 
-    # reset time
-    current_app.proofread_time = dict.fromkeys(current_app.proofread_time, None)
-
-    current_app.selected_neuron_id = None
-
-    # pop all the session content.
-    for key in list(session.keys()):
-        session.pop(key)
+    # reset the session
+    session.clear()
 
     # delete json file.
     if os.path.isfile(
@@ -162,10 +159,11 @@ def reset() -> Template:
             )
         )
 
-    # delete static images
     static_folder = os.path.join(
         current_app.root_path, current_app.config["STATIC_FOLDER"]
     )
+
+    # delete images
     image_folder = os.path.join(static_folder, "Images")
 
     if os.path.exists(os.path.join(image_folder, "Img")):
@@ -180,6 +178,15 @@ def reset() -> Template:
         except Exception as e:
             logger.error("Failed to delete %s. Reason: %s" % (image_folder, e))
 
+    # delete swc files
+    swc_folder = os.path.join(static_folder, "swc")
+
+    if os.path.exists(swc_folder):
+        try:
+            shutil.rmtree(swc_folder)
+        except Exception as e:
+            logger.error("Failed to delete %s. Reason: %s" % (swc_folder, e))
+
     # delete masks zip file.
     if os.path.isfile(os.path.join(image_folder, "Mask.zip")):
         os.remove(os.path.join(image_folder, "Mask.zip"))
@@ -191,9 +198,6 @@ def reset() -> Template:
             shutil.rmtree(mask_folder)
         except Exception as e:
             logger.error("Failed to delete %s. Reason: %s" % (mask_folder, e))
-
-    # set the metadataframe back to null
-    current_app.df_metadata.drop(current_app.df_metadata.index, inplace=True)
 
     return render_template("landingpage.html")
 

@@ -62,8 +62,7 @@ async function initializeViewer(sharkContainerMinimap, maxVolumeSize, sectionArr
     await window.shark.init();
     window.shark.animate();
 
-    let collectSectionIndices = getDisplayedSectionIndices(true);
-    console.log("Displayed section indices:", collectSectionIndices);
+    const collectSectionIndices = getDisplayedSectionIndices(true);
 
     const mElement = createMetadataElement(sectionMetadata, window.sectionColors, collectSectionIndices);
     const oldElement = document.getElementById("node_key");
@@ -559,15 +558,14 @@ function getDisplayedDataID() {
         }
     });
 
-    return [...new Set(collectSectionIndices)]; // Remove duplicates
+    return [...new Set(collectSectionIndices)];
 }
 
 function updateLoadingBar(synapse_count) {
-    const displayedSectionIndices = getDisplayedDataID(); // Retrieve sections from UI
+    const displayedSectionIndices = getDisplayedDataID();
 
     if (displayedSectionIndices.length === 0) return;
 
-    // Simplified progress calculation
     const lowestDisplayedSectionIdx = Math.min(...displayedSectionIndices);
     const progressPercent = (lowestDisplayedSectionIdx / synapse_count) * 100;
 

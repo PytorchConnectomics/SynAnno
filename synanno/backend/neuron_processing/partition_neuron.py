@@ -1,135 +1,134 @@
 import logging
 
+import navis
 import networkx as nx
+import numpy as np
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def df_degree_based_partitioning(
+def compute_sections(
+    pruned_swc_file: str, merge: bool = True
+) -> tuple[list[list[int]], navis.TreeNeuron, dict[int, int]]:
+    """Compute the sections of the pruned neuron.
+
+    Args:
+        pruned_swc_file: The path to the pruned SWC file.
+        merge: Whether to merge the segments.
+
+    Returns:
+        The merged segments of the neuron, the tree traversal order,
+        the pruned neuron, and the node traversal lookup.
+    """
+    neuron_pruned = navis.read_swc(pruned_swc_file, write_meta=True)
+    undirected_graph = convert_to_undirected_graph(neuron_pruned)
+    center_node = find_center_node(neuron_pruned, undirected_graph)
+    tree_traversal, node_traversal_lookup = generate_tree_traversal(
+        undirected_graph, center_node
+    )
+    segments = partition_segments(
+        tree_traversal, undirected_graph, merge, node_traversal_lookup
+    )
+    validate_segments(segments, undirected_graph)
+    return segments, neuron_pruned, node_traversal_lookup
+
+
+def convert_to_undirected_graph(neuron_pruned: navis.TreeNeuron) -> nx.Graph:
+    """Convert the neuron graph to an undirected graph.
+
+    Args:
+        neuron_pruned: The pruned neuron.
+
+    Returns:
+        The undirected graph.
+    """
+    nx_graph = navis.neuron2nx(neuron_pruned)
+    return nx_graph.to_undirected()
+
+
+def find_center_node(
+    neuron_pruned: navis.TreeNeuron, undirected_graph: nx.Graph
+) -> int:
+    """Find the center node of the neuron.
+
+    Args:
+        neuron_pruned: The pruned neuron.
+        undirected_graph: The undirected graph.
+
+    Returns:
+        The center node.
+    """
+    if neuron_pruned.soma is None:
+        pagerank = nx.pagerank(undirected_graph)
+        return sorted(pagerank.items(), key=lambda x: x[1], reverse=True)[0][0]
+    return neuron_pruned.soma.node_id
+
+
+def generate_tree_traversal(
+    undirected_graph: nx.Graph, center_node: int
+) -> tuple[list[int], dict[int, int]]:
+    """Generate the tree traversal order.
+
+    Args:
+        undirected_graph: The undirected graph.
+        center_node: The center node.
+
+    Returns:
+        The tree traversal order and the node traversal lookup.
+    """
+    tree_traversal = list(nx.dfs_preorder_nodes(undirected_graph, source=center_node))
+    node_traversal_lookup = node_tree_traversal_mapping(tree_traversal)
+    return tree_traversal, node_traversal_lookup
+
+
+def partition_segments(
     tree_traversal: list[int],
     undirected_graph: nx.Graph,
+    merge: bool,
+    node_traversal_lookup: dict[int, int],
 ) -> list[list[int]]:
-    """
-    Splits the neuron skeleton into connected segments by identifying meaningful
-    branch points, ensuring each section remains connected while approximating
-    equal size.
+    """Partition the neuron into segments.
 
     Args:
-        tree_traversal: List of node indices representing the traversal order of
-            the neuron skeleton.
-        undirected_graph: The neuron skeleton graph as an undirected NetworkX graph.
+        tree_traversal: The tree traversal order.
+        undirected_graph: The undirected graph.
+        merge: Whether to merge the segments.
+        node_traversal_lookup: The node traversal lookup.
 
     Returns:
-        list[list[int]]: A list of connected segments.
+        The segments.
     """
-    branch_points = _identify_branch_points(undirected_graph)
-    segments = _create_segments(tree_traversal, undirected_graph, branch_points)
-    _validate_segments(segments, undirected_graph)
-    return segments
+    branch_points = identify_branch_points(undirected_graph)
+    adjacency_list = get_adjacency_list(undirected_graph)
+    segments = df_degree_based_partitioning(
+        tree_traversal, adjacency_list, branch_points
+    )
 
+    validate_segments(segments, undirected_graph)
 
-def _identify_branch_points(undirected_graph: nx.Graph) -> set[int]:
-    """
-    Identify branch points (nodes with degree >= 3).
+    logger.info(
+        f"{len((segments))} segments with"
+        f"a joint length of {sum([len(s) for s in segments])}."
+    )
+    num_sections = len(branch_points) // 4
 
-    Args:
-        undirected_graph (nx.Graph): The neuron skeleton graph as an undirected
-            NetworkX graph.
-
-    Returns:
-        set[int]: A set of branch point node indices.
-    """
-    return {node for node, degree in undirected_graph.degree() if degree >= 3}
-
-
-def _create_segments(
-    tree_traversal: list[int], undirected_graph: nx.Graph, branch_points: set[int]
-) -> list[list[int]]:
-    """
-    Walk along the tree traversal and create segments.
-
-    Args:
-        tree_traversal (list[int]): List of node indices representing the traversal
-            order of the neuron skeleton.
-        undirected_graph (nx.Graph): The neuron skeleton graph as an undirected
-            NetworkX graph.
-        branch_points (set[int]): Set of branch point node indices.
-
-    Returns:
-        list[list[int]]: A list of connected segments.
-    """
-    segments = []
-    current_segment = []
-    last_node = None
-
-    for node in tree_traversal:
-        is_junction = node in branch_points
-
-        if last_node is None:
-            current_segment.append(node)
-        elif is_junction:
-            if current_segment not in segments:
-                segments.append(current_segment)
-            current_segment = [node]
-        elif undirected_graph.has_edge(last_node, node):
-            current_segment.append(node)
-        elif any(
-            undirected_graph.has_edge(prev_node, node) for prev_node in current_segment
-        ):
-            current_segment.append(node)
-        else:
-            parent_segment = _find_parent_segment(node, segments, undirected_graph)
-            if current_segment not in segments:
-                segments.append(current_segment)
-            current_segment = parent_segment
-            current_segment.append(node)
-
-        last_node = node
-
-    if current_segment not in segments:
-        segments.append(current_segment)
-
-    return segments
-
-
-def _find_parent_segment(
-    node: int, segments: list[list[int]], undirected_graph: nx.Graph
-) -> list[int]:
-    """
-    Find the smallest parent segment to merge into.
-
-    Args:
-        node (int): Node index to find the parent segment for.
-        segments (list[list[int]]): List of existing segments.
-        undirected_graph (nx.Graph): The neuron skeleton graph as an undirected
-            NetworkX graph.
-
-    Returns:
-        list[int]: The parent segment to merge into.
-
-    Raises:
-        ValueError: If no parent segment is found for the node.
-    """
-    parent_segment = None
-    smallest_parent_segment_size = float("inf")
-
-    for segment in segments:
-        if any(undirected_graph.has_edge(seg_node, node) for seg_node in segment):
-            if len(segment) < smallest_parent_segment_size:
-                smallest_parent_segment_size = len(segment)
-                parent_segment = segment
-
-    if parent_segment is None:
-        raise ValueError(
-            f"No parent segment found for node {node}. Ensure the neuron skeleton "
-            "is fully connected."
+    if num_sections > 1 and merge:
+        logger.info(
+            f"Merging {len(segments)} segments into {num_sections} largest segments..."
+        )
+        segments = merge_segments_traversal_order(
+            segments, node_traversal_lookup, num_sections, adjacency_list
+        )
+        logger.info(
+            f"{len((segments))} merged segments "
+            f"with a joint length of {sum([len(s) for s in segments])}."
         )
 
-    return parent_segment
+    return segments
 
 
-def _validate_segments(segments: list[list[int]], undirected_graph: nx.Graph) -> None:
+def validate_segments(segments: list[list[int]], undirected_graph: nx.Graph) -> None:
     """
     Ensure each segment is fully connected.
 
@@ -147,11 +146,126 @@ def _validate_segments(segments: list[list[int]], undirected_graph: nx.Graph) ->
             raise ValueError(f"Segment {i} is not fully connected.")
 
 
+def df_degree_based_partitioning(
+    tree_traversal: list[int],
+    adjacent_nodes: nx.Graph,
+    branch_points: set[int],
+) -> list[list[int]]:
+    """
+    Splits the neuron skeleton into connected segments by identifying meaningful
+    branch points, ensuring each section remains connected while approximating
+    equal size.
+
+    Args:
+        tree_traversal: List of node indices representing the traversal order of
+            the neuron skeleton.
+        undirected_graph (nx.Graph): The neuron skeleton graph as an undirected
+            NetworkX graph.
+        branch_points (set[int]): Set of branch point node indices.
+
+
+    Returns:
+        A list of connected segments.
+    """
+    segments = []
+    current_segment = []
+    last_node = None
+
+    for node in tree_traversal:
+        is_junction = node in branch_points
+
+        if last_node is None:
+            current_segment.append(node)
+        elif is_junction:
+            if current_segment not in segments:
+                segments.append(current_segment)
+            current_segment = [node]
+        elif last_node in adjacent_nodes[node]:
+            current_segment.append(node)
+        elif any(prev_node in adjacent_nodes[node] for prev_node in current_segment):
+            current_segment.append(node)
+        else:
+            parent_segment = _find_parent_segment(node, segments, adjacent_nodes)
+            if current_segment not in segments:
+                segments.append(current_segment)
+            current_segment = parent_segment
+            current_segment.append(node)
+
+        last_node = node
+
+    if current_segment not in segments:
+        segments.append(current_segment)
+
+    return segments
+
+
+def identify_branch_points(undirected_graph: nx.Graph) -> set[int]:
+    """
+    Identify branch points (nodes with degree >= 3).
+
+    Args:
+        undirected_graph (nx.Graph): The neuron skeleton graph as an undirected
+            NetworkX graph.
+
+    Returns:
+        set[int]: A set of branch point node indices.
+    """
+    return {node for node, degree in undirected_graph.degree() if degree >= 3}
+
+
+def get_adjacency_list(undirected_graph: nx.Graph) -> dict[int, set[int]]:
+    """Precompute adjacency list for faster edge lookups.
+
+    Args:
+        undirected_graph (nx.Graph): The neuron skeleton graph as an undirected
+            NetworkX graph.
+
+    Returns:
+        A dictionary mapping node indices to their neighbors.
+    """
+    return {node: set(neighbors) for node, neighbors in undirected_graph.adjacency()}
+
+
+def _find_parent_segment(
+    node: int, segments: list[list[int]], adjacency_list: dict[int, set[int]]
+) -> list[int]:
+    """
+    Find the smallest parent segment to merge into.
+
+    Args:
+        node (int): Node index to find the parent segment for.
+        segments (list[list[int]]): List of existing segments.
+        adjacency_list (dict[int, set[int]]): Precomputed adjacency node list
+
+    Returns:
+        list[int]: The parent segment to merge into.
+
+    Raises:
+        ValueError: If no parent segment is found for the node.
+    """
+    parent_segment = None
+    smallest_parent_segment_size = float("inf")
+
+    for segment in segments:
+        if any(neighbor in segment for neighbor in adjacency_list[node]):
+            if len(segment) < smallest_parent_segment_size:
+                smallest_parent_segment_size = len(segment)
+                parent_segment = segment
+
+    if parent_segment is None:
+        raise ValueError(
+            f"No parent segment found for node {node}. Ensure the neuron skeleton "
+            "is fully connected."
+        )
+
+    return parent_segment
+
+
 def merge_segments_traversal_order(
     segments: list[list[int]],
     node_traversal_lookup: dict[int, int],
-    undirected_graph: nx.Graph,
     num_sections: int,
+    adjacency_list: dict[int, set[int]],
 ) -> list[list[int]]:
     """
     Iteratively merges the smallest segment with the smallest directly connected
@@ -162,9 +276,8 @@ def merge_segments_traversal_order(
             of node indices).
         node_traversal_lookup (dict[int, int]): Dictionary mapping node indices to
             their position in the tree traversal.
-        undirected_graph (nx.Graph): The neuron skeleton graph as an undirected
-            NetworkX graph.
         num_sections (int): The number of final sections to retain.
+        adjacency_list (dict[int, set[int]]): Precomputed adjacency node list.
 
     Returns:
         list[list[int]]: List of `num_sections` connected segments.
@@ -174,7 +287,7 @@ def merge_segments_traversal_order(
         segments.sort(key=len)
         smallest_segment = segments.pop(0)
         connected_segments = _id_adjacent_sections_size_asce(
-            smallest_segment, segments, undirected_graph
+            smallest_segment, segments, adjacency_list
         )
         merged = _extend_section(
             smallest_segment,
@@ -192,7 +305,7 @@ def merge_segments_traversal_order(
 def _id_adjacent_sections_size_asce(
     smallest_segment: list[int],
     segments: list[list[int]],
-    undirected_graph: nx.Graph,
+    adjacency_list: dict[int, set[int]],
 ) -> list[tuple[int, list[int]]]:
     """
     Identify all segments that share a direct connection with the current smallest
@@ -203,8 +316,7 @@ def _id_adjacent_sections_size_asce(
             segment.
         segments (list[list[int]]): List of neuron skeleton segments (each a list
             of node indices).
-        undirected_graph (nx.Graph): The neuron skeleton graph as an undirected
-            NetworkX graph.
+        adjacency_list (dict[int, set[int]]): Precomputed adjacency node list.
 
     Returns:
         list[tuple[int, list[int]]]: List of connected segments sorted by size.
@@ -213,7 +325,7 @@ def _id_adjacent_sections_size_asce(
         i: segment
         for i, segment in enumerate(segments)
         if any(
-            undirected_graph.has_edge(small_node, large_node)
+            large_node in adjacency_list[small_node]
             for small_node in smallest_segment
             for large_node in segment
         )
@@ -290,10 +402,10 @@ def sort_sections_by_traversal_order(
     Returns:
         List of sorted sections.
     """
-
-    def section_mean_traversal_index(section: list[int]) -> float:
-        indices = [node_traversal_lookup[node] for node in section]
-        return sum(indices) / len(indices)
-
-    sorted_sections = sorted(sections, key=section_mean_traversal_index)
-    return sorted_sections
+    traversal_positions = np.array(
+        [
+            np.mean([node_traversal_lookup[node] for node in section])
+            for section in sections
+        ]
+    )
+    return [section for _, section in sorted(zip(traversal_positions, sections))]

@@ -11,7 +11,6 @@ from werkzeug.datastructures import MultiDict
 
 import synanno.backend.ng_util as ng_util
 from synanno.backend.neuron_processing.load_neuron import (
-    compute_sections,
     load_neuron_skeleton,
     navis_neuron,
 )
@@ -25,6 +24,7 @@ from synanno.backend.neuron_processing.load_synapse_point_cloud import (
     snap_points_to_neuron,
 )
 from synanno.backend.neuron_processing.partition_neuron import (
+    compute_sections,
     sort_sections_by_traversal_order,
 )
 from synanno.backend.processing import (

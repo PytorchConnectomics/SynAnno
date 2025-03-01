@@ -1,3 +1,4 @@
+import io
 import logging
 import os
 import shutil
@@ -572,6 +573,49 @@ def save_slices(
         lab_c.save(os.path.join(syn_dir_instance, img_name), "PNG")
 
 
+def save_slices_in_memory(
+    cropped_img_pad: np.ndarray,
+    vis_label: np.ndarray,
+    item: dict,
+    coord_order: list,
+) -> None:
+    """Convert images to bytes and save them in Flask's shared memory buffer.
+
+    Args:
+        cropped_img_pad: Padded cropped image (numpy array).
+        vis_label: Visual label of the synapse segmentation (numpy array).
+        item: Dictionary containing metadata of the current instance.
+        coord_order: List containing the coordinate order.
+    """
+    slice_axis = coord_order.index("z")
+
+    for s in range(cropped_img_pad.shape[slice_axis]):
+        image_index = str(item["Image_Index"])
+        img_z_index = str(item["Adjusted_Bbox"][slice_axis * 2] + s)
+
+        # Define slicing
+        slicing_img = [s if idx == slice_axis else slice(None) for idx in range(3)]
+        slicing_seg = [s if idx == slice_axis else slice(None) for idx in range(4)]
+
+        # Process EM image
+        img_c = Image.fromarray(adjust_image_range(cropped_img_pad[tuple(slicing_img)]))
+        img_io = io.BytesIO()
+        img_c.save(img_io, format="PNG")
+        img_io.seek(0)
+        current_app.source_image_data[image_index][
+            img_z_index
+        ] = img_io.getvalue()  # Store as bytes
+
+        # Process Synapse Segmentation image
+        lab_c = apply_transparency(vis_label[tuple(slicing_seg)])
+        lab_io = io.BytesIO()
+        lab_c.save(lab_io, format="PNG")
+        lab_io.seek(0)
+        current_app.target_image_data[image_index][
+            img_z_index
+        ] = lab_io.getvalue()  # Store as bytes
+
+
 def process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) -> None:
     """Process the synapse and EM images for a single instance.
 
@@ -700,6 +744,14 @@ def process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) -
         vis_label,
         img_dir_instance,
         syn_dir_instance,
+        item,
+        coord_order,
+    )
+
+    # test saving the slices in memory instead
+    save_slices_in_memory(
+        cropped_img_pad,
+        vis_label,
         item,
         coord_order,
     )

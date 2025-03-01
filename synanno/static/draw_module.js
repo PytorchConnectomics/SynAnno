@@ -73,13 +73,13 @@ $(document).ready(function () {
 
       // update the range slider
       $("#rangeSlices").attr("min", data.range_min);
-      $("#rangeSlices").attr("max", data.range_min + data.slices_len - 1);
+      $("#rangeSlices").attr("max", data.range_min + data.number_of_slices - 1);
       $("#rangeSlices").val(data.halflen);
       $("#rangeSlices").attr("data_id", data_id);
       $("#rangeSlices").attr("page", page);
 
       $("#minSlice").html(0);
-      $("#maxSlice").html(data.slices_len - 1);
+      $("#maxSlice").html(data.number_of_slices - 1);
 
       let cz0 = data_json.cz0;
       let cy0 = data_json.cy0;

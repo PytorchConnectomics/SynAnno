@@ -482,20 +482,7 @@ def get_instance():
 
     if load == "full":
         with current_app.df_metadata_lock:
-            slices_len = len(
-                os.listdir(
-                    os.path.join(
-                        current_app.root_path,
-                        current_app.config["STATIC_FOLDER"],
-                    )
-                    + current_app.df_metadata.loc[
-                        (current_app.df_metadata["Page"] == page)
-                        & (current_app.df_metadata["Image_Index"] == index),
-                        "EM",
-                    ].item()
-                    + "/"
-                )
-            )
+            number_of_slices = len(current_app.source_image_data[str(index)])
             middle_slice = int(
                 current_app.df_metadata.loc[
                     (current_app.df_metadata["Page"] == page)
@@ -556,7 +543,7 @@ def get_instance():
 
         final_json = jsonify(
             data=data,
-            slices_len=slices_len,
+            number_of_slices=number_of_slices,
             halflen=middle_slice,
             range_min=range_min,
             host=current_app.config["IP"],

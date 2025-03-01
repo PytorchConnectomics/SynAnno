@@ -1,4 +1,5 @@
 import os
+from collections import defaultdict
 from threading import Lock
 
 import pandas as pd
@@ -161,7 +162,11 @@ def initialize_global_variables(app):
     }
 
     app.df_metadata = pd.DataFrame(columns=app.columns).astype(dtypes)
+
     app.synapse_data = {}
+
+    app.source_image_data = defaultdict(dict)
+    app.target_image_data = defaultdict(dict)
 
     app.pre_id_color_main = (0, 255, 0)
     app.pre_id_color_sub = (200, 255, 200)

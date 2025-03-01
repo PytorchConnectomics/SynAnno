@@ -2,6 +2,9 @@
 # track the annotation time
 import datetime
 
+# io operations
+import io
+
 # ajax json response
 import json
 
@@ -9,7 +12,7 @@ import json
 from typing import Dict
 
 # flask util functions
-from flask import Blueprint, current_app, jsonify, render_template, request
+from flask import Blueprint, current_app, jsonify, render_template, request, send_file
 
 # flask ajax requests
 from flask_cors import cross_origin
@@ -119,3 +122,33 @@ def update_card() -> Dict[str, object]:
         ] = "Incorrect"
 
     return jsonify({"result": "success", "label": label})
+
+
+@blueprint.route("/get_source_image/<image_index>/<slice_id>")
+@cross_origin()
+def get_source_image(image_index, slice_id):
+    """Serves EM images from memory."""
+    if (
+        image_index in current_app.source_image_data
+        and slice_id in current_app.source_image_data[image_index]
+    ):
+        return send_file(
+            io.BytesIO(current_app.source_image_data[image_index][slice_id]),
+            mimetype="image/png",
+        )
+    return "Image not found", 404
+
+
+@blueprint.route("/get_target_image/<image_index>/<slice_id>")
+@cross_origin()
+def get_target_image(image_index, slice_id):
+    """Serves synapse segmentation images from memory."""
+    if (
+        image_index in current_app.source_image_data
+        and slice_id in current_app.target_image_data[image_index]
+    ):
+        return send_file(
+            io.BytesIO(current_app.target_image_data[image_index][slice_id]),
+            mimetype="image/png",
+        )
+    return "Image not found", 404

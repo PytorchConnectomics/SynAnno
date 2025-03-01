@@ -148,18 +148,18 @@ $(document).ready(function () {
     await req_data.done(function (data) {
       let data_json = JSON.parse(data.data);
       // enable the range slider if more than a single slice exists per instance
-      if (data.slices_len > 1){
+      if (data.number_of_slices > 1){
         $("#rangeSlices").removeClass("d-none");
         $("#minSlice").removeClass("d-none");
         $("#maxSlice").removeClass("d-none");
         $("#rangeSlices").attr("min", data.range_min);
-        $("#rangeSlices").attr("max", data.range_min + data.slices_len - 1);
+        $("#rangeSlices").attr("max", data.range_min + data.number_of_slices - 1);
         $("#rangeSlices").val(data.halflen);
         $("#rangeSlices").attr("data_id", data_id);
         $("#rangeSlices").attr("page", page);
 
         $("#minSlice").html(0);
-        $("#maxSlice").html(data.slices_len - 1);
+        $("#maxSlice").html(data.number_of_slices - 1);
       }
       else{
         $("#rangeSlices").addClass("d-none");
@@ -168,14 +168,9 @@ $(document).ready(function () {
       }
       // load the current slice
       $("#imgDetails-EM").addClass(label.toLowerCase());
-      $("#imgDetails-EM").attr(
-        "src",
-        staticBaseUrl + data_json.EM + "/" + data_json.Middle_Slice + ".png",
-      );
-      $("#imgDetails-GT").attr(
-        "src",
-        staticBaseUrl + data_json.GT + "/" + data_json.Middle_Slice + ".png",
-      );
+      $("#imgDetails-EM").attr("src", "/get_source_image/" + data_id + "/" + data_json.Middle_Slice);
+      $("#imgDetails-GT").attr("src","/get_target_image/" + data_id + "/" + data_json.Middle_Slice);
+
 
       $("#detailsModal").modal("show");
 
@@ -230,9 +225,8 @@ $(document).ready(function () {
 
     // update the slice and GT that is depicted
     req_slice.done(function (data) {
-      data_json = JSON.parse(data.data);
-      $("#imgDetails-EM").attr("src", staticBaseUrl + data_json.EM + "/" + rangeValue + ".png");
-      $("#imgDetails-GT").attr("src", staticBaseUrl + data_json.GT + "/" + rangeValue + ".png");
+      $("#imgDetails-EM").attr("src", "/get_source_image/" + data_id + "/" + rangeValue);
+      $("#imgDetails-GT").attr("src","/get_target_image/" + data_id + "/" + rangeValue);
     });
   });
 
@@ -270,7 +264,7 @@ window.dec_opacity_grid =  function dec_opacity_grid() {
   }
   $("#value-opacity-grid").attr("value", new_value);
   $("#value-opacity-grid").text(new_value.toFixed(1));
-  $('[id^="imgEM-GT-"]').each(function () {
+  $('[id^="imgTarget-"]').each(function () {
     $(this).css("opacity", new_value);
   });
 
@@ -291,7 +285,7 @@ window.add_opacity_grid = function add_opacity_grid() {
   }
   $("#value-opacity-grid").attr("value", new_value);
   $("#value-opacity-grid").text(new_value.toFixed(1));
-  $('[id^="imgEM-GT-"]').each(function () {
+  $('[id^="imgTarget-"]').each(function () {
     $(this).css("opacity", new_value);
   });
 

@@ -26,17 +26,17 @@
         >
           <div class="main-image-categorize">
             <img
-              id="imgEM-GT-{{image.Image_Index}}"
+              id="imgTarget-{{image.Image_Index}}"
               class="img_categorize"
-              src="{{ url_for('static', filename=image.GT ~ '/' ~ image.Middle_Slice ~ '.png')}}"
+              src="{{ url_for('annotation.get_target_image', image_index=image.Image_Index, slice_id=image.Middle_Slice)}}"
               width="64px"
               height="64px"
               style="opacity: 0.5"
             />
             <img
-              id="imgGT-{{image.Image_Index}}"
+              id="imgSource-{{image.Image_Index}}"
               class="img_categorize"
-              src="{{ url_for('static', filename= image.EM ~ '/' ~ image.Middle_Slice ~ '.png')}}"
+              src="{{ url_for('annotation.get_source_image', image_index=image.Image_Index, slice_id=image.Middle_Slice)}}"
               width="64px"
               height="64px"
             />

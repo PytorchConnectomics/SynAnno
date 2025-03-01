@@ -88,7 +88,7 @@
             <img id="img-target-circlePre-{{image.Page}}-{{image.Image_Index}}" class="img_categorize d-none" src="{{url_for('static', filename= image.EM ~ '/' ~ image.Middle_Slice ~ '.png')}}" width="64px" height="64px" style="opacity: 0.5" />
             <img id="img-target-circlePost-{{image.Page}}-{{image.Image_Index}}" class="img_categorize d-none" src="{{url_for('static', filename= image.EM ~ '/' ~ image.Middle_Slice ~ '.png')}}" width="64px" height="64px" style="opacity: 0.5" />
             {% endif %}
-            <img id="imgGT-{{image.Page}}-{{image.Image_Index}}" class="img_categorize" data-image_base_path="{{ url_for('static', filename=image.EM) }}" src="{{ url_for('static', filename=image.EM ~ '/' ~ image.Middle_Slice ~ '.png')}}" width="64px" height="64px" />
+            <img id="imgSource-{{image.Page}}-{{image.Image_Index}}" class="img_categorize" data-image_base_path="{{ url_for('static', filename=image.EM) }}" src="{{ url_for('annotation.get_source_image', image_index=image.Image_Index, slice_id=image.Middle_Slice)}}" width="64px" height="64px" />
           </div>
         </div>
         <div class="card-block mt-2">

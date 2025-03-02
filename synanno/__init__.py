@@ -101,8 +101,6 @@ def initialize_global_variables(app):
         "materialization_index",
         "section_index",
         "tree_traversal_index",
-        "GT",
-        "EM",
         "Label",
         "Annotated",
         "neuron_id",
@@ -134,8 +132,6 @@ def initialize_global_variables(app):
         "materialization_index": int,  # Example: 0
         "section_index": int,  # Example: 0
         "tree_traversal_index": int,  # Example
-        "GT": int,  # Example: 1
-        "EM": str,  # Example: 'Images/Syn/1'
         "Label": str,  # Example: 'Images/Img/1'
         "Annotated": str,  # Example: 'Incorrect'
         "neuron_id": int,  # Example: 1
@@ -167,6 +163,8 @@ def initialize_global_variables(app):
 
     app.source_image_data = defaultdict(dict)
     app.target_image_data = defaultdict(dict)
+
+    app.point_cloud_data = []
 
     app.pre_id_color_main = (0, 255, 0)
     app.pre_id_color_sub = (200, 255, 200)

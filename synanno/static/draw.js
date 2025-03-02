@@ -1,103 +1,104 @@
-$(document).ready(function () {
-  // retrieve canvas and set 2D context
-  var canvas_curve = $("canvas.curveCanvas")[0];
-  var ctx_curve = canvas_curve.getContext("2d");
+$(document).ready(() => {
+  const canvas_curve = $("canvas.curveCanvas")[0];
+  const ctx_curve = canvas_curve.getContext("2d");
 
-  var canvas_circle_pre = $("canvas.circleCanvasPre")[0];
-  var ctx_circle_pre = canvas_circle_pre.getContext("2d");
+  const canvas_circle_pre = $("canvas.circleCanvasPre")[0];
+  const ctx_circle_pre = canvas_circle_pre.getContext("2d");
 
-  var canvas_circle_post = $("canvas.circleCanvasPost")[0];
-  var ctx_circle_post = canvas_circle_post.getContext("2d");
+  const canvas_circle_post = $("canvas.circleCanvasPost")[0];
+  const ctx_circle_post = canvas_circle_post.getContext("2d");
 
-  // initialize mouse position to zero
-  var mousePosition = { x: 0, y: 0 };
-
-  // initialize global rectangle variable
-  var rect_curve, rect_circle;
-
-  // turn mask drawing and splitting off at the start
+  let mousePosition = { x: 0, y: 0 };
+  let rect_curve, rect_circle;
   let draw_mask = false, split_mask = false;
-
-  // global buffer for the start, end, and control points of the spline
-  var points = [], pointsQBez = [];
-
-  // init thickness
+  let points = [], pointsQBez = [];
   const thickness = 20;
-
-  // define colors
   const pink = "rgba(255, 0, 255, 0.7)";
-
-  // init image identifiers to null
-  var page, data_id, label;
-
-  // path where to save the custom masks
-  const base_mask_path = "/static/Images/Mask/";
-
-  // init pre and post synaptic coordinates
+  let page, data_id, label;
   let pre_CRD = false, post_CRD = false;
-
-  // make the last set coordinates globally available
   let x_syn_crd = null, y_syn_crd = null;
 
-  // the currently viewed image in the grid view
-  let pre_slice = null, post_slice = null;
-
-  // make sure that the modal is reset every time it gets closed
-  $(".modal").on("hidden.bs.modal", function () {
+  $(".modal").on("hidden.bs.modal", () => {
     if (!$(".modal:visible").length) {
       $("canvas.curveCanvas, canvas.circleCanvasPre, canvas.circleCanvasPost").addClass("d-none");
     }
   });
 
-  // Function to check if a URL exists without throwing a 404 error
-  async function urlExists(url) {
-    try {
-      const response = await fetch(url, { method: 'HEAD' });
-      return response.ok;
-    } catch (error) {
-      console.error("An error occurred while checking the URL:", error);
-      return false;
-    }
-  }
-
-  // Check and inject mask paths on page load
-  imageData.forEach(async function(image) {
+  imageData.forEach(async (image) => {
     const page = image.Page;
     const data_id = image.Image_Index;
-    const base = "-" + page + "-" + data_id;
-
-    const coordinates = image.Adjusted_Bbox.join('_');
+    const base = `-${page}-${data_id}`;
     const middle_slice = image.Middle_Slice;
-
-    const custom_mask_path_check_curve = `/static/Images/Mask/${data_id}/curve_idx_${data_id}_slice_${middle_slice}_cor_${coordinates}.png`;
-    const custom_mask_path_check_circle_pre = `/static/Images/Mask/${data_id}/circlePre_idx_${data_id}_slice_${middle_slice}_cor_${coordinates}.png`;
-    const custom_mask_path_check_circle_post = `/static/Images/Mask/${data_id}/circlePost_idx_${data_id}_slice_${middle_slice}_cor_${coordinates}.png`;
-    const auto_mask_path_check_curve = `/static/Images/Mask/${data_id}/auto_curve_idx_${data_id}_slice_${middle_slice}.png`;
 
     const canvas_target_image_curve = `#img-target-curve${base}`;
     const canvas_target_image_circle_pre = `#img-target-circlePre${base}`;
     const canvas_target_image_circle_post = `#img-target-circlePost${base}`;
 
-    if (await urlExists(custom_mask_path_check_curve)) {
-      $(canvas_target_image_curve).attr("src", `${custom_mask_path_check_curve}?${Date.now()}`);
-      $(canvas_target_image_curve).removeClass('d-none');
-    } else if (await urlExists(auto_mask_path_check_curve)) {
-      $(canvas_target_image_curve).attr("src", `${auto_mask_path_check_curve}?${Date.now()}`);
-      $(canvas_target_image_curve).removeClass('d-none');
-    }
+    $.ajax({
+      url: "/get_auto_curve_image/" + data_id + "/" + middle_slice,
+      type: 'HEAD',
+      success: function (data, textStatus, xhr) {
+        if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
+          $(canvas_target_image_curve).attr("src", "/get_auto_curve_image/" + data_id + "/" + middle_slice);
+          $(canvas_target_image_curve).removeClass('d-none');
+        }
+        else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
+          $.ajax({
+            url: "/get_curve_image/" + data_id + "/" + middle_slice,
+            type: 'HEAD',
+            success: function (data, textStatus, xhr) {
+              if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
+                $(canvas_target_image_curve).attr("src", "/get_curve_image/" + data_id + "/" + middle_slice);
+                $(canvas_target_image_curve).removeClass('d-none');
+              }
+              else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
+                console.log("Curve image does not exist");
+              }
+            }
+          });
+        }
+      }
+    });
 
-    if (await urlExists(custom_mask_path_check_circle_pre)) {
-      $(canvas_target_image_circle_pre).attr("src", `${custom_mask_path_check_circle_pre}?${Date.now()}`);
-      $(canvas_target_image_circle_pre).removeClass('d-none');
-    }
+    $.ajax({
+      url: "/get_circle_pre_image/" + data_id + "/" + middle_slice,
+      type: "HEAD",
+      success: function (data, textStatus, xhr) {
+        if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
+          $(new Image())
+          .attr("src", "/get_circle_pre_image/" + data_id + "/" + middle_slice)
+          .load(function () {
+            $(canvas_target_image_circle_pre).attr("src", this.src);
+          });
+        $(canvas_target_image_circle_pre).removeClass("d-none");
+        }
+        else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
+          console.log("Circle Pre image does not exist");
+          $(canvas_target_image_circle_pre).addClass("d-none");
+        }
+      },
+    });
 
-    if (await urlExists(custom_mask_path_check_circle_post)) {
-      $(canvas_target_image_circle_post).attr("src", `${custom_mask_path_check_circle_post}?${Date.now()}`);
-      $(canvas_target_image_circle_post).removeClass('d-none');
-    }
+    $.ajax({
+      url: "/get_circle_post_image/" + data_id + "/" + middle_slice,
+      type: "HEAD",
+      success: function (data, textStatus, xhr) {
+        if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
+          $(new Image())
+          .attr("src", "/get_circle_post_image/" + data_id + "/" + middle_slice)
+          .load(function () {
+            $(canvas_target_image_circle_post).attr("src", this.src);
+          });
+        $(canvas_target_image_circle_post).removeClass("d-none");
+        }
+        else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
+          console.log("Circle Post image does not exist");
+          $(canvas_target_image_circle_post).addClass("d-none");
+        }
+      },
+    });
   });
 
-  // setup/reset the canvas whenever a draw button is clicked
   $('[id^="drawButton-"]').click(async function () {
     [page, data_id, label] = $(this).attr("id").replace(/drawButton-/, "").split("-");
     $("#canvasButtonDrawMask").text("Draw Mask").prop("disabled", false);
@@ -113,41 +114,36 @@ $(document).ready(function () {
     pointsQBez = [];
     split_mask = false;
     draw_mask = true;
-    pre_slice = null;
-    post_slice = null;
     mousePosition = { x: 0, y: 0 };
   });
 
-  // on click canvasButtonAuto call backend python function that queries a model to predict the mask
-  $("#canvasButtonAuto").on("click", async function () {
+  $("#canvasButtonAuto").on("click", async () => {
     try {
-      // Show the spinner
       $("#loading-bar").css('display', 'flex');
-
       const image = imageData.find(img => img.Page == page && img.Image_Index == data_id);
       const middle_slice = image.Middle_Slice;
+      const base = `-${image.Page}-${data_id}`;
+      const canvas_target_image_curve = `#img-target-curve${base}`;
 
       const response = await $.ajax({
         type: "POST",
         url: "/auto_annotate",
-        data: {
-          data_id: data_id,
-        },
+        data: { data_id: data_id },
       });
 
       if (response.result === "success") {
-        const base = "-" + page + "-" + data_id;
-        const auto_mask_name = `auto_curve_idx_${data_id}_slice_${middle_slice}.png`;
-        const auto_mask_path = `${base_mask_path}${data_id}/${auto_mask_name}`;
-        const canvas_target_image = `#img-target-curve${base}`;
-
         // Check if auto-generated mask exists and update the image source
         $.ajax({
-          url: auto_mask_path,
+          url: "/get_auto_curve_image/" + data_id + "/" + middle_slice,
           type: 'HEAD',
-          success: function() {
-            $(canvas_target_image).attr("src", `${auto_mask_path}?${Date.now()}`);
-            $(canvas_target_image).removeClass('d-none');
+          success: function (data, textStatus, xhr) {
+            if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
+              $(canvas_target_image_curve).attr("src", "/get_auto_curve_image/" + data_id + "/" + middle_slice);
+              $(canvas_target_image_curve).removeClass('d-none');
+            } else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
+              console.log("Auto curve image does not exist");
+              $(canvas_target_image_curve).addClass('d-none');
+            }
           }
         });
       } else {
@@ -156,13 +152,11 @@ $(document).ready(function () {
     } catch (error) {
       console.error("An error occurred during auto annotation:", error);
     } finally {
-      // Hide the spinner
       $("#loading-bar").css('display', 'none');
     }
   });
 
-  // on click activate canvas
-  $("#canvasButtonPreCRD").on("click", function () {
+  $("#canvasButtonPreCRD").on("click", () => {
     ctx_circle_pre.restore();
     if ($("canvas.circleCanvasPre").hasClass("d-none")) {
       clear_canvas(ctx_circle_pre, canvas_circle_pre);
@@ -192,10 +186,10 @@ $(document).ready(function () {
     }
   });
 
-  $("canvas.circleCanvasPre").on("click", async function (e) {
+  $("canvas.circleCanvasPre").on("click", async (e) => {
     if (pre_CRD) {
       clear_canvas(ctx_circle_pre, canvas_circle_pre);
-      var pos = getXY(canvas_circle_pre, e, rect_circle);
+      const pos = getXY(canvas_circle_pre, e, rect_circle);
       x_syn_crd = pos.x;
       y_syn_crd = pos.y;
       ctx_circle_pre.fillStyle = "rgb(0, 255, 0)";
@@ -208,8 +202,7 @@ $(document).ready(function () {
     }
   });
 
-  // on click activate canvas
-  $("#canvasButtonPostCRD").on("click", function () {
+  $("#canvasButtonPostCRD").on("click", () => {
     ctx_circle_post.restore();
     if ($("canvas.circleCanvasPost").hasClass("d-none")) {
       clear_canvas(ctx_circle_post, canvas_circle_post);
@@ -239,10 +232,10 @@ $(document).ready(function () {
     }
   });
 
-  $("canvas.circleCanvasPost").on("click", async function (e) {
+  $("canvas.circleCanvasPost").on("click", async (e) => {
     if (post_CRD) {
       clear_canvas(ctx_circle_post, canvas_circle_post);
-      var pos = getXY(canvas_circle_post, e, rect_circle);
+      const pos = getXY(canvas_circle_post, e, rect_circle);
       x_syn_crd = pos.x;
       y_syn_crd = pos.y;
       ctx_circle_post.fillStyle = "rgb(0, 0, 255)";
@@ -255,8 +248,7 @@ $(document).ready(function () {
     }
   });
 
-  // on click activate canvas
-  $("#canvasButtonDrawMask").on("click", function () {
+  $("#canvasButtonDrawMask").on("click", () => {
     clear_canvas(ctx_curve, canvas_curve);
     points = [];
     pointsQBez = [];
@@ -271,8 +263,6 @@ $(document).ready(function () {
       $("canvas.curveCanvas").css("z-index", 3);
       $("canvas.circleCanvasPost").css("z-index", 2);
       $("canvas.circleCanvasPre").css("z-index", 1);
-      width_curve = canvas_curve.width;
-      height = canvas_curve.height;
       split_mask = false;
       draw_mask = true;
       $("#canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonAuto, #rangeSlices").prop("disabled", true);
@@ -288,8 +278,7 @@ $(document).ready(function () {
     }
   });
 
-  // activate event for splitting/erasing the curve
-  $("#canvasButtonRevise").on("click", function () {
+  $("#canvasButtonRevise").on("click", () => {
     $("#canvasButtonFill").prop("disabled", true);
     $("#canvasButtonRevise").prop("disabled", true);
     ctx_curve.save();
@@ -297,8 +286,7 @@ $(document).ready(function () {
     split_mask = true;
   });
 
-  // create the mask based on the drawn spline
-  $("#canvasButtonFill").on("click", function () {
+  $("#canvasButtonFill").on("click", () => {
     ctx_curve.restore();
     split_mask = false;
     draw_mask = false;
@@ -310,16 +298,17 @@ $(document).ready(function () {
     $("#canvasButtonRevise, #canvasButtonSave").prop("disabled", false);
   });
 
-  // save the current mask
-  $("#canvasButtonSave").on("click", async function () {
-    split_mask = false
+  $("#canvasButtonSave").on("click", async () => {
+    split_mask = false;
     save_canvas(canvas_curve, "curve");
   });
 
   async function save_canvas(canvas, canvas_type) {
     const dataURL = canvas.toDataURL();
     const viewed_instance_slice = $("#rangeSlices").data("viewed_instance_slice");
+
     try {
+      console.log("Saving canvas of type:", canvas_type);
       const response = await $.ajax({
         type: "POST",
         url: "/save_canvas",
@@ -332,28 +321,32 @@ $(document).ready(function () {
         },
       });
       const data_json = JSON.parse(response.data);
-      const base = "-" + page + "-" + data_id;
+      const base = `-${page}-${data_id}`;
       const canvas_target_image = `#img-target-${canvas_type}${base}`;
-      const coordinates = data_json.Adjusted_Bbox.join("_");
-      const img_index = data_json.Image_Index;
-      const img_name = `${canvas_type}_idx_${img_index}_slice_${viewed_instance_slice}_cor_${coordinates}.png`;
-      const image_path = `${base_mask_path}${data_id}/${img_name}`;
+
       if (canvas_type === 'curve') {
-        if (viewed_instance_slice === parseInt(data_json.Middle_Slice, 10)) {
-          $(new Image()).attr("src", `${image_path}?${Date.now()}`).load(function () {
-            $(canvas_target_image).attr("src", this.src);
-          });
-          $(canvas_target_image).removeClass('d-none');
-        }
-        if (pre_slice === parseInt(data_json.Middle_Slice, 10)) {
-          $(`#img-target-circlePre${base}`).removeClass('d-none');
-        }
-        if (post_slice === parseInt(data_json.Middle_Slice, 10)) {
-          $(`#img-target-circlePost${base}`).removeClass('d-none');
-        }
-        $("#canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonAuto, #rangeSlices").prop("disabled", false);
-        $("#canvasButtonSave, #canvasButtonFill, #canvasButtonRevise").prop("disabled", true);
+        $.ajax({
+          url: "/get_curve_image/" + data_id + "/" + viewed_instance_slice,
+          type: 'HEAD',
+          success: function (data, textStatus, xhr) {
+            if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
+              if (viewed_instance_slice === parseInt(data_json.Middle_Slice, 10)) {
+                $(new Image()).attr("src", "/get_curve_image/" + data_id + "/" + viewed_instance_slice).on("load", function () {
+                  $(canvas_target_image).attr("src", this.src);
+                });
+                $(canvas_target_image).removeClass('d-none');
+              }
+              $("#canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonAuto, #rangeSlices").prop("disabled", false);
+              $("#canvasButtonSave, #canvasButtonFill, #canvasButtonRevise").prop("disabled", true);
+            }
+            else if (xhr.status === 204) {
+              console.log("Curve image does not exist");
+              $(canvas_target_image).addClass('d-none');
+            }
+          }
+        });
       }
+
       if (canvas_type === "circlePre" || canvas_type === "circlePost") {
         const id = canvas_type === "circlePre" ? "pre" : "post";
         const coordinateResponse = await $.ajax({
@@ -368,94 +361,87 @@ $(document).ready(function () {
             id: id,
           },
         });
+
         if (canvas_type === 'circlePre') {
-          pre_slice = viewed_instance_slice;
-          $(new Image()).attr("src", `${image_path}?${Date.now()}`).load(function () {
-            $(canvas_target_image).attr("src", this.src);
-          });
-          if (pre_slice === parseInt(data_json.Middle_Slice, 10)) {
-            $(`#img-target-circlePre${base}`).removeClass('d-none');
-          } else {
-            $(`#img-target-circlePre${base}`).addClass('d-none');
-          }
-        }
+          $.ajax({
+            url: "/get_circle_pre_image/" + data_id + "/" + viewed_instance_slice,
+            type: "HEAD",
+            success: function (data, textStatus, xhr) {
+              if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
+                $(new Image()).attr("src", "/get_circle_pre_image/" + data_id + "/" + viewed_instance_slice).on("load", function () {
+                  $(canvas_target_image).attr("src", this.src);
+                });
+                if (viewed_instance_slice === parseInt(data_json.Middle_Slice, 10)) {
+                  $(canvas_target_image).removeClass('d-none');
+                } else {
+                  $(canvas_target_image).addClass('d-none');
+                }
+              }
+              else if (xhr.status === 204) {
+                console.log("Circle Pre image does not exist");
+                $(canvas_target_image).addClass('d-none');
+              }
+            },
+          });        }
+
         if (canvas_type === 'circlePost') {
-          post_slice = viewed_instance_slice;
-          $(new Image()).attr("src", `${image_path}?${Date.now()}`).load(function () {
-            $(canvas_target_image).attr("src", this.src);
-          });
-          if (post_slice === parseInt(data_json.Middle_Slice, 10)) {
-            $(`#img-target-circlePost${base}`).removeClass('d-none');
-          } else {
-            $(`#img-target-circlePost${base}`).addClass('d-none');
-          }
-        }
-        const curve_src = $(`#img-target-curve${base}`).attr('src');
-        const curve_src_file = curve_src.split('/').pop().split('?')[0];
-        const original = curve_src_file.startsWith('curve');
-        if (!original) {
-          const canvas_src = $(`#img-target-curve${base}`).attr("src").trim();
-          $(`#img-target-curve${base}`).attr("src", canvas_src + "?" + Date.now());
-          if (post_slice === parseInt(data_json.Middle_Slice, 10) || pre_slice === parseInt(data_json.Middle_Slice, 10)) {
-            $(`#img-target-curve${base}`).addClass('d-none');
-          }
-        }
+          $.ajax({
+            url: "/get_circle_post_image/" + data_id + "/" + viewed_instance_slice,
+            type: "HEAD",
+            success: function (data, textStatus, xhr) {
+              if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
+                $(new Image()).attr("src", "/get_circle_post_image/" + data_id + "/" + viewed_instance_slice).on("load", function () {
+                  $(canvas_target_image).attr("src", this.src);
+                });
+                if (viewed_instance_slice === parseInt(data_json.Middle_Slice, 10)) {
+                  $(canvas_target_image).removeClass('d-none');
+                } else {
+                  $(canvas_target_image).addClass('d-none');
+                }
+              }
+              else if (xhr.status === 204) {
+                console.log("Circle Post image does not exist");
+                $(canvas_target_image).addClass('d-none');
+              }
+            },
+          });        }
       }
+
+      const curve_src = $(`#img-target-curve${base}`).attr('src');
+      const custom_mask = curve_src.includes("curve_image");
+      if (!custom_mask && viewed_instance_slice === parseInt(data_json.Middle_Slice, 10)) {
+        console.log("Hiding original target image");
+        $(`#img-target-curve${base}`).addClass('d-none');
+      }
+
     } catch (error) {
       console.error('An error occurred:', error);
     }
   }
 
-  $("canvas.circleCanvasPre").on("click", function (e) {
-    if (pre_CRD) {
-      clear_canvas(ctx_circle_pre, canvas_circle_pre);
-      var pos = getXY(canvas_circle_pre, e, rect_circle);
-      x_syn_crd = pos.x;
-      y_syn_crd = pos.y;
-      ctx_circle_pre.fillStyle = "rgb(0, 255, 0)";
-      ctx_circle_pre.beginPath();
-      ctx_circle_pre.arc(x_syn_crd, y_syn_crd, 10, 0, 2 * Math.PI);
-      ctx_circle_pre.fill();
-    }
-  });
-
-  $("canvas.circleCanvasPost").on("click", function (e) {
-    if (post_CRD) {
-      clear_canvas(ctx_circle_post, canvas_circle_post);
-      var pos = getXY(canvas_circle_post, e, rect_circle);
-      x_syn_crd = pos.x;
-      y_syn_crd = pos.y;
-      ctx_circle_post.fillStyle = "rgb(0, 0, 255)";
-      ctx_circle_post.beginPath();
-      ctx_circle_post.arc(x_syn_crd, y_syn_crd, 10, 0, 2 * Math.PI);
-      ctx_circle_post.fill();
-    }
-  });
-
-  $("canvas.curveCanvas").mousemove(function (event) {
+  $("canvas.curveCanvas").mousemove((event) => {
     if (split_mask) {
       if ((mousePosition.x != event.clientX || mousePosition.y != event.clientY) && event.buttons == 1) {
-        mousePosition.x = event.clientX;
-        mousePosition.y = event.clientY;
-        var pos = getXY(canvas_curve, event, rect_curve);
-        var x = pos.x;
-        var y = pos.y;
+        mousePosition = { x: event.clientX, y: event.clientY };
+        const pos = getXY(canvas_curve, event, rect_curve);
+        const x = pos.x;
+        const y = pos.y;
         ctx_curve.strokeStyle = "#000";
         ctx_curve.beginPath();
         ctx_curve.ellipse(x, y, thickness, Math.floor(thickness / 2), 0, 0, Math.PI * 2);
-        ctx_curve.stroke(); // Draw the outline of the eraser
-        ctx_curve.fill(); // Fill the eraser to erase the mask
+        ctx_curve.stroke();
+        ctx_curve.fill();
       }
     }
   });
 
-  $("canvas.curveCanvas").on("click", function (e) {
+  $("canvas.curveCanvas").on("click", (e) => {
     if (draw_mask) {
       clear_canvas(ctx_curve, canvas_curve);
       ctx_curve.beginPath();
-      var pos = getXY(canvas_curve, e, rect_curve);
-      var x = pos.x;
-      var y = pos.y;
+      const pos = getXY(canvas_curve, e, rect_curve);
+      const x = pos.x;
+      const y = pos.y;
       points.push({ x, y });
       if (points.length > 2) {
         draw_quad_line(points, 3);

@@ -80,15 +80,15 @@
           <div class="main-image-categorize">
             <!-- In case of a FN we depict we use the source image also as the target to act as placholder -->
             {% if image.Error_Description != "False Negatives"%}
-            <img id="img-target-curve-{{image.Page}}-{{image.Image_Index}}" class="img_categorize" src="{{ url_for('static', filename=image.GT ~ '/' ~ image.Middle_Slice ~ '.png')}}" width="64px" height="64px" style="opacity: 0.5" />
-            <img id="img-target-circlePre-{{image.Page}}-{{image.Image_Index}}" class="img_categorize d-none" src="{{ url_for('static', filename=image.GT ~ '/' ~ image.Middle_Slice ~ '.png')}}" width="64px" height="64px" style="opacity: 0.5" />
-            <img id="img-target-circlePost-{{image.Page}}-{{image.Image_Index}}" class="img_categorize d-none" src="{{ url_for('static', filename=image.GT ~ '/' ~ image.Middle_Slice ~ '.png')}}" width="64px" height="64px" style="opacity: 0.5" />
+            <img id="img-target-curve-{{image.Page}}-{{image.Image_Index}}" class="img_categorize" src="{{ url_for('file_access.get_target_image', image_index=image.Image_Index, slice_id=image.Middle_Slice)}}" width="64px" height="64px" style="opacity: 0.5" />
+            <img id="img-target-circlePre-{{image.Page}}-{{image.Image_Index}}" class="img_categorize d-none" src="{{ url_for('file_access.get_target_image', image_index=image.Image_Index, slice_id=image.Middle_Slice)}}" width="64px" height="64px" style="opacity: 0.5" />
+            <img id="img-target-circlePost-{{image.Page}}-{{image.Image_Index}}" class="img_categorize d-none" src="{{ url_for('file_access.get_target_image', image_index=image.Image_Index, slice_id=image.Middle_Slice)}}" width="64px" height="64px" style="opacity: 0.5" />
             {% else %}
-            <img id="img-target-curve-{{image.Page}}-{{image.Image_Index}}" class="img_categorize" src="{{url_for('static', filename= image.EM ~ '/' ~ image.Middle_Slice ~ '.png')}}" width="64px" height="64px" style="opacity: 0.5" />
-            <img id="img-target-circlePre-{{image.Page}}-{{image.Image_Index}}" class="img_categorize d-none" src="{{url_for('static', filename= image.EM ~ '/' ~ image.Middle_Slice ~ '.png')}}" width="64px" height="64px" style="opacity: 0.5" />
-            <img id="img-target-circlePost-{{image.Page}}-{{image.Image_Index}}" class="img_categorize d-none" src="{{url_for('static', filename= image.EM ~ '/' ~ image.Middle_Slice ~ '.png')}}" width="64px" height="64px" style="opacity: 0.5" />
+            <img id="img-target-curve-{{image.Page}}-{{image.Image_Index}}" class="img_categorize" src="{{ url_for('file_access.get_source_image', image_index=image.Image_Index, slice_id=image.Middle_Slice)}}" width="64px" height="64px" style="opacity: 0.5" />
+            <img id="img-target-circlePre-{{image.Page}}-{{image.Image_Index}}" class="img_categorize d-none" src="{{ url_for('file_access.get_source_image', image_index=image.Image_Index, slice_id=image.Middle_Slice)}}" height="64px" style="opacity: 0.5" />
+            <img id="img-target-circlePost-{{image.Page}}-{{image.Image_Index}}" class="img_categorize d-none" src="{{ url_for('file_access.get_source_image', image_index=image.Image_Index, slice_id=image.Middle_Slice)}}" width="64px" height="64px" style="opacity: 0.5" />
             {% endif %}
-            <img id="imgSource-{{image.Page}}-{{image.Image_Index}}" class="img_categorize" data-image_base_path="{{ url_for('static', filename=image.EM) }}" src="{{ url_for('annotation.get_source_image', image_index=image.Image_Index, slice_id=image.Middle_Slice)}}" width="64px" height="64px" />
+            <img id="imgSource-{{image.Page}}-{{image.Image_Index}}" class="img_categorize" data-image_base_path="{{ url_for('static', filename=image.EM) }}" src="{{ url_for('file_access.get_source_image', image_index=image.Image_Index, slice_id=image.Middle_Slice)}}" width="64px" height="64px" />
           </div>
         </div>
         <div class="card-block mt-2">

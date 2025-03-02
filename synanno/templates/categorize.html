@@ -28,7 +28,7 @@
             <img
               id="imgTarget-{{image.Image_Index}}"
               class="img_categorize"
-              src="{{ url_for('annotation.get_target_image', image_index=image.Image_Index, slice_id=image.Middle_Slice)}}"
+              src="{{ url_for('file_access.get_target_image', image_index=image.Image_Index, slice_id=image.Middle_Slice)}}"
               width="64px"
               height="64px"
               style="opacity: 0.5"
@@ -36,7 +36,7 @@
             <img
               id="imgSource-{{image.Image_Index}}"
               class="img_categorize"
-              src="{{ url_for('annotation.get_source_image', image_index=image.Image_Index, slice_id=image.Middle_Slice)}}"
+              src="{{ url_for('file_access.get_source_image', image_index=image.Image_Index, slice_id=image.Middle_Slice)}}"
               width="64px"
               height="64px"
             />

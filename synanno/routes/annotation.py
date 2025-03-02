@@ -2,9 +2,6 @@
 # track the annotation time
 import datetime
 
-# io operations
-import io
-
 # ajax json response
 import json
 
@@ -12,7 +9,7 @@ import json
 from typing import Dict
 
 # flask util functions
-from flask import Blueprint, current_app, jsonify, render_template, request, send_file
+from flask import Blueprint, current_app, jsonify, render_template, request
 
 # flask ajax requests
 from flask_cors import cross_origin
@@ -20,7 +17,10 @@ from flask_cors import cross_origin
 # for type hinting
 from jinja2 import Template
 
-import synanno.backend.processing as ip
+from synanno.backend.processing import free_page, retrieve_instance_metadata
+
+# io operations
+
 
 # define a Blueprint for annotation routes
 blueprint = Blueprint("annotation", __name__)
@@ -39,10 +39,10 @@ def annotation(page: int = 0) -> Template:
     """
 
     # remove the synapse and image slices for the previous and next page
-    ip.free_page()
+    free_page()
 
     # load the data for the current page
-    ip.retrieve_instance_metadata(page=page)
+    retrieve_instance_metadata(page=page)
 
     # start the timer for the annotation process
     if current_app.proofread_time["start_grid"] is None:
@@ -122,33 +122,3 @@ def update_card() -> Dict[str, object]:
         ] = "Incorrect"
 
     return jsonify({"result": "success", "label": label})
-
-
-@blueprint.route("/get_source_image/<image_index>/<slice_id>")
-@cross_origin()
-def get_source_image(image_index, slice_id):
-    """Serves EM images from memory."""
-    if (
-        image_index in current_app.source_image_data
-        and slice_id in current_app.source_image_data[image_index]
-    ):
-        return send_file(
-            io.BytesIO(current_app.source_image_data[image_index][slice_id]),
-            mimetype="image/png",
-        )
-    return "Image not found", 404
-
-
-@blueprint.route("/get_target_image/<image_index>/<slice_id>")
-@cross_origin()
-def get_target_image(image_index, slice_id):
-    """Serves synapse segmentation images from memory."""
-    if (
-        image_index in current_app.source_image_data
-        and slice_id in current_app.target_image_data[image_index]
-    ):
-        return send_file(
-            io.BytesIO(current_app.target_image_data[image_index][slice_id]),
-            mimetype="image/png",
-        )
-    return "Image not found", 404

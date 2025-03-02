@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -55,11 +54,8 @@ def open_data(task: str):
         Renders the open-data view
     """
     current_app.draw_or_annotate = task
-    if os.path.isdir(
-        os.path.join(
-            current_app.root_path, current_app.config["STATIC_FOLDER"], "Images/Img"
-        )
-    ):
+
+    if current_app.source_image_data:
         flash(
             "Click 'Reset Backend' to clear the memory, start a new task, "
             "and start up a Neuroglancer instance."
@@ -81,26 +77,6 @@ def open_data(task: str):
         view_style="synapse",
         neuronReady="false",
     )
-
-
-def create_upload_folder():
-    """Create the upload folder if it does not exist."""
-    upload_folder_path = os.path.join(
-        current_app.root_path, current_app.config["UPLOAD_FOLDER"]
-    )
-    if not os.path.exists(upload_folder_path):
-        os.mkdir(upload_folder_path)
-
-
-def remove_old_json_file():
-    """Remove the old JSON file if it exists."""
-    json_file_path = os.path.join(
-        current_app.root_path,
-        current_app.config["UPLOAD_FOLDER"],
-        current_app.config["JSON"],
-    )
-    if os.path.isfile(json_file_path):
-        os.remove(json_file_path)
 
 
 def save_coordinate_order_and_crop_size(form: MultiDict):
@@ -150,19 +126,78 @@ def load_json_to_metadata(file_json):
     Args:
         file_json: The JSON file provided by the user.
     """
-    expected_columns = set(current_app.df_metadata.columns)
-    current_app.df_metadata = pd.read_json(file_json, orient="records")
-    actual_columns = set(current_app.df_metadata.columns)
+    try:
+        # Read JSON file as a dictionary
+        json_data = json.load(file_json)  # file_json is a file-like object
 
-    if expected_columns != actual_columns:
+        # Extract "Proofread Time" (store it as a dictionary in the app context)
+        if "Proofread Time" in json_data and isinstance(
+            json_data["Proofread Time"], dict
+        ):
+            current_app.proofread_time = json_data["Proofread Time"]
+        else:
+            logger.warning(
+                "Proofread Time missing or invalid in JSON. Setting default."
+            )
+            current_app.proofread_time = {
+                "start_grid": None,
+                "finish_grid": None,
+                "difference_grid": None,
+                "start_categorize": None,
+                "finish_categorize": None,
+                "difference_categorize": None,
+            }
+
+        # Extract metadata
+        if "Metadata" not in json_data:
+            raise ValueError("Invalid JSON format: 'Metadata' key is missing!")
+
+        metadata_records = json_data["Metadata"]
+
+        # Load into DataFrame
+        expected_columns = set(current_app.df_metadata.columns)
+        df_new_metadata = pd.DataFrame(metadata_records)
+
+        # Ensure all required columns exist
+        actual_columns = set(df_new_metadata.columns)
         missing_columns = expected_columns - actual_columns
         extra_columns = actual_columns - expected_columns
-        logger.info(f"Missing columns: {missing_columns}")
-        logger.info(f"Extra columns: {extra_columns}")
-        raise ValueError("The provided JSON does not match the expected format!")
 
-    current_app.df_metadata.sort_values(["Page", "Image_Index"], inplace=True)
-    update_slice_number(current_app.df_metadata.to_dict("records"))
+        if missing_columns:
+            logger.error(f"Missing columns in JSON: {missing_columns}")
+            raise ValueError(f"Missing columns in JSON: {missing_columns}")
+
+        if extra_columns:
+            logger.warning(
+                f"Extra columns in JSON: {extra_columns} (they will be ignored)"
+            )
+
+        # Convert None values to default values based on column types
+        for col, dtype in current_app.df_metadata.dtypes.items():
+            if dtype == "int64":  # Integers cannot have None, set default as -1 or 0
+                df_new_metadata[col] = df_new_metadata[col].fillna(-1).astype(int)
+            elif dtype == "float64":  # Floats can have NaN
+                df_new_metadata[col] = df_new_metadata[col].astype(float)
+            elif dtype == "object":  # Strings & JSON objects
+                df_new_metadata[col] = df_new_metadata[col].fillna("")
+
+        # Reorder DataFrame to match expected format
+        df_new_metadata = df_new_metadata[current_app.df_metadata.columns]
+
+        # Assign the new DataFrame to the app's metadata
+        current_app.df_metadata = df_new_metadata
+
+        # Sort and update slices
+        current_app.df_metadata.sort_values(["Page", "Image_Index"], inplace=True)
+        update_slice_number(current_app.df_metadata.to_dict("records"))
+
+    except json.JSONDecodeError:
+        logger.error("Invalid JSON file: Failed to parse.")
+        raise ValueError("Invalid JSON format! Please provide a valid JSON file.")
+
+    except Exception as e:
+        logger.error(f"Error loading JSON: {str(e)}")
+        raise
 
 
 def set_coordinate_resolution():
@@ -321,8 +356,6 @@ def upload_file():
     """
     current_app.view_style = request.form.get("view_style")
 
-    create_upload_folder()
-    remove_old_json_file()
     save_coordinate_order_and_crop_size(request.form)
 
     source_url = request.form.get("source_url")
@@ -471,18 +504,16 @@ def get_instance():
     """
     coordinate_order = list(current_app.coordinate_order.keys())
 
-    mode = str(request.form["mode"])
+    str(request.form["mode"])
     load = str(request.form["load"])
     page = int(request.form["page"])
     index = int(request.form["data_id"])
 
-    custom_mask_path_curve = None
-    custom_mask_path_pre = None
-    custom_mask_path_post = None
-
     if load == "full":
         with current_app.df_metadata_lock:
+
             number_of_slices = len(current_app.source_image_data[str(index)])
+
             middle_slice = int(
                 current_app.df_metadata.loc[
                     (current_app.df_metadata["Page"] == page)
@@ -497,48 +528,6 @@ def get_instance():
 
         range_min = data["Adjusted_Bbox"][coordinate_order.index("z") * 2]
 
-        if mode == "draw":
-            base_mask_path = str(request.form["base_mask_path"])
-            isinstance_mask_path = os.path.join(base_mask_path, str(index))
-            if base_mask_path:
-                coordinates = "_".join(list(map(str, data["Adjusted_Bbox"])))
-                path_curve = os.path.join(
-                    isinstance_mask_path,
-                    "curve_idx_"
-                    + str(data["Image_Index"])
-                    + "_slice_"
-                    + str(data["Middle_Slice"])
-                    + "_cor_"
-                    + coordinates
-                    + ".png",
-                )
-                path_circle_pre = os.path.join(
-                    isinstance_mask_path,
-                    "circlePre_idx_"
-                    + str(data["Image_Index"])
-                    + "_slice_"
-                    + str(data["Middle_Slice"])
-                    + "_cor_"
-                    + coordinates
-                    + ".png",
-                )
-                path_circle_post = os.path.join(
-                    isinstance_mask_path,
-                    "circlePost_idx_"
-                    + str(data["Image_Index"])
-                    + "_slice_"
-                    + str(data["Middle_Slice"])
-                    + "_cor_"
-                    + coordinates
-                    + ".png",
-                )
-                if os.path.exists(current_app.root_path + path_curve):
-                    custom_mask_path_curve = path_curve
-                if os.path.exists(current_app.root_path + path_circle_pre):
-                    custom_mask_path_pre = path_circle_pre
-                if os.path.exists(current_app.root_path + path_circle_post):
-                    custom_mask_path_post = path_circle_post
-
         data = json.dumps(data)
 
         final_json = jsonify(
@@ -548,9 +537,6 @@ def get_instance():
             range_min=range_min,
             host=current_app.config["IP"],
             port=current_app.config["PORT"],
-            custom_mask_path_curve=custom_mask_path_curve,
-            custom_mask_path_pre=custom_mask_path_pre,
-            custom_mask_path_post=custom_mask_path_post,
         )
 
     elif load == "single":
@@ -558,71 +544,9 @@ def get_instance():
             "Page == @page & Image_Index == @index"
         ).to_dict("records")[0]
 
-        if mode == "draw":
-            base_mask_path = str(request.form["base_mask_path"])
-            isinstance_mask_path = os.path.join(base_mask_path, str(index))
-            viewed_instance_slice = request.form["viewed_instance_slice"]
-
-            if base_mask_path:
-                if viewed_instance_slice:
-                    coordinates = "_".join(list(map(str, data["Adjusted_Bbox"])))
-                    path_curve = os.path.join(
-                        isinstance_mask_path,
-                        "curve_idx_"
-                        + str(data["Image_Index"])
-                        + "_slice_"
-                        + str(viewed_instance_slice)
-                        + "_cor_"
-                        + coordinates
-                        + ".png",
-                    )
-                    path_mask = os.path.join(
-                        isinstance_mask_path,
-                        "auto_curve_idx_"
-                        + str(data["Image_Index"])
-                        + "_slice_"
-                        + str(viewed_instance_slice)
-                        + ".png",
-                    )
-                    path_circle_pre = os.path.join(
-                        isinstance_mask_path,
-                        "circlePre_idx_"
-                        + str(data["Image_Index"])
-                        + "_slice_"
-                        + str(viewed_instance_slice)
-                        + "_cor_"
-                        + coordinates
-                        + ".png",
-                    )
-                    path_circle_post = os.path.join(
-                        isinstance_mask_path,
-                        "circlePost_idx_"
-                        + str(data["Image_Index"])
-                        + "_slice_"
-                        + str(viewed_instance_slice)
-                        + "_cor_"
-                        + coordinates
-                        + ".png",
-                    )
-
-                    if os.path.exists(current_app.root_path + path_mask):
-                        custom_mask_path_curve = path_mask
-                    elif os.path.exists(current_app.root_path + path_curve):
-                        custom_mask_path_curve = path_curve
-
-                    if os.path.exists(current_app.root_path + path_circle_pre):
-                        custom_mask_path_pre = path_circle_pre
-                    if os.path.exists(current_app.root_path + path_circle_post):
-                        custom_mask_path_post = path_circle_post
-
         data = json.dumps(data)
 
-        final_json = jsonify(
-            data=data,
-            custom_mask_path_curve=custom_mask_path_curve,
-            custom_mask_path_pre=custom_mask_path_pre,
-            custom_mask_path_post=custom_mask_path_post,
-        )
+        final_json = jsonify(data=data)
 
     return final_json
 
@@ -688,43 +612,6 @@ def neuro():
     )
 
     return final_json
-
-
-def save_file(
-    file: MultiDict,
-    filename: str,
-    path: Optional[str] = None,
-):
-    """Saves the provided file at the specified location.
-
-    Args:
-        file: The file to be saved
-        filename: The name of the file
-        path: Path where to save the file
-
-    Returns:
-        None if the provided file does not match one of the required extensions,
-        else the full path where the file got saved.
-    """
-    path = (
-        os.path.join(current_app.root_path, current_app.config["UPLOAD_FOLDER"])
-        if not path
-        else path
-    )
-
-    file_ext = os.path.splitext(filename)[1]
-    if file_ext not in current_app.config["UPLOAD_EXTENSIONS"]:
-        flash("Incorrect file format! Load again.", "error")
-        render_template(
-            "opendata.html",
-            modenext="disabled",
-            mode=current_app.draw_or_annotate,
-            neuronReady="false",
-        )
-        return None
-    else:
-        file.save(os.path.join(path, filename))
-        return os.path.join(path, filename)
 
 
 @blueprint.route("/enable_neuropil_layer", methods=["POST"])

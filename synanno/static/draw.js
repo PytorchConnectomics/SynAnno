@@ -44,15 +44,12 @@ $(document).ready(() => {
         }
         else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
           $.ajax({
-            url: "/get_curve_image/" + data_id + "/" + middle_slice,
+            url: "/get_auto_curve_image/" + data_id + "/" + middle_slice,
             type: 'HEAD',
             success: function (data, textStatus, xhr) {
               if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
-                $(canvas_target_image_curve).attr("src", "/get_curve_image/" + data_id + "/" + middle_slice);
+                $(canvas_target_image_curve).attr("src", "/get_auto_curve_image/" + data_id + "/" + middle_slice);
                 $(canvas_target_image_curve).removeClass('d-none');
-              }
-              else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
-                console.log("Curve image does not exist");
               }
             }
           });
@@ -73,7 +70,6 @@ $(document).ready(() => {
         $(canvas_target_image_circle_pre).removeClass("d-none");
         }
         else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
-          console.log("Circle Pre image does not exist");
           $(canvas_target_image_circle_pre).addClass("d-none");
         }
       },
@@ -92,7 +88,6 @@ $(document).ready(() => {
         $(canvas_target_image_circle_post).removeClass("d-none");
         }
         else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
-          console.log("Circle Post image does not exist");
           $(canvas_target_image_circle_post).addClass("d-none");
         }
       },
@@ -141,7 +136,6 @@ $(document).ready(() => {
               $(canvas_target_image_curve).attr("src", "/get_auto_curve_image/" + data_id + "/" + middle_slice);
               $(canvas_target_image_curve).removeClass('d-none');
             } else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
-              console.log("Auto curve image does not exist");
               $(canvas_target_image_curve).addClass('d-none');
             }
           }
@@ -308,7 +302,6 @@ $(document).ready(() => {
     const viewed_instance_slice = $("#rangeSlices").data("viewed_instance_slice");
 
     try {
-      console.log("Saving canvas of type:", canvas_type);
       const response = await $.ajax({
         type: "POST",
         url: "/save_canvas",
@@ -340,7 +333,6 @@ $(document).ready(() => {
               $("#canvasButtonSave, #canvasButtonFill, #canvasButtonRevise").prop("disabled", true);
             }
             else if (xhr.status === 204) {
-              console.log("Curve image does not exist");
               $(canvas_target_image).addClass('d-none');
             }
           }
@@ -378,7 +370,6 @@ $(document).ready(() => {
                 }
               }
               else if (xhr.status === 204) {
-                console.log("Circle Pre image does not exist");
                 $(canvas_target_image).addClass('d-none');
               }
             },
@@ -400,7 +391,6 @@ $(document).ready(() => {
                 }
               }
               else if (xhr.status === 204) {
-                console.log("Circle Post image does not exist");
                 $(canvas_target_image).addClass('d-none');
               }
             },
@@ -410,7 +400,6 @@ $(document).ready(() => {
       const curve_src = $(`#img-target-curve${base}`).attr('src');
       const custom_mask = curve_src.includes("curve_image");
       if (!custom_mask && viewed_instance_slice === parseInt(data_json.Middle_Slice, 10)) {
-        console.log("Hiding original target image");
         $(`#img-target-curve${base}`).addClass('d-none');
       }
 

@@ -8,7 +8,7 @@ window.onload = async () => {
     const initialLoad = $("script[src*='viewer.js']").data("initial-load") === true;
     const neuronPath = $("script[src*='viewer.js']").data("neuron-path");
     const sectionArray = $("script[src*='viewer.js']").data("neuron-section");
-    const synapseCloudPath = $("script[src*='viewer.js']").data("synapse-cloud-path");
+    const synapsePointCloud = $("script[src*='viewer.js']").data("synapse-point-cloud");
 
     const $sharkContainerMinimap = $("#shark_container_minimap");
 
@@ -30,10 +30,9 @@ window.onload = async () => {
                 console.error("No neuron path provided.");
             }
 
-            if (synapseCloudPath) {
-                const data = await loadSynapseCloud(synapseCloudPath);
-                updateLoadingBar(parseInt(data.length / 3));
-                processSynapseCloudData(data, maxVolumeSize);
+            if (synapsePointCloud) {
+                updateLoadingBar(parseInt(synapsePointCloud.length / 3));
+                processSynapseCloudData(synapsePointCloud, maxVolumeSize);
             } else {
                 console.error("No synapse cloud path provided.");
             }
@@ -126,16 +125,6 @@ function processSwcFile(swcTxt, sectionArray) {
     window.shark.render();
 }
 
-async function loadSynapseCloud(jsonPath) {
-    try {
-        const response = await fetch(jsonPath);
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error("Error fetching synapse cloud data:", error);
-        throw error;
-    }
-}
 
 function processSynapseCloudData(data, maxVolumeSize) {
     if (!Array.isArray(data) || data.length % 3 !== 0) {

@@ -164,8 +164,10 @@ def free_page() -> None:
         ].values.tolist()
 
     for key in key_list:
-        del current_app.source_image_data[str(key)]
-        del current_app.target_image_data[str(key)]
+        if str(key) in current_app.source_image_data:
+            del current_app.source_image_data[str(key)]
+        if str(key) in current_app.target_image_data:
+            del current_app.target_image_data[str(key)]
 
 
 def retrieve_materialization_data() -> dict:
@@ -402,9 +404,6 @@ def update_slice_number(data: dict) -> None:
                 instance["Original_Bbox"], current_app.vol_dim, pad_z=True
             )
 
-            print("Original Bbox: ", instance["Original_Bbox"])
-            print("Adjusted Bbox: ", instance["Adjusted_Bbox"])
-
             # Update the fields Adjusted_Bbox, Padding, crop_size_z, and Original_Bbox
             condition = (current_app.df_metadata["Page"] == instance["Page"]) & (
                 current_app.df_metadata["Image_Index"] == instance["Image_Index"]
@@ -510,12 +509,13 @@ def save_slices_in_memory(
     slice_axis = coord_order.index("z")
 
     for s in range(cropped_img_pad.shape[slice_axis]):
-        image_index = str(item["Image_Index"])
-        img_z_index = str(item["Adjusted_Bbox"][slice_axis * 2] + s)
 
         # Define slicing
         slicing_img = [s if idx == slice_axis else slice(None) for idx in range(3)]
         slicing_seg = [s if idx == slice_axis else slice(None) for idx in range(4)]
+
+        image_index = str(item["Image_Index"])
+        img_z_index = str(item["Adjusted_Bbox"][slice_axis * 2] + s)
 
         # Process EM image
         current_app.source_image_data[image_index][img_z_index] = img_to_png_bytes(
@@ -649,10 +649,6 @@ def process_instance(item: dict) -> None:
         layout=coord_order,
     )
 
-    print("Saving slices in memory...")
-    print("Item: ", item)
-    print("Shape of cropped_img_pad: ", cropped_img_pad.shape)
-    print("Shape of vis_label: ", vis_label.shape)
     save_slices_in_memory(
         cropped_img_pad,
         vis_label,

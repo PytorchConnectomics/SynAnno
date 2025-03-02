@@ -65,7 +65,7 @@ def annotation(page: int = 0) -> Template:
         neuronReady=current_app.neuron_ready,
         neuronSection=current_app.sections,
         neuronPath=current_app.pruned_navis_swc_file_name,
-        synapseCloudPath=current_app.snapped_points_json_file_name,
+        synapsePointCloud=current_app.snapped_point_cloud,
     )
 
 

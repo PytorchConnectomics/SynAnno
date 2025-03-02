@@ -494,8 +494,7 @@ def save_pre_post_coordinates() -> tuple:
         & (current_app.df_metadata["Page"] == page),
         "Middle_Slice",
     ].values[0]
-    print(list(current_app.target_image_data.keys()))
-    print(list(current_app.target_image_data[str(data_id)].keys()))
+
     update_segmentation_color(data_id, middle_slice, (128, 128, 128, 0.5))
     return json.dumps({"success": True}), 200, {"ContentType": "application/json"}
 

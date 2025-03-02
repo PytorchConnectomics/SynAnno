@@ -19,7 +19,6 @@ from synanno.backend.neuron_processing.load_synapse_point_cloud import (
     filter_synapse_data,
     get_neuron_coordinates,
     neuron_section_lookup,
-    save_point_clouds,
     snap_points_to_neuron,
 )
 from synanno.backend.neuron_processing.partition_neuron import (
@@ -315,13 +314,10 @@ def handle_neuron_view(neuropil_url: str):
     indices_of_near_neuron = snap_points_to_neuron(point_cloud, neuron_tree)
 
     snapped_point_coordinates = neuron_coords[indices_of_near_neuron]
-    _, snapped_points_json_file_name = save_point_clouds(
-        current_app.selected_neuron_id, point_cloud, snapped_point_coordinates, swc_path
-    )
 
     return (
         os.path.basename(pruned_navis_swc_file_path),
-        snapped_points_json_file_name,
+        [int(x) for x in snapped_point_coordinates.flatten()],
         sorted_sections,
     )
 
@@ -417,7 +413,7 @@ def upload_file():
 
         (
             current_app.pruned_navis_swc_file_name,
-            current_app.snapped_points_json_file_name,
+            current_app.snapped_point_cloud,
             current_app.sections,
         ) = handle_neuron_view(neuropil_url)
         current_app.neuron_ready = "true"
@@ -448,7 +444,7 @@ def upload_file():
         neuronReady=current_app.neuron_ready,
         neuronSection=current_app.sections,
         neuronPath=current_app.pruned_navis_swc_file_name,
-        synapseCloudPath=current_app.snapped_points_json_file_name,
+        synapsePointCloud=current_app.snapped_point_cloud,
     )
 
 
@@ -490,7 +486,7 @@ def set_data(task: str = "annotate"):
             neuronReady=current_app.neuron_ready,
             neuronSection=current_app.sections,
             neuronPath=current_app.pruned_navis_swc_file_name,
-            synapseCloudPath=current_app.snapped_points_json_file_name,
+            synapsePointCloud=current_app.snapped_point_cloud,
         )
 
 
@@ -663,7 +659,6 @@ def load_materialization():
         logger.info("Loading the materialization table...")
         path = materialization_path.replace("file://", "")
         current_app.synapse_data = pd.read_csv(path)
-        logger.info(current_app.synapse_data.head())
 
         logger.info("Materialization table loaded successfully!")
         return jsonify({"status": "success"}), 200

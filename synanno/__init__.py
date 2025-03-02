@@ -88,7 +88,6 @@ def initialize_global_variables(app):
     app.sections = None
     app.neuron_ready = None
     app.pruned_navis_swc_file_name = None
-    app.snapped_points_json_file_name = None
     # The auto segmentation view needs a set number of slices per instance (depth)
     # see process_instances.py::load_missing_slices for more details
     app.crop_size_z_draw = 16
@@ -164,7 +163,7 @@ def initialize_global_variables(app):
     app.source_image_data = defaultdict(dict)
     app.target_image_data = defaultdict(dict)
 
-    app.point_cloud_data = []
+    app.snapped_point_cloud = []
 
     app.pre_id_color_main = (0, 255, 0)
     app.pre_id_color_sub = (200, 255, 200)

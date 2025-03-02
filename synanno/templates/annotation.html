@@ -119,7 +119,7 @@
 
 <!-- Load the SharkViewer -->
 <script type="text/javascript" src="{{ url_for('static', filename='SharkViewer/three.min.js') }}"></script>
-<script type="module" src="{{ url_for('static', filename='viewer.js') }}" data-neuron-ready="{{ neuronReady }}" data-neuron-section="{{ neuronSection }}" data-neuron-path="{{ url_for('static', filename= 'swc/' ~ neuronPath)}}" data-synapse-cloud-path="{{ url_for('static', filename='swc/' ~ synapseCloudPath)}}"></script>
+<script type="module" src="{{ url_for('static', filename='viewer.js') }}" data-neuron-ready="{{ neuronReady }}" data-neuron-section="{{ neuronSection }}" data-neuron-path="{{ url_for('static', filename= 'swc/' ~ neuronPath)}}" data-synapse-point-cloud="{{ synapsePointCloud }}"></script>
 
 <script type="module" src="{{ url_for('static', filename='minimap.js') }}" data-neuron-ready="{{ neuronReady }}"></script>
 {% endblock %}

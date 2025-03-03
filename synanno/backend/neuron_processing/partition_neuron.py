@@ -9,21 +9,20 @@ logger = logging.getLogger(__name__)
 
 
 def compute_sections(
-    pruned_swc_file: str, merge: bool = True
+    navis_neuron: navis.TreeNeuron, merge: bool = True
 ) -> tuple[list[list[int]], navis.TreeNeuron, dict[int, int]]:
     """Compute the sections of the pruned neuron.
 
     Args:
-        pruned_swc_file: The path to the pruned SWC file.
+        navis_neuron: The pruned neuron.
         merge: Whether to merge the segments.
 
     Returns:
         The merged segments of the neuron, the tree traversal order,
         the pruned neuron, and the node traversal lookup.
     """
-    neuron_pruned = navis.read_swc(pruned_swc_file, write_meta=True)
-    undirected_graph = convert_to_undirected_graph(neuron_pruned)
-    center_node = find_center_node(neuron_pruned, undirected_graph)
+    undirected_graph = convert_to_undirected_graph(navis_neuron)
+    center_node = find_center_node(navis_neuron, undirected_graph)
     tree_traversal, node_traversal_lookup = generate_tree_traversal(
         undirected_graph, center_node
     )
@@ -31,7 +30,7 @@ def compute_sections(
         tree_traversal, undirected_graph, merge, node_traversal_lookup
     )
     validate_segments(segments, undirected_graph)
-    return segments, neuron_pruned, node_traversal_lookup
+    return segments, navis_neuron, node_traversal_lookup
 
 
 def convert_to_undirected_graph(neuron_pruned: navis.TreeNeuron) -> nx.Graph:

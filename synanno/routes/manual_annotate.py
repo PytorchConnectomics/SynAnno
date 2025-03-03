@@ -60,7 +60,6 @@ def resize_image(image: Image, crop_axes: tuple) -> Image:
 
 
 def save_image_data(
-    data: dict,
     img_index: str,
     canvas_type: str,
     image_byte: bytes,
@@ -105,10 +104,11 @@ def save_canvas() -> dict:
     data = get_instance_data(page, index)
     img_index = str(data["Image_Index"])
 
-    save_image_data(data, img_index, canvas_type, image_byte, viewed_instance_slice)
+    save_image_data(img_index, canvas_type, image_byte, viewed_instance_slice)
 
     data = json.dumps(data)
     final_json = jsonify(data=data)
+
     return final_json
 
 

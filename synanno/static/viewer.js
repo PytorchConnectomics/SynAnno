@@ -6,7 +6,6 @@ window.onload = async () => {
 
     const neuronReady = $("script[src*='viewer.js']").data("neuron-ready") === true;
     const initialLoad = $("script[src*='viewer.js']").data("initial-load") === true;
-    const neuronPath = $("script[src*='viewer.js']").data("neuron-path");
     const sectionArray = $("script[src*='viewer.js']").data("neuron-section");
     const synapsePointCloud = $("script[src*='viewer.js']").data("synapse-point-cloud");
 
@@ -23,12 +22,8 @@ window.onload = async () => {
         try {
             await initializeViewer($sharkContainerMinimap[0], maxVolumeSize, sectionArray);
 
-            if (neuronPath) {
-                const swcTxt = await loadSwcFile(neuronPath);
-                processSwcFile(swcTxt, sectionArray);
-            } else {
-                console.error("No neuron path provided.");
-            }
+            const swcTxt = await loadSwcFile();
+            processSwcFile(swcTxt, sectionArray);
 
             if (synapsePointCloud) {
                 updateLoadingBar(parseInt(synapsePointCloud.length / 3));
@@ -79,11 +74,17 @@ window.setupWindowResizeHandler = (sharkContainerMinimap) => {
     }, 100);
 };
 
-async function loadSwcFile(swcPath) {
+async function loadSwcFile() {
     try {
-        const response = await fetch(swcPath);
-        const swcTxt = await response.text();
-        return swcTxt;
+        const response = await fetch(`/get_swc`);
+
+        if (!response.ok) {
+            console.error("Failed to fetch SWC file.");
+            return;
+        }
+
+        const swcText = await response.text();
+        return swcText;
     } catch (error) {
         console.error("Error fetching SWC file:", error);
         alert("An error occurred while fetching the SWC file.");

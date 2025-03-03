@@ -47,11 +47,7 @@ def configure_app(app):
 
     # Application-specific configurations
     app.config.update(
-        PACKAGE_NAME="synanno/",
-        STATIC_FOLDER="static/",
-        UPLOAD_FOLDER="files/",
         CLOUD_VOLUME_BUCKETS=["gs:", "s3:", "file:"],
-        JSON="synAnno.json",
         IP=os.getenv("APP_IP", "0.0.0.0"),
         PORT=int(os.getenv("APP_PORT", 80)),
         NG_IP="localhost",
@@ -163,7 +159,8 @@ def initialize_global_variables(app):
     app.source_image_data = defaultdict(dict)
     app.target_image_data = defaultdict(dict)
 
-    app.snapped_point_cloud = []
+    app.snapped_point_cloud = None
+    app.neuron_skeleton_bytes = None
 
     app.pre_id_color_main = (0, 255, 0)
     app.pre_id_color_sub = (200, 255, 200)

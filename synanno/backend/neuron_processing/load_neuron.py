@@ -1,5 +1,6 @@
+import io
 import logging
-import os
+import tempfile
 
 import navis
 from cloudvolume import CloudVolume
@@ -8,25 +9,24 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def load_neuron_skeleton(
-    c3_bucket: str, neuron_id: int, swc_path: str, overwrite: bool = False
-) -> str:
-    """Load the skeleton of a neuron from the c3 bucket and save it as an SWC file.
+def load_neuron_skeleton(c3_bucket: str, neuron_id: int) -> navis.TreeNeuron:
+    """Fetch, process, prune neuron from CloudVolume without writing to permanent disk.
 
     Args:
         c3_bucket: The c3 bucket to load the neuron from.
-        neuron_id: The id of the neuron to load.
-        swc_path: The path to save the SWC file.
-        overwrite: Whether to overwrite the existing SWC file.
+        neuron_id: The ID of the neuron to load.
 
     Returns:
-        The path to the saved SWC file.
+        The pruned and reindexed neuron as a navis.TreeNeuron.
     """
-    os.makedirs(swc_path, exist_ok=True)
     cv = CloudVolume(c3_bucket, mip=0, cache=False, use_https=True)
     skeleton = fetch_skeleton(cv, neuron_id)
-    swc_file = save_skeleton(skeleton, swc_path, neuron_id, overwrite)
-    return swc_file
+    swc_string = skeleton.to_swc()
+    neuron = read_neuron_from_swc_string(swc_string)
+    neuron = heal_neuron(neuron)
+    neuron_pruned = prune_neuron(neuron)
+    neuron_reindexed = reindex_neuron(neuron_pruned)
+    return neuron_reindexed
 
 
 def fetch_skeleton(cv: CloudVolume, neuron_id: int) -> navis.TreeNeuron:
@@ -45,56 +45,36 @@ def fetch_skeleton(cv: CloudVolume, neuron_id: int) -> navis.TreeNeuron:
         raise ValueError(
             f"Neuron {neuron_id} not found in c3 bucket {cv.cloudpath}"
         ) from e
+    if not skeletons or len(skeletons[0].vertices) == 0:
+        raise ValueError(f"Neuron {neuron_id} is empty or not found in {cv.cloudpath}.")
     return skeletons[0]
 
 
-def save_skeleton(
-    skeleton: navis.TreeNeuron, swc_path: str, neuron_id: int, overwrite: bool
-) -> str:
-    """Save the neuron skeleton to an SWC file.
+def read_neuron_from_swc_string(swc_string: str) -> navis.TreeNeuron:
+    """Read a neuron from an SWC string.
 
     Args:
-        skeleton: The neuron skeleton.
-        swc_path: The path to save the SWC file.
-        neuron_id: The id of the neuron.
-        overwrite: Whether to overwrite the existing SWC file.
+        swc_string: The SWC string.
 
     Returns:
-        The path to the saved SWC file.
+        The neuron as a navis.TreeNeuron.
     """
-    swc_file = os.path.join(swc_path, f"{neuron_id}.swc")
-    if overwrite and os.path.exists(swc_file):
-        os.remove(swc_file)
-    with open(swc_file, "w") as f:
-        f.write(skeleton.to_swc())
-        logger.info(f"Skeleton saved as SWC: {swc_file}")
-    return swc_file
+    with tempfile.NamedTemporaryFile(suffix=".swc", delete=True) as temp_swc:
+        temp_swc.write(swc_string.encode("utf-8"))
+        temp_swc.flush()
+        neuron = navis.read_swc(temp_swc.name)
+    return neuron
 
 
-def navis_neuron(swc_file: str) -> tuple[navis.TreeNeuron, str]:
-    """Load the skeleton, prune it, and save the pruned neuron as navis TreeNeuron.
+def heal_neuron(neuron: navis.TreeNeuron) -> navis.TreeNeuron:
+    """Heal the neuron skeleton.
 
     Args:
-        swc_file: The path to the SWC file.
-
-    Returns:
-        The pruned and healed neuron and the path to the SWC file.
-    """
-    neuron = load_and_heal_neuron(swc_file)
-    pruned_swc_file = prune_and_save_neuron(neuron, swc_file)
-    return pruned_swc_file
-
-
-def load_and_heal_neuron(swc_file: str) -> navis.TreeNeuron:
-    """Load and heal the neuron skeleton.
-
-    Args:
-        swc_file: The path to the SWC file.
+        neuron: The neuron skeleton.
 
     Returns:
         The healed neuron skeleton.
     """
-    neuron = navis.read_swc(swc_file)
     if not isinstance(neuron, navis.TreeNeuron):
         raise TypeError(f"Neuron type is {type(neuron)} and not a navis.TreeNeuron")
     neuron.units = "nm"
@@ -105,19 +85,49 @@ def load_and_heal_neuron(swc_file: str) -> navis.TreeNeuron:
     return neuron
 
 
-def prune_and_save_neuron(neuron: navis.TreeNeuron, swc_file: str) -> str:
-    """Prune the neuron and save it to an SWC file.
+def prune_neuron(neuron: navis.TreeNeuron) -> navis.TreeNeuron:
+    """Prune the neuron.
 
     Args:
         neuron: The neuron skeleton.
-        swc_file: The path to the SWC file.
 
     Returns:
-        The path to the pruned SWC file.
+        The pruned neuron.
     """
     neuron_pruned = navis.prune_twigs(
         neuron, size="4096 nm", inplace=False, recursive=True
     )
-    pruned_swc_file = swc_file.replace(".swc", "_pruned.swc")
-    neuron_pruned.to_swc(pruned_swc_file, write_meta=True)
-    return pruned_swc_file
+    if neuron_pruned.n_nodes == 0:
+        raise ValueError("Pruning removed all nodes! Check pruning logic.")
+    return neuron_pruned
+
+
+def reindex_neuron(neuron: navis.TreeNeuron) -> navis.TreeNeuron:
+    """Reindex the neuron by saving and reloading it.
+
+    Args:
+        neuron: The neuron skeleton.
+
+    Returns:
+        The reindexed neuron.
+    """
+    with tempfile.NamedTemporaryFile(suffix=".swc", delete=True) as temp_swc:
+        neuron.to_swc(temp_swc.name, write_meta=True)
+        neuron_reindexed = navis.read_swc(temp_swc.name)
+    return neuron_reindexed
+
+
+def neuron_to_bytes(neuron: navis.TreeNeuron) -> bytes:
+    """Convert a neuron object to an SWC file and return its contents as bytes.
+
+    Args:
+        neuron: The navis.TreeNeuron object.
+
+    Returns:
+        SWC data as bytes.
+    """
+    with tempfile.NamedTemporaryFile(suffix=".swc", delete=True) as temp_swc:
+        navis.write_swc(neuron, temp_swc.name)
+        with open(temp_swc.name, "r", encoding="utf-8") as f:
+            swc_data = f.read()
+    return io.BytesIO(swc_data.encode("utf-8"))

@@ -1,7 +1,7 @@
 import io
 import logging
 
-from flask import Blueprint, current_app, request, send_file, send_from_directory
+from flask import Blueprint, Response, current_app, request, send_file
 from flask_cors import cross_origin
 
 logging.basicConfig(level=logging.INFO)
@@ -10,9 +10,15 @@ logger = logging.getLogger(__name__)
 blueprint = Blueprint("file_access", __name__)
 
 
-@blueprint.route("/static/<path:filename>")
-def static_files(filename):
-    return send_from_directory("static", filename)
+@blueprint.route("/get_swc", methods=["GET"])
+def get_swc():
+    """Serve the SWC file stored in memory."""
+    if not hasattr(current_app, "neuron_skeleton"):
+        return "SWC file not available", 404  # Handle missing data
+
+    # Read SWC from in-memory bytes and send as response
+    swc_data = current_app.neuron_skeleton.getvalue().decode("utf-8")
+    return Response(swc_data, mimetype="text/plain")
 
 
 @blueprint.route("/get_source_image/<image_index>/<slice_id>", methods=["GET", "HEAD"])

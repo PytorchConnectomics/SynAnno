@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 
 import numpy as np
 import pandas as pd
@@ -11,7 +10,7 @@ from werkzeug.datastructures import MultiDict
 import synanno.backend.ng_util as ng_util
 from synanno.backend.neuron_processing.load_neuron import (
     load_neuron_skeleton,
-    navis_neuron,
+    neuron_to_bytes,
 )
 from synanno.backend.neuron_processing.load_synapse_point_cloud import (
     convert_to_point_cloud,
@@ -65,7 +64,6 @@ def open_data(task: str):
             modenext="d-none",
             modereset="inline",
             mode=current_app.draw_or_annotate,
-            json_name=current_app.config["JSON"],
             view_style="synapse",
             neuronReady="false",
         )
@@ -250,16 +248,7 @@ def handle_neuron_view(neuropil_url: str):
 
     Args:
         neuropil_url: URL to the neuropil cloud volume.
-
-    Returns:
-        Tuple containing the pruned navis SWC file path, snapped points JSON file name,
-        and sections.
     """
-    static_folder = os.path.join(
-        current_app.root_path, current_app.config["STATIC_FOLDER"]
-    )
-    swc_path = os.path.join(static_folder, "swc")
-
     current_app.synapse_data["materialization_index"] = (
         current_app.synapse_data.index.to_series()
     )
@@ -268,18 +257,19 @@ def handle_neuron_view(neuropil_url: str):
     )
     current_app.synapse_data.reset_index(drop=True, inplace=True)
 
-    neuron_skeleton_swc_path = load_neuron_skeleton(
-        neuropil_url, current_app.selected_neuron_id, swc_path
-    )
+    pruned_neuron = load_neuron_skeleton(neuropil_url, current_app.selected_neuron_id)
 
-    pruned_navis_swc_file_path = navis_neuron(neuron_skeleton_swc_path)
-    sections, neuron_pruned, node_traversal_lookup = compute_sections(
-        pruned_navis_swc_file_path, merge=True
+    # pruned_neuron = navis_neuron(neuron_skeleton_swc_path)
+
+    current_app.neuron_skeleton = neuron_to_bytes(pruned_neuron)
+
+    sections, pruned_neuron, node_traversal_lookup = compute_sections(
+        pruned_neuron, merge=True
     )
 
     sorted_sections = sort_sections_by_traversal_order(sections, node_traversal_lookup)
 
-    neuron_coords = get_neuron_coordinates(neuron_pruned)
+    neuron_coords = get_neuron_coordinates(pruned_neuron)
     neuron_tree = create_neuron_tree(neuron_coords)
     neuron_sec_lookup = neuron_section_lookup(sorted_sections, node_traversal_lookup)
 
@@ -315,11 +305,11 @@ def handle_neuron_view(neuropil_url: str):
 
     snapped_point_coordinates = neuron_coords[indices_of_near_neuron]
 
-    return (
-        os.path.basename(pruned_navis_swc_file_path),
-        [int(x) for x in snapped_point_coordinates.flatten()],
-        sorted_sections,
-    )
+    current_app.snapped_point_cloud = [
+        int(x) for x in snapped_point_coordinates.flatten()
+    ]
+
+    current_app.sections = sorted_sections
 
 
 def handle_synapse_view():
@@ -411,11 +401,7 @@ def upload_file():
                 neuronReady="false",
             )
 
-        (
-            current_app.pruned_navis_swc_file_name,
-            current_app.snapped_point_cloud,
-            current_app.sections,
-        ) = handle_neuron_view(neuropil_url)
+        handle_neuron_view(neuropil_url)
         current_app.neuron_ready = "true"
     elif current_app.view_style == "synapse":
         handle_synapse_view()
@@ -443,7 +429,6 @@ def upload_file():
         mode=current_app.draw_or_annotate,
         neuronReady=current_app.neuron_ready,
         neuronSection=current_app.sections,
-        neuronPath=current_app.pruned_navis_swc_file_name,
         synapsePointCloud=current_app.snapped_point_cloud,
     )
 
@@ -485,7 +470,6 @@ def set_data(task: str = "annotate"):
             neuron_id=current_app.selected_neuron_id,
             neuronReady=current_app.neuron_ready,
             neuronSection=current_app.sections,
-            neuronPath=current_app.pruned_navis_swc_file_name,
             synapsePointCloud=current_app.snapped_point_cloud,
         )
 

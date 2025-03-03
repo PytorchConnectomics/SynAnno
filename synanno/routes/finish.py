@@ -125,7 +125,7 @@ def create_zip_with_masks() -> io.BytesIO:
 
 def get_metadata_for_image_index(img_index: str) -> dict:
     """Retrieve metadata for a given image index."""
-    int(img_index)
+    img_index_int = int(img_index)  # noqa: F841
     return current_app.df_metadata.query("Image_Index == @img_index_int").to_dict(
         "records"
     )[0]

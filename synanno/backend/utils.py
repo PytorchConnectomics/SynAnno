@@ -1,10 +1,11 @@
 import concurrent.futures
+import io
 import json
 import logging
-import os
 from typing import Callable, Dict, Tuple
 
 import numpy as np
+from PIL import Image
 
 logging.basicConfig(level="INFO")
 logger = logging.getLogger(__name__)
@@ -68,16 +69,6 @@ def adjust_datatype(data: np.ndarray) -> Tuple[np.ndarray, str]:
         return data.astype(np.uint32), "uint32"
     else:
         return data.astype(np.uint64), "uint64"
-
-
-def mkdir(folder_name: str) -> None:
-    """Create a folder if it does not exist.
-
-    Args:
-        folder_name: Name of the folder to be created.
-    """
-    if not os.path.exists(folder_name):
-        os.mkdir(folder_name)
 
 
 def get_sub_dict_within_range(dictionary: Dict, start_key: int, end_key: int) -> Dict:
@@ -192,3 +183,22 @@ def draw_cylinder(
             image[tuple(slice_list)] = color_main
 
     return image
+
+
+def img_to_png_bytes(img: np.ndarray) -> bytes:
+    """Convert a NumPy array to PNG byte data."""
+
+    # Convert NumPy array to PIL Image if not already
+    if not isinstance(img, Image.Image):
+        img = Image.fromarray(img)
+    img_io = io.BytesIO()
+    img.save(img_io, format="PNG")  # Save as PNG into memory
+    img_io.seek(0)  # Reset stream position
+    return img_io.getvalue()  # Return byte data
+
+
+def png_bytes_to_pil_img(png_bytes: bytes) -> np.ndarray:
+    """Convert PNG byte data back to a NumPy array."""
+    img_io = io.BytesIO(png_bytes)  # Convert bytes to BytesIO object
+    img = Image.open(img_io)  # Open as PIL Image
+    return img  # Convert back to NumPy array

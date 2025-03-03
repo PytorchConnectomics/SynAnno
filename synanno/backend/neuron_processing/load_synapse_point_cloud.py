@@ -1,6 +1,4 @@
-import json
 import logging
-import os
 
 import numpy as np
 import pandas as pd
@@ -97,37 +95,6 @@ def snap_points_to_neuron(point_cloud: np.ndarray, neuron_tree: KDTree) -> np.nd
         point_cloud
     ), f"Length mismatch: {len(indices)} != {len(point_cloud)}"
     return indices
-
-
-def save_point_clouds(
-    neuron_id: int, point_cloud: np.ndarray, snapped_points: np.ndarray, swc_path: str
-) -> None:
-    """
-    Save the point cloud and snapped points to JSON files.
-
-    Args:
-        neuron_id: ID of the neuron.
-        point_cloud: Array of point cloud coordinates.
-        snapped_points: Array of snapped points.
-        swc_path: Path to save the output files.
-
-    Returns:
-        Tuple of the file names for the saved JSON files.
-    """
-    logger.info(f"Length of point cloud: {len(point_cloud)}")
-    logger.info(f"Length of snapped points: {len(snapped_points)}")
-    point_cloud_json = json.dumps([int(x) for x in point_cloud.flatten()])
-    snapped_points_json = json.dumps([int(x) for x in snapped_points.flatten()])
-
-    point_cloud_json_file_name = f"synapse_point_cloud_{neuron_id}.json"
-    snapped_points_json_file_name = f"snapped_synapse_point_cloud_{neuron_id}.json"
-
-    with open(os.path.join(swc_path, point_cloud_json_file_name), "w") as f:
-        f.write(point_cloud_json)
-    with open(os.path.join(swc_path, snapped_points_json_file_name), "w") as f:
-        f.write(snapped_points_json)
-
-    return point_cloud_json_file_name, snapped_points_json_file_name
 
 
 def neuron_section_lookup(

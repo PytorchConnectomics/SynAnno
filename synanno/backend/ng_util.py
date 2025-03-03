@@ -83,8 +83,8 @@ def get_hovered_neuron_id(app):
             return
 
         # store the neuron ID globally in the app context
-        app.selected_neuron_id = neuron_id
         logging.info(f"Selected Neuron ID: {neuron_id}")
+        app.selected_neuron_id = int(neuron_id)
 
         # add a marker at the neuron ID location
         with app.ng_viewer.txn() as layer:

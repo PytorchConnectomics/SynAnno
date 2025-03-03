@@ -1,20 +1,23 @@
 import logging
-import os
-import shutil
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Callable, Optional, Union
+from typing import Callable, Optional
 
 import numpy as np
 import pandas as pd
 from cloudvolume import Bbox, CloudVolume
-from flask import Flask, current_app, session
+from flask import Flask, current_app
 from PIL import Image
 from scipy.ndimage import center_of_mass
 from skimage.measure import label as label_cc
 from skimage.transform import resize
 
-from .utils import adjust_image_range, draw_cylinder, get_sub_dict_within_range
+from .utils import (
+    adjust_image_range,
+    draw_cylinder,
+    get_sub_dict_within_range,
+    img_to_png_bytes,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -135,20 +138,6 @@ def calculate_crop_pad(
     return [c11, c12, c21, c22, c31, c32], pad
 
 
-def create_dir(parent_dir_path: str, dir_name: str) -> str:
-    """Create a directory if it does not exist.
-
-    Args:
-        parent_dir_path (str): the path to the parent directory.
-        dir_name (str): the name of the directory.
-
-    """
-    dir_path = os.path.join(parent_dir_path, dir_name)
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path)
-    return dir_path
-
-
 def syn2rgb(label: np.ndarray) -> np.ndarray:
     """Convert the binary mask of the synapse to RGB format.
 
@@ -166,16 +155,7 @@ def syn2rgb(label: np.ndarray) -> np.ndarray:
 
 
 def free_page() -> None:
-    """Remove the current and next page segmentation/images from the EM/GT folder."""
-
-    # create the handles to the directories
-    base_folder = os.path.join(
-        os.path.join(current_app.root_path, current_app.config["STATIC_FOLDER"]),
-        "Images",
-    )
-    syn_dir, img_dir = os.path.join(base_folder, "Syn"), os.path.join(
-        base_folder, "Img"
-    )
+    """Remove the current and next page segmentation/images from the dict."""
 
     # retrieve the image index for all instances that are not labeled as "Correct"
     with current_app.df_metadata_lock:
@@ -184,19 +164,10 @@ def free_page() -> None:
         ].values.tolist()
 
     for key in key_list:
-        syn_dir_idx = os.path.join(syn_dir, str(key))
-        img_dir_idx = os.path.join(img_dir, str(key))
-
-        if os.path.exists(syn_dir_idx):
-            try:
-                shutil.rmtree(syn_dir_idx)
-            except Exception as e:
-                logger.error("Failed to delete %s. Reason: %s" % (syn_dir_idx, e))
-        if os.path.exists(img_dir_idx):
-            try:
-                shutil.rmtree(img_dir_idx)
-            except Exception as e:
-                logger.error("Failed to delete %s. Reason: %s" % (img_dir_idx, e))
+        if str(key) in current_app.source_image_data:
+            del current_app.source_image_data[str(key)]
+        if str(key) in current_app.target_image_data:
+            del current_app.target_image_data[str(key)]
 
 
 def retrieve_materialization_data() -> dict:
@@ -257,22 +228,11 @@ def retrieve_instance_metadata(page: int = 0, mode: str = "annotate"):
     # retrieve the order of the coordinates (xyz, xzy, yxz, yzx, zxy, zyx)
     coordinate_order = list(current_app.coordinate_order.keys())
 
-    # Safely create directories
-    try:
-        idx_dir = create_dir(
-            os.path.join(current_app.root_path, current_app.config["STATIC_FOLDER"]),
-            "Images",
-        )
-        syn_dir, img_dir = create_dir(idx_dir, "Syn"), create_dir(idx_dir, "Img")
-    except OSError as e:
-        logger.error("Failed to create directories: %s", e)
-        raise
-
     with current_app.df_metadata_lock:
         page_empty = current_app.df_metadata.query("Page == @page").empty
 
     crop_size_x = (
-        session["crop_size_z"] if mode == "annotate" else current_app.crop_size_z_draw
+        current_app.crop_size_z if mode == "annotate" else current_app.crop_size_z_draw
     )
 
     if page_empty and not (
@@ -280,15 +240,12 @@ def retrieve_instance_metadata(page: int = 0, mode: str = "annotate"):
     ):
         bbox_dict = get_sub_dict_within_range(
             materialization,
-            (page * session["per_page"]),
-            session["per_page"] + (page * session["per_page"]) - 1,
+            (page * current_app.per_page),
+            current_app.per_page + (page * current_app.per_page) - 1,
         )
 
         instance_list = []
         for idx in bbox_dict.keys():
-            syn_dir_instance, img_dir_instance = create_dir(
-                syn_dir, str(idx)
-            ), create_dir(img_dir, str(idx))
 
             item = {
                 "Page": int(page),
@@ -308,8 +265,6 @@ def retrieve_instance_metadata(page: int = 0, mode: str = "annotate"):
                     if "tree_traversal_index" in bbox_dict[idx]
                     else -1
                 ),
-                "GT": "/".join(syn_dir_instance.strip(".\\").split("/")[-3:]),
-                "EM": "/".join(img_dir_instance.strip(".\\").split("/")[-3:]),
                 "Label": "Correct",
                 "Annotated": "No",
                 "neuron_id": (
@@ -331,8 +286,8 @@ def retrieve_instance_metadata(page: int = 0, mode: str = "annotate"):
                 "post_pt_x": int(bbox_dict[idx]["post_pt_x"]),
                 "post_pt_y": int(bbox_dict[idx]["post_pt_y"]),
                 "post_pt_z": int(bbox_dict[idx]["post_pt_z"]),
-                "crop_size_x": session["crop_size_x"],
-                "crop_size_y": session["crop_size_y"],
+                "crop_size_x": current_app.crop_size_x,
+                "crop_size_y": current_app.crop_size_y,
                 # The auto segmentation view needs a set number of slices per instance
                 # (depth) see process_instances.py::load_missing_slices for more details
                 "crop_size_z": crop_size_x,
@@ -343,10 +298,10 @@ def retrieve_instance_metadata(page: int = 0, mode: str = "annotate"):
                 item["cz0"] - crop_size_x // 2,
                 item["cz0"]
                 + max(1, (crop_size_x + 1) // 2),  # incase the depth was set to one.
-                item["cy0"] - session["crop_size_y"] // 2,
-                item["cy0"] + (session["crop_size_y"] + 1) // 2,
-                item["cx0"] - session["crop_size_x"] // 2,
-                item["cx0"] + (session["crop_size_x"] + 1) // 2,
+                item["cy0"] - current_app.crop_size_y // 2,
+                item["cy0"] + (current_app.crop_size_y + 1) // 2,
+                item["cx0"] - current_app.crop_size_x // 2,
+                item["cx0"] + (current_app.crop_size_x + 1) // 2,
             ]
 
             item["Original_Bbox"] = [
@@ -387,8 +342,6 @@ def retrieve_instance_metadata(page: int = 0, mode: str = "annotate"):
                 current_app._get_current_object(),
                 process_instance,
                 item,
-                create_dir(img_dir, str(item["Image_Index"])),
-                create_dir(syn_dir, str(item["Image_Index"])),
             )
             for item in page_metadata
         ]
@@ -539,46 +492,47 @@ def scale_synapse_points(
     return pre_pt_x, pre_pt_y, pre_pt_z, post_pt_x, post_pt_y, post_pt_z
 
 
-def save_slices(
+def save_slices_in_memory(
     cropped_img_pad: np.ndarray,
     vis_label: np.ndarray,
-    img_dir_instance: str,
-    syn_dir_instance: str,
     item: dict,
     coord_order: list,
 ) -> None:
-    """Save the slices of the cropped image and synapse segmentation.
+    """Convert images to bytes and save them in Flask's shared memory buffer.
 
     Args:
-        cropped_img_pad: Padded cropped image.
-        vis_label: Visual label of the synapse segmentation.
-        img_dir_instance: Path to the directory for saving the EM images.
-        syn_dir_instance: Path to the directory for saving the synapse images.
-        item: Dictionary containing the metadata of the current instance.
+        cropped_img_pad: Padded cropped image (numpy array).
+        vis_label: Visual label of the synapse segmentation (numpy array).
+        item: Dictionary containing metadata of the current instance.
         coord_order: List containing the coordinate order.
     """
     slice_axis = coord_order.index("z")
 
     for s in range(cropped_img_pad.shape[slice_axis]):
-        img_name = str(item["Adjusted_Bbox"][slice_axis * 2] + s) + ".png"
 
+        # Define slicing
         slicing_img = [s if idx == slice_axis else slice(None) for idx in range(3)]
         slicing_seg = [s if idx == slice_axis else slice(None) for idx in range(4)]
 
-        img_c = Image.fromarray(adjust_image_range(cropped_img_pad[tuple(slicing_img)]))
-        img_c.save(os.path.join(img_dir_instance, img_name), "PNG")
+        image_index = str(item["Image_Index"])
+        img_z_index = str(item["Adjusted_Bbox"][slice_axis * 2] + s)
 
-        lab_c = apply_transparency(vis_label[tuple(slicing_seg)])
-        lab_c.save(os.path.join(syn_dir_instance, img_name), "PNG")
+        # Process EM image
+        current_app.source_image_data[image_index][img_z_index] = img_to_png_bytes(
+            adjust_image_range(cropped_img_pad[tuple(slicing_img)])
+        )
+
+        # Process Synapse Segmentation image
+        current_app.target_image_data[image_index][img_z_index] = img_to_png_bytes(
+            apply_transparency(vis_label[tuple(slicing_seg)])
+        )
 
 
-def process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) -> None:
+def process_instance(item: dict) -> None:
     """Process the synapse and EM images for a single instance.
 
     Args:
         item: Dictionary containing the metadata of the current instance.
-        img_dir_instance: Path to the directory for saving the EM images.
-        syn_dir_instance: Path to the directory for saving the synapse images.
     """
     crop_bbox = item["Adjusted_Bbox"]
     img_padding = item["Padding"]
@@ -695,11 +649,9 @@ def process_instance(item: dict, img_dir_instance: str, syn_dir_instance: str) -
         layout=coord_order,
     )
 
-    save_slices(
+    save_slices_in_memory(
         cropped_img_pad,
         vis_label,
-        img_dir_instance,
-        syn_dir_instance,
         item,
         coord_order,
     )
@@ -820,43 +772,3 @@ def calculate_number_of_pages(n_images: int, per_page: int) -> int:
     if n_images % per_page != 0:
         number_pages += 1
     return number_pages
-
-
-def neuron_centric_3d_data_processing(
-    source_url: str,
-    target_url: str,
-    neuropil_url: str,
-    bucket_secret_json: str = "~/.cloudvolume/secrets",
-    mode: str = "annotate",
-) -> Union[str, tuple[np.ndarray, np.ndarray]]:
-    """
-    Retrieve the bounding boxes and indexes to render the 3D data as 2D images.
-
-    Args:
-        source_url: URL to the source cloud volume (EM).
-        target_url: URL to the target cloud volume (synapse).
-        neuropil_url: URL to the neuropil cloud volume (neuron segmentation).
-        bucket_secret_json: Path to the JSON file with bucket secrets.
-        mode: Mode of operation, either "annotate" or "draw".
-
-    Returns:
-        Union[str, tuple[np.ndarray, np.ndarray]]: Result of the processing.
-    """
-
-    load_cloud_volumes(source_url, target_url, neuropil_url, bucket_secret_json)
-
-    vol_dim = determine_volume_dimensions()
-    current_app.vol_dim = vol_dim
-    current_app.vol_dim_scaled = tuple(
-        int(a * b) for a, b in zip(vol_dim, current_app.scale.values())
-    )
-
-    session["n_images"] = len(current_app.synapse_data.index)
-    session["n_pages"] = calculate_number_of_pages(
-        session["n_images"], session["per_page"]
-    )
-
-    retrieve_instance_metadata(page=0, mode=mode)
-    return (
-        "Processing completed" if mode == "annotate" else (np.array([]), np.array([]))
-    )

@@ -1,4 +1,5 @@
 import os
+from collections import defaultdict
 from threading import Lock
 
 import pandas as pd
@@ -46,11 +47,7 @@ def configure_app(app):
 
     # Application-specific configurations
     app.config.update(
-        PACKAGE_NAME="synanno/",
-        STATIC_FOLDER="static/",
-        UPLOAD_FOLDER="files/",
         CLOUD_VOLUME_BUCKETS=["gs:", "s3:", "file:"],
-        JSON="synAnno.json",
         IP=os.getenv("APP_IP", "0.0.0.0"),
         PORT=int(os.getenv("APP_PORT", 80)),
         NG_IP="localhost",
@@ -71,6 +68,7 @@ def initialize_global_variables(app):
         "finish_categorize": None,
         "difference_categorize": None,
     }
+    app.draw_or_annotate = "annotate"
     app.ng_viewer = None
     app.ng_version = None
     app.selected_neuron_id = None
@@ -80,22 +78,24 @@ def initialize_global_variables(app):
     app.vol_dim_scaled = (0, 0, 0)
     app.source = None
     app.cz1, app.cz2, app.cz, app.cy, app.cx = 0, 0, 0, 0, 0
+    app.n_pages = 0
+    app.per_page = 24  # Number of images per page
     # Neuron skeleton info/data
     app.sections = None
     app.neuron_ready = None
     app.pruned_navis_swc_file_name = None
-    app.snapped_points_json_file_name = None
     # The auto segmentation view needs a set number of slices per instance (depth)
     # see process_instances.py::load_missing_slices for more details
     app.crop_size_z_draw = 16
+    app.crop_size_z = 1
+    app.crop_size_x = 256
+    app.crop_size_y = 256
     app.columns = [
         "Page",
         "Image_Index",
         "materialization_index",
         "section_index",
         "tree_traversal_index",
-        "GT",
-        "EM",
         "Label",
         "Annotated",
         "neuron_id",
@@ -127,8 +127,6 @@ def initialize_global_variables(app):
         "materialization_index": int,  # Example: 0
         "section_index": int,  # Example: 0
         "tree_traversal_index": int,  # Example
-        "GT": int,  # Example: 1
-        "EM": str,  # Example: 'Images/Syn/1'
         "Label": str,  # Example: 'Images/Img/1'
         "Annotated": str,  # Example: 'Incorrect'
         "neuron_id": int,  # Example: 1
@@ -155,7 +153,14 @@ def initialize_global_variables(app):
     }
 
     app.df_metadata = pd.DataFrame(columns=app.columns).astype(dtypes)
-    app.materialization = {}
+
+    app.synapse_data = {}
+
+    app.source_image_data = defaultdict(dict)
+    app.target_image_data = defaultdict(dict)
+
+    app.snapped_point_cloud = None
+    app.neuron_skeleton_bytes = None
 
     app.pre_id_color_main = (0, 255, 0)
     app.pre_id_color_sub = (200, 255, 200)

@@ -6,9 +6,8 @@ window.onload = async () => {
 
     const neuronReady = $("script[src*='viewer.js']").data("neuron-ready") === true;
     const initialLoad = $("script[src*='viewer.js']").data("initial-load") === true;
-    const neuronPath = $("script[src*='viewer.js']").data("neuron-path");
     const sectionArray = $("script[src*='viewer.js']").data("neuron-section");
-    const synapseCloudPath = $("script[src*='viewer.js']").data("synapse-cloud-path");
+    const synapsePointCloud = $("script[src*='viewer.js']").data("synapse-point-cloud");
 
     const $sharkContainerMinimap = $("#shark_container_minimap");
 
@@ -23,17 +22,12 @@ window.onload = async () => {
         try {
             await initializeViewer($sharkContainerMinimap[0], maxVolumeSize, sectionArray);
 
-            if (neuronPath) {
-                const swcTxt = await loadSwcFile(neuronPath);
-                processSwcFile(swcTxt, sectionArray);
-            } else {
-                console.error("No neuron path provided.");
-            }
+            const swcTxt = await loadSwcFile();
+            processSwcFile(swcTxt, sectionArray);
 
-            if (synapseCloudPath) {
-                const data = await loadSynapseCloud(synapseCloudPath);
-                updateLoadingBar(parseInt(data.length / 3));
-                processSynapseCloudData(data, maxVolumeSize);
+            if (synapsePointCloud) {
+                updateLoadingBar(parseInt(synapsePointCloud.length / 3));
+                processSynapseCloudData(synapsePointCloud, maxVolumeSize);
             } else {
                 console.error("No synapse cloud path provided.");
             }
@@ -62,8 +56,7 @@ async function initializeViewer(sharkContainerMinimap, maxVolumeSize, sectionArr
     await window.shark.init();
     window.shark.animate();
 
-    let collectSectionIndices = getDisplayedSectionIndices(true);
-    console.log("Displayed section indices:", collectSectionIndices);
+    const collectSectionIndices = getDisplayedSectionIndices(true);
 
     const mElement = createMetadataElement(sectionMetadata, window.sectionColors, collectSectionIndices);
     const oldElement = document.getElementById("node_key");
@@ -81,11 +74,17 @@ window.setupWindowResizeHandler = (sharkContainerMinimap) => {
     }, 100);
 };
 
-async function loadSwcFile(swcPath) {
+async function loadSwcFile() {
     try {
-        const response = await fetch(swcPath);
-        const swcTxt = await response.text();
-        return swcTxt;
+        const response = await fetch(`/get_swc`);
+
+        if (!response.ok) {
+            console.error("Failed to fetch SWC file.");
+            return;
+        }
+
+        const swcText = await response.text();
+        return swcText;
     } catch (error) {
         console.error("Error fetching SWC file:", error);
         alert("An error occurred while fetching the SWC file.");
@@ -127,16 +126,6 @@ function processSwcFile(swcTxt, sectionArray) {
     window.shark.render();
 }
 
-async function loadSynapseCloud(jsonPath) {
-    try {
-        const response = await fetch(jsonPath);
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error("Error fetching synapse cloud data:", error);
-        throw error;
-    }
-}
 
 function processSynapseCloudData(data, maxVolumeSize) {
     if (!Array.isArray(data) || data.length % 3 !== 0) {
@@ -559,15 +548,14 @@ function getDisplayedDataID() {
         }
     });
 
-    return [...new Set(collectSectionIndices)]; // Remove duplicates
+    return [...new Set(collectSectionIndices)];
 }
 
 function updateLoadingBar(synapse_count) {
-    const displayedSectionIndices = getDisplayedDataID(); // Retrieve sections from UI
+    const displayedSectionIndices = getDisplayedDataID();
 
     if (displayedSectionIndices.length === 0) return;
 
-    // Simplified progress calculation
     const lowestDisplayedSectionIdx = Math.min(...displayedSectionIndices);
     const progressPercent = (lowestDisplayedSectionIdx / synapse_count) * 100;
 

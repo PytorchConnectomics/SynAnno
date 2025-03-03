@@ -9,7 +9,7 @@ import json
 from typing import Dict
 
 # flask util functions
-from flask import Blueprint, current_app, jsonify, render_template, request, session
+from flask import Blueprint, current_app, jsonify, render_template, request
 
 # flask ajax requests
 from flask_cors import cross_origin
@@ -17,7 +17,10 @@ from flask_cors import cross_origin
 # for type hinting
 from jinja2 import Template
 
-import synanno.backend.processing as ip
+from synanno.backend.processing import free_page, retrieve_instance_metadata
+
+# io operations
+
 
 # define a Blueprint for annotation routes
 blueprint = Blueprint("annotation", __name__)
@@ -36,10 +39,10 @@ def annotation(page: int = 0) -> Template:
     """
 
     # remove the synapse and image slices for the previous and next page
-    ip.free_page()
+    free_page()
 
     # load the data for the current page
-    ip.retrieve_instance_metadata(page=page)
+    retrieve_instance_metadata(page=page)
 
     # start the timer for the annotation process
     if current_app.proofread_time["start_grid"] is None:
@@ -56,13 +59,12 @@ def annotation(page: int = 0) -> Template:
         "annotation.html",
         images=data,
         page=page,
-        n_pages=session.get("n_pages"),
+        n_pages=current_app.n_pages,
         grid_opacity=current_app.grid_opacity,
         neuron_id=current_app.selected_neuron_id,
         neuronReady=current_app.neuron_ready,
         neuronSection=current_app.sections,
-        neuronPath=current_app.pruned_navis_swc_file_name,
-        synapseCloudPath=current_app.snapped_points_json_file_name,
+        synapsePointCloud=current_app.snapped_point_cloud,
     )
 
 

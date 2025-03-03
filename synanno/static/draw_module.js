@@ -1,6 +1,4 @@
 $(document).ready(function () {
-  // path where to save the custom masks
-  const base_mask_path = "/static/Images/Mask/";
 
   $('[id^="drawButton-"]').click(async function () {
     var [page, data_id, label] = $(this)
@@ -22,68 +20,94 @@ $(document).ready(function () {
         load: load,
         data_id: data_id,
         page: page,
-        base_mask_path: base_mask_path,
       },
     });
+
+    let cz0 = 0;
+    let cy0 = 0;
+    let cx0 = 0;
 
     // set the base image to the center slice
     await req_data.done(function (data) {
       let data_json = JSON.parse(data.data);
       $("#imgDetails-EM").addClass(label.toLowerCase());
-      $("#imgDetails-EM").attr(
-        "src",
-        staticBaseUrl + data_json.EM + "/" + data_json.Middle_Slice + ".png",
-      );
+      $("#imgDetails-EM").attr("src", "/get_source_image/" + data_id + "/" + data_json.Middle_Slice);
 
-      // curve mask
-      if (data.custom_mask_path_curve === null) {
-        $("#imgDetails-EM-GT-curve").addClass("d-none");
-      } else {
-        $(new Image())
-          .attr("src", data.custom_mask_path_curve + "?" + Date.now())
-          .load(function () {
-            $("#imgDetails-EM-GT-curve").attr("src", this.src);
-          });
-        $("#imgDetails-EM-GT-curve").removeClass("d-none");
-      }
+      if (mode === "draw") {
+        $.ajax({
+          url: "/get_curve_image/" + data_id + "/" + data_json.Middle_Slice,
+          type: "HEAD",
+          success: function (data, textStatus, xhr) {
+            if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
+              $(new Image())
+                .attr("src", "/get_curve_image/" + data_id + "/" + data_json.Middle_Slice)
+                .load(function () {
+                  $("#imgDetails-EM-GT-curve").attr("src", this.src);
+                });
+              $("#imgDetails-EM-GT-curve").removeClass("d-none");
+            }
+            else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
+              console.log("Curve image does not exist");
+              $("#imgDetails-EM-GT-curve").addClass("d-none");
+            }
+          },
+        });
 
-      // pre-synaptic coordinate mask
-      if (data.custom_mask_path_pre === null) {
-        $("#imgDetails-EM-GT-circlePre").addClass("d-none");
-      } else {
-        $(new Image())
-          .attr("src", data.custom_mask_path_pre + "?" + Date.now())
-          .load(function () {
-            $("#imgDetails-EM-GT-circlePre").attr("src", this.src);
-          });
-        $("#imgDetails-EM-GT-circlePre").removeClass("d-none");
-      }
+        $.ajax({
+          url: "/get_circle_pre_image/" + data_id + "/" + data_json.Middle_Slice,
+          type: "HEAD",
+          success: function (data, textStatus, xhr) {
+            if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
+                $(new Image())
+                    .attr("src", "/get_circle_pre_image/" + data_id + "/" + data_json.Middle_Slice)
+                    .on("load", function () {
+                        $("#imgDetails-EM-GT-circlePre").attr("src", this.src);
+                    });
+                $("#imgDetails-EM-GT-circlePre").removeClass("d-none");
+            }
+            else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
+              console.log("Circle Pre image does not exist");
+              $("#imgDetails-EM-GT-circlePre").addClass("d-none");
+            }
+          },
+          error: function () {
+            $("#imgDetails-EM-GT-circlePre").addClass("d-none");
+          },
+        });
 
-      // post-synaptic coordinate mask
-      if (data.custom_mask_path_post === null) {
-        $("#imgDetails-EM-GT-circlePost").addClass("d-none");
-      } else {
-        $(new Image())
-          .attr("src", data.custom_mask_path_post + "?" + Date.now())
-          .load(function () {
-            $("#imgDetails-EM-GT-circlePost").attr("src", this.src);
-          });
-        $("#imgDetails-EM-GT-circlePost").removeClass("d-none");
+        $.ajax({
+          url: "/get_circle_post_image/" + data_id + "/" + data_json.Middle_Slice,
+          type: "HEAD",
+          success: function (data, textStatus, xhr) {
+            if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
+              $(new Image())
+                .attr("src", "/get_circle_post_image/" + data_id + "/" + data_json.Middle_Slice)
+                .load(function () {
+                  $("#imgDetails-EM-GT-circlePost").attr("src", this.src);
+                });
+              $("#imgDetails-EM-GT-circlePost").removeClass("d-none");
+              }
+              else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
+                console.log("Circle Post image does not exist");
+                $("#imgDetails-EM-GT-circlePost").addClass("d-none");
+              }
+            }
+        });
       }
 
       // update the range slider
       $("#rangeSlices").attr("min", data.range_min);
-      $("#rangeSlices").attr("max", data.range_min + data.slices_len - 1);
+      $("#rangeSlices").attr("max", data.range_min + data.number_of_slices - 1);
       $("#rangeSlices").val(data.halflen);
       $("#rangeSlices").attr("data_id", data_id);
       $("#rangeSlices").attr("page", page);
 
       $("#minSlice").html(0);
-      $("#maxSlice").html(data.slices_len - 1);
+      $("#maxSlice").html(data.number_of_slices - 1);
 
-      let cz0 = data_json.cz0;
-      let cy0 = data_json.cy0;
-      let cx0 = data_json.cx0;
+      cz0 = data_json.cz0;
+      cy0 = data_json.cy0;
+      cx0 = data_json.cx0;
 
       $("#rangeSlices").data("viewed_instance_slice", data_json.Middle_Slice);
     });
@@ -150,53 +174,87 @@ $(document).ready(function () {
         load: load,
         data_id: data_id,
         page: page,
-        base_mask_path: base_mask_path,
         viewed_instance_slice: viewed_instance_slice,
       },
     });
 
     // update the slice and GT that is depicted
     req.done(function (data) {
-      let data_json = JSON.parse(data.data);
-      $("#imgDetails-EM").attr(
-        "src",
-        staticBaseUrl + data_json.EM + "/" + viewed_instance_slice + ".png",
-      );
+      $("#imgDetails-EM").attr("src", "/get_source_image/" + data_id + "/" + viewed_instance_slice);
 
-      // curve mask
-      if (data.custom_mask_path_curve === null) {
-        $("#imgDetails-EM-GT-curve").addClass("d-none");
-      } else {
-        $(new Image())
-          .attr("src", data.custom_mask_path_curve + "?" + Date.now())
-          .load(function () {
-            $("#imgDetails-EM-GT-curve").attr("src", this.src);
-          });
-        $("#imgDetails-EM-GT-curve").removeClass("d-none");
-      }
+      if (mode === "draw") {
+        $.ajax({
+          url: "/get_auto_curve_image/" + data_id + "/" + viewed_instance_slice,
+          type: 'HEAD',
+          success: function (data, textStatus, xhr) {
+            if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
+              $(new Image())
+              .attr("src", "/get_auto_curve_image/" + data_id + "/" + viewed_instance_slice)
+              .load(function () {
+                $("#imgDetails-EM-GT-curve").attr("src", this.src);
+              });
+              $("#imgDetails-EM-GT-curve").removeClass('d-none');
+            }
+            else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
+              $.ajax({
+                url: "/get_curve_image/" + data_id + "/" + viewed_instance_slice,
+                type: 'HEAD',
+                success: function (data, textStatus, xhr) {
+                  if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
+                    $(new Image())
+                    .attr("src", "/get_curve_image/" + data_id + "/" + viewed_instance_slice)
+                    .load(function () {
+                      $("#imgDetails-EM-GT-curve").attr("src", this.src);
+                    });
+                    $("#imgDetails-EM-GT-curve").removeClass('d-none');
+                  }
+                  else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
+                    console.log("Curve image does not exist");
+                    $("#imgDetails-EM-GT-curve").addClass('d-none');
+                  }
+                }
+              });
+            }
+          }
+        });
 
-      // pre-synaptic coordinate mask
-      if (data.custom_mask_path_pre === null) {
-        $("#imgDetails-EM-GT-circlePre").addClass("d-none");
-      } else {
-        $(new Image())
-          .attr("src", data.custom_mask_path_pre + "?" + Date.now())
-          .load(function () {
-            $("#imgDetails-EM-GT-circlePre").attr("src", this.src);
-          });
-        $("#imgDetails-EM-GT-circlePre").removeClass("d-none");
-      }
+        $.ajax({
+          url: "/get_circle_pre_image/" + data_id + "/" + viewed_instance_slice,
+          type: "HEAD",
+          success: function (data, textStatus, xhr) {
+            if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
+              $(new Image())
+              .attr("src", "/get_circle_pre_image/" + data_id + "/" + viewed_instance_slice)
+              .load(function () {
+                $("#imgDetails-EM-GT-circlePre").attr("src", this.src);
+              });
+            $("#imgDetails-EM-GT-circlePre").removeClass("d-none");
+            }
+            else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
+              console.log("Circle Pre image does not exist");
+              $("#imgDetails-EM-GT-circlePre").addClass("d-none");
+            }
+          },
+        });
 
-      // post-synaptic coordinate mask
-      if (data.custom_mask_path_post === null) {
-        $("#imgDetails-EM-GT-circlePost").addClass("d-none");
-      } else {
-        $(new Image())
-          .attr("src", data.custom_mask_path_post + "?" + Date.now())
-          .load(function () {
-            $("#imgDetails-EM-GT-circlePost").attr("src", this.src);
-          });
-        $("#imgDetails-EM-GT-circlePost").removeClass("d-none");
+        $.ajax({
+          url: "/get_circle_post_image/" + data_id + "/" + viewed_instance_slice,
+          type: "HEAD",
+          success: function (data, textStatus, xhr) {
+            if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
+              $(new Image())
+              .attr("src", "/get_circle_post_image/" + data_id + "/" + viewed_instance_slice)
+              .load(function () {
+                $("#imgDetails-EM-GT-circlePost").attr("src", this.src);
+              });
+            $("#imgDetails-EM-GT-circlePost").removeClass("d-none");
+            }
+            else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
+              console.log("Circle Post image does not exist");
+              $("#imgDetails-EM-GT-circlePost").addClass("d-none");
+            }
+          },
+        });
       }
     });
   });

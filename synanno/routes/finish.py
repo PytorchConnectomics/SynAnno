@@ -1,25 +1,26 @@
-# flask util functions
 import datetime
+import io
 import json
 import logging
+import zipfile
 
-# manage paths and files
-import os
-
-# to zip folder
-import shutil
-import time
-
-from flask import Blueprint, current_app, flash, render_template, send_file, session
-
-# for type hinting
+from flask import (
+    Blueprint,
+    current_app,
+    flash,
+    render_template,
+    request,
+    send_file,
+    session,
+)
 from jinja2 import Template
+
+from synanno import initialize_global_variables
+from synanno.backend.utils import img_to_png_bytes, png_bytes_to_pil_img
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
-# define a Blueprint for finish routes
 blueprint = Blueprint("finish", __name__)
 
 
@@ -30,10 +31,6 @@ def export_annotate() -> Template:
     Return:
         Export-annotate view
     """
-
-    # disable the 'Start New Process' button as long as the user
-    # did not download the masks or JSON the user can always interrupt a
-    # process using the home button, but we want to prevent data loss
     return render_template("export_annotate.html", disable_snp="disabled")
 
 
@@ -44,164 +41,111 @@ def export_draw() -> Template:
     Return:
         Export-draw view
     """
-
-    # disable the 'Start New Process' button as long as the user did
-    # not download the masks or JSON the user can always interrupt a
-    # process using the home button, but we want to prevent data loss
     return render_template("export_draw.html", disable_snp="disabled")
 
 
-@blueprint.route("/export_data/<string:data_type>", methods=["GET"])
-def export_data(data_type) -> Template:
-    """Download the JSON or the custom masks.
+@blueprint.route("/download_json", methods=["GET", "HEAD"])
+def download_json():
+    """Provide JSON data as a direct download from memory.
 
-    Args:
-        data_type: Specifies the data type for download | json, or masks
-
-    Return:
-        Either sends the JSON or the masks to the users download folder
-        or rerenders the export view if there is now file that could be downloaded
+    Returns:
+        - Serves JSON data directly from memory.
+        - Returns 200 for HEAD requests if data exists.
+        - Renders an error page if no data is available.
     """
+    if current_app.n_pages <= 0 or current_app.df_metadata.empty:
+        flash("No file - session data is empty.", "error")
+        return render_template("export_annotate.html", disable_snp=" ")
 
-    with open(
-        os.path.join(
-            current_app.root_path,
-            os.path.join(current_app.config["UPLOAD_FOLDER"]),
-            current_app.config["JSON"],
-        ),
-        "w",
-    ) as f:
-        # TODO: What to do with the timing data?
-        # write the metadata to a json file
-        final_file = {}
-        final_file["Proofread Time"] = current_app.proofread_time
+    final_data = {
+        "Proofread Time": current_app.proofread_time,
+        "Metadata": current_app.df_metadata.to_dict("records"),
+    }
 
-        json.dump(
-            current_app.df_metadata.to_dict("records"),
-            f,
-            indent=4,
-            default=json_serial,
+    json_bytes = convert_json_to_bytes(final_data)
+
+    if request.method == "HEAD":
+        return "", 200
+
+    return send_file(
+        json_bytes,
+        mimetype="application/json",
+        as_attachment=True,
+        download_name="synanno.json",
+    )
+
+
+def convert_json_to_bytes(data: dict) -> io.BytesIO:
+    """Convert JSON data to bytes."""
+    json_str = json.dumps(data, indent=4, default=json_serial)
+    json_bytes = io.BytesIO(json_str.encode("utf-8"))
+    json_bytes.seek(0)
+    return json_bytes
+
+
+@blueprint.route("/download_all_masks", methods=["GET"])
+def download_all_masks():
+    """Creates a ZIP file in memory with all custom masks and serves it for download."""
+    zip_buffer = create_zip_with_masks()
+
+    if zip_buffer.tell() == 0:
+        flash(
+            "No masks available for download. " "Did you draw custom masks?",
+            "error",
         )
+        return render_template("export_draw.html", disable_snp=" ")
 
-        # provide sufficient time for the json update dependent on df_metadata
-        time.sleep(0.1 * len(current_app.df_metadata))
+    zip_buffer.seek(0)
+    return send_file(
+        zip_buffer,
+        mimetype="application/zip",
+        as_attachment=True,
+        download_name="custom_masks.zip",
+    )
 
-    if data_type == "json":
-        # exporting the final json
-        if session.get("n_pages"):
-            return send_file(
-                os.path.join(
-                    os.path.join(
-                        current_app.root_path,
-                        current_app.config["UPLOAD_FOLDER"],
-                    ),
-                    current_app.config["JSON"],
-                ),
-                as_attachment=True,
-                download_name=current_app.config["JSON"],
-            )
-        else:
-            flash("Now file - session data is empty.", "error")
-            # rerender export-draw and enable the 'Start New Process' button
-            return render_template("export_annotate.html", disable_snp=" ")
-    elif data_type == "mask":
-        static_folder = os.path.join(
-            os.path.join(current_app.root_path, current_app.config["STATIC_FOLDER"]),
-        )
-        image_folder = os.path.join(static_folder, "Images")
-        mask_folder = os.path.join(image_folder, "Mask")
 
-        if os.path.exists(mask_folder):
-            # create zip of folder
-            shutil.make_archive(mask_folder, "zip", mask_folder)
-            return send_file(
-                os.path.join(image_folder, "Mask.zip"),
-                as_attachment=True,
-            )
-        else:
-            flash(
-                "The folder containing custom masks is empty. "
-                "Did you draw custom masks?",
-                "error",
-            )
-            # rerender export-draw and enable the 'Start New Process' button
-            return render_template("export_draw.html", disable_snp=" ")
+def create_zip_with_masks() -> io.BytesIO:
+    """Create a ZIP file in memory with all masks."""
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        for img_index, mask_data in current_app.target_image_data.items():
+            meta_data = get_metadata_for_image_index(img_index)
+            coordinates = "_".join(map(str, meta_data["Adjusted_Bbox"]))
+
+            for canvas_type in ["circlePre", "circlePost", "curve"]:
+                if canvas_type in mask_data:
+                    for slice_id, image_bytes in mask_data[canvas_type].items():
+                        img = png_bytes_to_pil_img(image_bytes)
+                        img_io = img_to_png_bytes(img)
+                        filename = f"{canvas_type}_idx_{img_index}_slice_{slice_id}"
+                        f"_cor_{coordinates}.png"
+                        zip_file.writestr(filename, img_io)
+    return zip_buffer
+
+
+def get_metadata_for_image_index(img_index: str) -> dict:
+    """Retrieve metadata for a given image index."""
+    img_index_int = int(img_index)  # noqa: F841
+    return current_app.df_metadata.query("Image_Index == @img_index_int").to_dict(
+        "records"
+    )[0]
 
 
 @blueprint.route("/reset")
 def reset() -> Template:
-    """Resets all process by pooping the session content, resting the process bar,
-    resting the timer, deleting deleting the JSON, the images, masks and zip folder.
+    """Resets all processes by clearing the session content, resetting the process bar,
+    resetting the timer, deleting the JSON, the images, the SWCs, masks, and zip folder.
 
     Return:
         Renders the landing-page view.
     """
-
-    # reset time
-    current_app.proofread_time = dict.fromkeys(current_app.proofread_time, None)
-
-    current_app.selected_neuron_id = None
-
-    # pop all the session content.
-    for key in list(session.keys()):
-        session.pop(key)
-
-    # delete json file.
-    if os.path.isfile(
-        os.path.join(
-            os.path.join(current_app.root_path, current_app.config["UPLOAD_FOLDER"]),
-            current_app.config["JSON"],
-        )
-    ):
-        os.remove(
-            os.path.join(
-                os.path.join(
-                    current_app.root_path, current_app.config["UPLOAD_FOLDER"]
-                ),
-                current_app.config["JSON"],
-            )
-        )
-
-    # delete static images
-    static_folder = os.path.join(
-        current_app.root_path, current_app.config["STATIC_FOLDER"]
-    )
-    image_folder = os.path.join(static_folder, "Images")
-
-    if os.path.exists(os.path.join(image_folder, "Img")):
-        try:
-            shutil.rmtree(os.path.join(image_folder, "Img"))
-        except Exception as e:
-            logger.error("Failed to delete %s. Reason: %s" % (image_folder, e))
-
-    if os.path.exists(os.path.join(image_folder, "Syn")):
-        try:
-            shutil.rmtree(os.path.join(image_folder, "Syn"))
-        except Exception as e:
-            logger.error("Failed to delete %s. Reason: %s" % (image_folder, e))
-
-    # delete masks zip file.
-    if os.path.isfile(os.path.join(image_folder, "Mask.zip")):
-        os.remove(os.path.join(image_folder, "Mask.zip"))
-
-    # delete custom masks
-    mask_folder = os.path.join(image_folder, "Mask")
-    if os.path.exists(mask_folder):
-        try:
-            shutil.rmtree(mask_folder)
-        except Exception as e:
-            logger.error("Failed to delete %s. Reason: %s" % (mask_folder, e))
-
-    # set the metadataframe back to null
-    current_app.df_metadata.drop(current_app.df_metadata.index, inplace=True)
-
+    session.clear()
+    initialize_global_variables(current_app)
     return render_template("landingpage.html")
 
 
-# handle non json serializable data
 def json_serial(obj):
-    """JSON serializer for objects not serializable by default json code"""
-
+    """JSON serializer for objects not serializable by default json code."""
     if isinstance(obj, (datetime.timedelta)):
         return str(obj)
     if isinstance(obj, (datetime.datetime)):

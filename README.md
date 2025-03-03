@@ -128,108 +128,81 @@ Repository includes a Dockerfile that enables you to build and run the applicati
 
 6. **Stop the Docker container**: When you're done, you can stop the Docker container by pressing `Ctrl + C` in the terminal where the container is running.
 
+
 ### Local Installation
 
-To set up SynAnno on your local machine, start by creating a fresh environment and installing the required packages `setup.py`. The guide below provides an optimal setup using `pyenv` and `venv` on macOS to manage a specific Python version and isolated environment.
+To set up SynAnno on your local machine, start by creating a fresh environment and installing the required packages using `uv`. The guide below provides an optimal setup using `uv` on macOS to manage a specific Python version and isolated environment.
 
-#### Setting Up SynAnno with `venv` and `pipenv` on macOS (Z shell)
+#### Setting Up SynAnno `uv` on macOS
 
-Why Use `pyenv` and `pipenv`?
+Why Use `uv`?
 
 - **Isolation**: Prevent dependency conflicts with isolated virtual environments.
 - **Reproducibility**: Ensure consistent dependency versions.
-- **Python Version Management**: Easily switch Python versions per project.
+- **Performance**: `uv` offers significantly faster dependency resolution and installation.
+- **Simplified Python Version Management**: `uv` can manage Python versions without requiring `pyenv`.
 
-##### Setup the project's Python Version (pyenv)
 
-1. **Install `pyenv`**:
+##### Install `uv` and Set Up the Environment
 
-   ```bash
-   brew install pyenv
-   ```
-
-2. **Add `pyenv` to your shell**:
+1. **Install `uv` using `pip`**:
 
    ```bash
-   echo 'eval "$(pyenv init --path)"' >> ~/.zshrc
+   python -m pip install uv
    ```
 
-   Reload your shell:
+   If you installed uv but the command is not recognized, it may not be in your PATH.
 
-   ```bash
-   source ~/.zshrc
-   ```
+   1. Check if uv is installed:
 
-3. **Install Python version with `pyenv`**:
+      ```bash
+      python -m uv --version
+      ```
+
+      If this works, uv is installed but not in your PATH. You'll need to add it manually.
+      Alternative you can install uv using the official installer:
+
+      ```bash
+      curl -LsSf https://astral.sh/uv/install.sh | sh
+      ```
+
+2. **Ensure the Correct Python Version is Installed:**
+
+   1. If you already use `pyenv`, this is probably not the time to switch your Python version management tool.
 
    ```bash
    pyenv install $(cat .python-version)
-   ```
-
-4. **Navigate to your project folder**:
-
-   ```bash
-   cd /home/user/SynAnno
-   ```
-5. **Set the Local Python Version**:
-
-   ```bash
    pyenv local $(cat .python-version)
    ```
 
-   *Note: This will create a .python-version file in the project directory.*
-   *Note: Alternatively you can also set the python version globally.*
+   2. If you don't use `pyenv`, you can install the required Python version using `uv`:
 
    ```bash
-   pyenv global $(cat .python-version)
+   uv python install $(cat .python-version)
    ```
 
-##### Create a Virtual Environment (Venv)
-
-1. **Navigate to the Project folder**:
+3. **Navigate to your project folder**:
 
    ```bash
-   cd /home/user/SynAnno
+   cd /<path-to-repo>/SynAnno
    ```
 
-2. **Setup the Project Environment**:
+4. **Create and Activate the Virtual Environment with:**
 
    ```bash
-   python -m venv .venv
-   ```
-
-3. **Activate the Virtual Environment**:
-
-   ```bash
+   uv venv .venv --python $(cat .python-version)
    source .venv/bin/activate
    ```
 
-4. **Verify the correct Python version is used**:
+5. Install Dependencies:
 
    ```bash
-   pyenv which python
-   ```
-
-   ```bash
-   python --version
-   ```
-
-   *The output should reflect the version written in .python-version*
-
-   ```bash
-   pyenv which python
-   ```
-
-   *The output should state: `<python version from .python-version> (set by /Home/user/SynAnno/.python-version)`*
-
-5. **Install the `Pipfile`**:
-   ```bash
-   pipenv install -e .
+   uv pip install -e ."[seg,dev]"
    ```
 
 ### Environment Variables
 
-SynAnno can be configured via environment variables. Simply provide a `.env` file which will be directly loaded by the tool.
+SynAnno can be configured via environment variables or the `.env` file.
 
    ```md
    SECRET_KEY=********

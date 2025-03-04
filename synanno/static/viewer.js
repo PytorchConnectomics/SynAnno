@@ -445,7 +445,7 @@ function generateSectionColors(sectionArray) {
 
 function generateSectionMetadata(sectionArray) {
     return sectionArray.map((_, index) => ({
-        "label": `Section ${index + 1}`, // Assign a readable name
+        "label": `Sec. ${index + 1}`, // Assign a readable name
         "type": index  // Unique type ID for this section
     }));
 }
@@ -495,7 +495,7 @@ function createMetadataElement(metadata, colors, activeSections) {
     metadiv.style.zIndex = "1000"; // Move above SharkViewer
     metadiv.style.pointerEvents = "auto"; // Ensure it captures mouse input
 
-    let toinnerhtml = "<strong>Neuron Sections</strong><br>";
+    let toinnerhtml = "<strong>  Sections</strong><br>";
     metadata.forEach((m, index) => {
         let cssColor = colors[index] instanceof THREE.Color
             ? `rgb(${colors[index].r * 255}, ${colors[index].g * 255}, ${colors[index].b * 255})`

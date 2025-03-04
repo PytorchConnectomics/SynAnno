@@ -87,7 +87,7 @@ def initialize_global_variables(app):
     # The auto segmentation view needs a set number of slices per instance (depth)
     # see process_instances.py::load_missing_slices for more details
     app.crop_size_z_draw = 16
-    app.crop_size_z = 1
+    app.crop_size_z = 6
     app.crop_size_x = 256
     app.crop_size_y = 256
     app.columns = [

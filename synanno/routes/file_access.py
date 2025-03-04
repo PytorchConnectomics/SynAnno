@@ -21,6 +21,23 @@ def get_swc():
     return Response(swc_data, mimetype="text/plain")
 
 
+@blueprint.route("/source_and_target_exist/<image_index>/<slice_id>", methods=["GET"])
+@cross_origin()
+def source_and_target_exist(image_index, slice_id):
+    """Valide that both source and target images are available."""
+    image_index = str(image_index)
+    slice_id = str(slice_id)
+    if (
+        image_index in current_app.source_image_data
+        and slice_id in current_app.source_image_data[image_index]
+    ) and (
+        image_index in current_app.target_image_data
+        and slice_id in current_app.target_image_data[image_index]
+    ):
+        return "Image found", 200
+    return "Image not found", 204
+
+
 @blueprint.route("/get_source_image/<image_index>/<slice_id>", methods=["GET", "HEAD"])
 @cross_origin()
 def get_source_image(image_index, slice_id):

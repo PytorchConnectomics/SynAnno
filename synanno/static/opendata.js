@@ -2,6 +2,8 @@ import {enableNeuropilLayer, disableNeuropilLayer} from "./utils/ng_util.js";
 
 $(document).ready(function () {
 
+  let materialization_loaded = false;
+
   // show progressbar when submitting the data
   $("form").on("submit", function (event) {
       $("#loading-bar").css('display', 'flex');
@@ -41,6 +43,10 @@ $(document).ready(function () {
         return false;
       }
     });
+    if (!materialization_loaded) {
+      allValid = false;
+      return false;
+    }
     return allValid;
   }
 
@@ -140,7 +146,6 @@ $(document).ready(function () {
     const self = this;
     debounceTimer = setTimeout(function() {
       var materializationUrl = self.value.trim();
-      console.log("Materialization URL:", materializationUrl);
       var openNeuronModalBtn = document.getElementById('openNeuronModalBtn');
       openNeuronModalBtn.setAttribute('disabled', 'disabled');
       if (materializationUrl) {
@@ -155,6 +160,8 @@ $(document).ready(function () {
         .then(data => {
           if (data.status === "success") {
             console.log("Materialization table loaded.");
+            materialization_loaded = true;
+            updateSubmitButtonState();
             // Grab the form values
             var source_url = document.getElementById('source_url').value.trim();
             var target_url = document.getElementById('target_url').value.trim();

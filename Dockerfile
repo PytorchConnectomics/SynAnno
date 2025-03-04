@@ -1,15 +1,8 @@
-FROM tiangolo/uwsgi-nginx-flask:python3.10
+FROM tiangolo/uwsgi-nginx:python3.11
 
 # Metadata
 LABEL Name="SynAnno" \
       Version="1.0.0"
-
-# Environment variables
-ENV DEBUG_APP=False
-ENV SECRET_KEY=your-secret-key
-ENV APP_IP=0.0.0.0
-ENV APP_PORT=80
-ENV STATIC_PATH /app/synanno/static
 
 # Set the working directory
 WORKDIR /app
@@ -17,22 +10,45 @@ WORKDIR /app
 # Upgrade pip
 RUN python -m pip install --no-cache-dir --upgrade pip
 
-# Create necessary directories and set ownership/permissions
-RUN mkdir -p /tmp/flask_session /app/files /app/synanno/static/Images \
-    && chown -R nginx:nginx /tmp /app/files /app/synanno/static/Images \
-    && chmod -R u+w /app/synanno/static/Images
+# Install system dependencies for PyQt5
+RUN apt-get update && apt-get install -y \
+    qtbase5-dev \
+    qtchooser \
+    qt5-qmake \
+    qttools5-dev-tools \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install latest Rust version via Rustup
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Verify Cargo version (should be latest)
+RUN cargo --version
 
 # Copy application code, configuration, and setup files
 COPY setup.py /app/
 COPY synanno /app/synanno
 COPY run_production.py /app/
-COPY h01/synapse-export_000000000000.csv /app/h01/synapse-export_000000000000.csv
+COPY h01/h01_104_materialization.csv /app/h01/h01_104_materialization.csv
 
-# Install application and dependencies from setup.py
-RUN pip install --no-cache-dir -e .
+
+RUN python -m pip install uv
+# Install torch separately before installing the package
+RUN uv pip install --system --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+# Install missing package
+RUN uv pip install --system --no-cache-dir torchsummary
+
+# Install remaining dependencies
+RUN uv pip install --system --no-cache-dir -e .
+RUN uv pip install --system --no-cache-dir tqdm
 
 # Expose the Nginx port
 EXPOSE 80
+
+# Expose Neuroglancer Port
+EXPOSE 9015
 
 # Copy uWSGI configuration
 COPY uwsgi.ini /app

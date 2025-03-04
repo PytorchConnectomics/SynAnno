@@ -171,7 +171,9 @@ function processSynapseCloudData(data, maxVolumeSize) {
 
         if (selectedSynapses.length > 0) {
             sizes[i] = selectedSynapses.includes(i.toString()) ? maxVolumeSize : 10;
-            alphas[i] = selectedSynapses.includes(i.toString()) ? 0.8 : 0.1;
+
+            window.synapseColors[i] === "green" || window.synapseColors[i] === "red" ? 0.7 : 0.3;
+            alphas[i] = selectedSynapses.includes(i.toString()) ? 0.8 : 0.3;
         } else {
             sizes[i] = 10;
             alphas[i] = 0.8;

@@ -50,7 +50,7 @@ def configure_app(app):
         CLOUD_VOLUME_BUCKETS=["gs:", "s3:", "file:"],
         IP=os.getenv("APP_IP", "0.0.0.0"),
         PORT=int(os.getenv("APP_PORT", 80)),
-        NG_IP="localhost",
+        NG_IP=os.getenv("NG_IP", "localhost"),
         NG_PORT="9015",
     )
 

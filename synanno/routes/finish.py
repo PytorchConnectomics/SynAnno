@@ -117,8 +117,7 @@ def create_zip_with_masks() -> io.BytesIO:
                     for slice_id, image_bytes in mask_data[canvas_type].items():
                         img = png_bytes_to_pil_img(image_bytes)
                         img_io = img_to_png_bytes(img)
-                        filename = f"{canvas_type}_idx_{img_index}_slice_{slice_id}"
-                        f"_cor_{coordinates}.png"
+                        filename = f"{canvas_type}_idx_{img_index}_slice_{slice_id}_cor_{coordinates}.png"  # noqa: E501
                         zip_file.writestr(filename, img_io)
     return zip_buffer
 

@@ -192,6 +192,13 @@ $(document).ready(function () {
     }, debounceDelay);
   });
 
+  let inputElement = document.getElementById('materialization_url');
+
+  // Trigger the event manually when the page loads as we provided a default value
+  if (inputElement) {
+      inputElement.dispatchEvent(new Event('input'));
+  }
+
   let checkSelectedNeuronIDHandle;
   let initialID = null;
 

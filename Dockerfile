@@ -32,8 +32,9 @@ COPY synanno /app/synanno
 COPY run_production.py /app/
 COPY h01/h01_104_materialization.csv /app/h01/h01_104_materialization.csv
 
-
+# Install uv
 RUN python -m pip install uv
+
 # Install torch separately before installing the package
 RUN uv pip install --system --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
@@ -44,11 +45,19 @@ RUN uv pip install --system --no-cache-dir torchsummary
 RUN uv pip install --system --no-cache-dir -e .
 RUN uv pip install --system --no-cache-dir tqdm
 
-# Expose the Nginx port
-EXPOSE 80
+# Expose necessary ports
+EXPOSE 80 9015
 
-# Expose Neuroglancer Port
-EXPOSE 9015
+# Set environment variables
+ENV DEBUG_APP="False"
+ENV SECRET_KEY="your-secret-key"
+ENV APP_IP="0.0.0.0"
+ENV NG_IP="0.0.0.0"
+ENV APP_PORT="80"
+ENV EXECUTION_ENV="docker"
+
+# Set CPU and Memory limits using ulimit
+RUN echo "ulimit -u 16384 -n 65536" >> /etc/profile
 
 # Copy uWSGI configuration
 COPY uwsgi.ini /app

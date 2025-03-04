@@ -87,7 +87,7 @@
               />
             </p>
             <label for="materialization_url" class="form-label">
-              Materialization (url/name of the table containing the ID association and bounding box information)
+              Materialization (path to the table containing the ID association and bounding box information) - Required
             </label>
             <p>
               <input
@@ -96,6 +96,7 @@
                 id="materialization_url"
                 name="materialization_url"
                 placeholder="file://<path_to_your_file>"
+                value="file:///app/h01/h01_104_materialization.csv"
                 {% if mode == 'draw' or mode == 'annotate' %} data-required="true" {% endif %}
               />
             </p>

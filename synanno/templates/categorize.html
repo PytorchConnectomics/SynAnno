@@ -11,32 +11,26 @@
       margin-bottom: 0 !important;
     }
 
-    /* Hide the form container completely for correct cards */
-    .card-block.image-card-btn.correct ~ .card-block.form-container {
-      display: none !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      height: 0 !important;
-      overflow: hidden !important;
-    }
-
-    /* Make the card more compact when it has a correct image */
-    .card:has(.card-block.image-card-btn.correct) {
-      padding-bottom: 0 !important;
+    /* Style for compact cards */
+    .card.compact {
       margin-bottom: 1rem !important;
     }
 
-    /* Ensure no padding or margins are affecting the card's height */
-    .card.compact {
-      padding-bottom: 0 !important;
+    /* Style for the confirmation message */
+    .card.compact .card-block.form-container {
+      padding: 0.5rem !important;
+      background-color: rgba(40, 167, 69, 0.1) !important;
+      border-top: 1px solid rgba(40, 167, 69, 0.2) !important;
     }
 
-    .card.compact .card-block.form-container {
-      display: none !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      height: 0 !important;
-      overflow: hidden !important;
+    .card.compact .card-block.form-container .text-success {
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    /* Ensure icons look nice */
+    .fa-check-circle {
+      margin-right: 0.25rem;
     }
   </style>
 {% endblock %}
@@ -86,6 +80,11 @@
           </div>
         </div>
         <div class="card-block form-container">
+          {% if image.Label == 'Correct' %}
+          <div class="text-success text-center py-2">
+            <i class="fas fa-check-circle"></i> Instance Marked as Correct!
+          </div>
+          {% else %}
           <div class="form">
             <div class="form-check m-2">
               <input
@@ -155,6 +154,7 @@
               />
             </div>
           </div>
+          {% endif %}
         </div>
       </div>
 

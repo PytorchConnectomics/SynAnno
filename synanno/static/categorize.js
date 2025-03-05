@@ -1,70 +1,10 @@
 $(document).ready(() => {
-  // Initialize form controls based on existing data
+  // Initialize form controls and UI state
   initializeFormControls();
-
-  // Set up form control interactions
   setupFormControlEvents();
-
-  // Set up submit button handlers
   setupSubmitHandlers();
-
-  // Show message in case no faulty instances were selected/marked
   updateEmptyStateMessage();
-
-  // Add click event handler to image cards to toggle correct/incorrect status
-  $('.card').on('click', async function() {
-    try {
-      const id = $(this).attr('id');
-      const parts = id.split('_');
-      const page = parts[2];
-      const dataId = parts[3];
-      const cardBlock = $(this).find('.card-block.image-card-btn');
-      const currentLabel = cardBlock.hasClass('correct') ? 'Correct' :
-                           cardBlock.hasClass('incorrect') ? 'Incorrect' : 'Unsure';
-
-      // Send AJAX request to update status
-      const response = await $.ajax({
-        url: '/update-status',
-        type: 'POST',
-        data: {
-          page,
-          data_id: dataId,
-          label: currentLabel
-        }
-      });
-
-      // Update the UI based on the response
-      if (response.result === 'success') {
-        cardBlock.removeClass('correct incorrect unsure');
-
-        if (response.label === 'Correct') {
-          cardBlock.addClass('correct');
-          $(this).addClass('compact');
-          // Force form container to be hidden
-          $(this).find('.card-block.form-container').css({
-            display: 'none',
-            height: 0,
-            margin: 0,
-            padding: 0,
-            overflow: 'hidden'
-          });
-        } else {
-          cardBlock.addClass(response.label.toLowerCase());
-          $(this).removeClass('compact');
-          // Show the form container
-          $(this).find('.card-block.form-container').css({
-            display: 'block',
-            height: '',
-            margin: '',
-            padding: '',
-            overflow: ''
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error updating status:', error);
-    }
-  });
+  setupCardClickHandlers();
 });
 
 /**
@@ -103,19 +43,6 @@ function initializeFormControls() {
       $(this).prop('checked', true);
     }
   });
-
-  // Hide form containers for correct cards on page load
-  $('.card-block.image-card-btn.correct').each(function() {
-    const card = $(this).closest('.card');
-    card.addClass('compact');
-    card.find('.card-block.form-container').css({
-      display: 'none',
-      height: 0,
-      margin: 0,
-      padding: 0,
-      overflow: 'hidden'
-    });
-  });
 }
 
 /**
@@ -145,6 +72,105 @@ function setupFormControlEvents() {
     const [_, page, imgId] = $(this).attr('id').split('_');
     const customFlagId = `#customFlagInput_${page}_${imgId}`;
     $(customFlagId).prop('disabled', true);
+  });
+}
+
+/**
+ * Setup handlers for image card clicks to toggle status
+ */
+function setupCardClickHandlers() {
+  // Only apply click handler to the image part, not the whole card
+  $('.card-block.image-card-btn').on('click', async function() {
+    try {
+      const card = $(this).closest('.card');
+      const id = card.attr('id');
+      const parts = id.split('_');
+      const page = parts[2];
+      const dataId = parts[3];
+      const currentLabel = $(this).hasClass('correct') ? 'Correct' :
+                         $(this).hasClass('incorrect') ? 'Incorrect' : 'Unsure';
+
+      // Send AJAX request to update status
+      const response = await $.ajax({
+        url: '/update-status',
+        type: 'POST',
+        data: { page, data_id: dataId, label: currentLabel }
+      });
+
+      // Update the UI based on the response
+      if (response.result === 'success') {
+        $(this).removeClass('correct incorrect unsure');
+
+        if (response.label === 'Correct') {
+          // Set 'correct' class and make the card compact
+          $(this).addClass('correct');
+          card.addClass('compact');
+
+          // Replace form with confirmation message
+          const formContainer = card.find('.card-block.form-container');
+          formContainer.html('<div class="text-success text-center py-2"><i class="fas fa-check-circle"></i> Instance Marked as Correct!</div>');
+        } else {
+          // Set appropriate class for incorrect/unsure
+          $(this).addClass(response.label.toLowerCase());
+          card.removeClass('compact');
+
+          // Restore the form container with original form content
+          const formContainer = card.find('.card-block.form-container');
+
+          // Only rebuild the form if it's been replaced with confirmation message
+          if (formContainer.find('.form').length === 0) {
+            const pageId = page;
+            const imgId = dataId;
+
+            // Create form HTML
+            const formHtml = `
+              <div class="form">
+                <div class="form-check m-2">
+                  <input class="form-check-input" type="radio" name="select_${pageId}_${imgId}"
+                         id="falsePositive_${pageId}_${imgId}" value="option1" />
+                  <label class="form-check-label" for="falsePositive_${pageId}_${imgId}"></label>
+                  False Positive
+                </div>
+                <div class="form-check m-2">
+                  <input class="form-check-input" type="radio" name="select_${pageId}_${imgId}"
+                         id="badFit_${pageId}_${imgId}" value="option2" />
+                  <label class="form-check-label" for="badFit_${pageId}_${imgId}"></label>
+                  Bad Fit
+                </div>
+                <div class="form-check m-2">
+                  <input class="form-check-input" type="radio" name="select_${pageId}_${imgId}"
+                         id="polaritySwitch_${pageId}_${imgId}" value="option3" />
+                  <label class="form-check-label" for="polaritySwitch_${pageId}_${imgId}"></label>
+                  Polarity Switch
+                </div>
+                <div class="input-group" id="customFlag_${pageId}_${imgId}">
+                  <div class="input-group-text">
+                    <input type="radio" name="select_${pageId}_${imgId}"
+                           id="customFlagButton_${pageId}_${imgId}"
+                           aria-label="Radio button for following text input" />
+                  </div>
+                  <input type="text" class="form-control disabled"
+                         id="customFlagInput_${pageId}_${imgId}"
+                         aria-label="Text input with radio button"
+                         placeholder="Custom Flag" disabled />
+                </div>
+              </div>
+            `;
+
+            // Set the HTML and reinitialize event handlers
+            formContainer.html(formHtml);
+            setupFormControlEvents();
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+    }
+  });
+
+  // Prevent form interactions from triggering the card click
+  $('.card .card-block.form-container').on('click', function(e) {
+    e.stopPropagation();
   });
 }
 

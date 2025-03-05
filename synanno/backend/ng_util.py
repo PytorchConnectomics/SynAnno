@@ -66,7 +66,12 @@ def get_hovered_neuron_id(app):
         logging.info(f"Mouse Voxel Coordinates: {voxel_coords}")
 
         # retrieve the selected neuron ID from the segmentation layer
-        neuron_info = s.selected_values["neuropil"].value
+        neuron_info = s.selected_values.get("neuropil")
+        if neuron_info is None:
+            logging.info("No neuron selected in neuropil layer.")
+            return
+
+        neuron_info = neuron_info.value
         logging.info(f"Raw Selected Neuron ID: {neuron_info}")
 
         neuron_id = None
@@ -86,8 +91,16 @@ def get_hovered_neuron_id(app):
         logging.info(f"Selected Neuron ID: {neuron_id}")
         app.selected_neuron_id = int(neuron_id)
 
-        # add a marker at the neuron ID location
+        # Highlight the selected neuron in the neuropil layer
         with app.ng_viewer.txn() as layer:
+            # Set the segments to just the selected neuron ID
+            layer.layers["neuropil"].segments = frozenset([neuron_id])
+
+            # Make the neuron visible by setting appropriate alpha values
+            layer.layers["neuropil"].selectedAlpha = 0.8
+            layer.layers["neuropil"].notSelectedAlpha = 0.0
+
+            # Add a marker at the neuron ID location
             layer.layers["marker_dot"].annotations = []  # Clear previous annotations
             pt = neuroglancer.PointAnnotation(
                 point=[
@@ -122,16 +135,16 @@ def setup_ng(
     target: Union[npt.NDArray, str],
     neuropil: Union[npt.NDArray, str],
 ) -> None:
-    """Setup function for the Neuroglancer (ng) that enables the recording and depiction
-    of center markers for newly identified FN instances.
+    """Setup function for the Neuroglancer (ng) that enables the recording and
+    depiction of center markers for newly identified FN instances.
 
     Args:
         app: a handle to the application context
         source: The image volume depicted by the ng
         target: The target volume depicted by the ng
-        neuropil: Neuropil segmentation volume when undergoing view-centric analysis
+        neuropil: Neuropil segmentation volume when undergoing view-centric
+                analysis
     """
-
     # generate a version number
     app.ng_version = str(randint(0, 3200))
 
@@ -238,8 +251,7 @@ def setup_ng(
 
         # additional layer that lets the user mark the center of FPs
         s.layers["marker"] = neuroglancer.LocalAnnotationLayer(
-            dimensions=coordinate_space,
-            annotations=[],
+            dimensions=coordinate_space, annotations=[]
         )
 
     # add the center dot as action
@@ -250,9 +262,13 @@ def setup_ng(
 
     # bind the action to a key, e.g., 'n'
     app.ng_viewer.actions.add("get_neuron_id", get_hovered_neuron_id(app))
-
     with app.ng_viewer.config_state.txn() as s:
         s.input_event_bindings.viewer["keyn"] = "get_neuron_id"
+
+    # if a neuron id is already set in the app context, explicitly select it
+    if getattr(app, "selected_neuron_id", None) is not None:
+        with app.ng_viewer.txn() as s:
+            s.selected_values["annotation"].value = app.selected_neuron_id
 
     logging.info(
         f"Starting a Neuroglancer instance at "

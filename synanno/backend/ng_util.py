@@ -268,7 +268,9 @@ def setup_ng(
     # if a neuron id is already set in the app context, explicitly select it
     if getattr(app, "selected_neuron_id", None) is not None:
         with app.ng_viewer.txn() as s:
-            s.selected_values["annotation"].value = app.selected_neuron_id
+            s.layer.layers["neuropil"].segments = frozenset(
+                [getattr(app, "selected_neuron_id", None)]
+            )
 
     logging.info(
         f"Starting a Neuroglancer instance at "

@@ -550,18 +550,51 @@ def neuro():
         center["y"] = int(int(request.form["cy0"]) * current_app.scale["y"])
         center["x"] = int(int(request.form["cx0"]) * current_app.scale["x"])
     elif mode == "draw":
-        center["z"] = int(
-            (current_app.vol_dim[coordinate_order.index("z")] // 2)
-            * current_app.scale["z"]
-        )
-        center["y"] = int(
-            (current_app.vol_dim[coordinate_order.index("y")] // 2)
-            * current_app.scale["y"]
-        )
-        center["x"] = int(
-            (current_app.vol_dim[coordinate_order.index("x")] // 2)
-            * current_app.scale["x"]
-        )
+        if getattr(current_app, "selected_neuron_id", None) is not None:
+            try:
+                # check if we have access to the current synapse point cloud coordinates
+                if (
+                    hasattr(current_app, "synapse_data")
+                    and not current_app.synapse_data.empty
+                ):
+                    # get the first point from the synapse data as a reference
+                    first_point = current_app.synapse_data.iloc[0]
+                    center = {
+                        "x": int(first_point["x"] * current_app.scale["x"]),
+                        "y": int(first_point["y"] * current_app.scale["y"]),
+                        "z": int(first_point["z"] * current_app.scale["z"]),
+                    }
+                else:
+                    # fall back to current_app coordinates if available
+                    if (
+                        hasattr(current_app, "cx")
+                        and hasattr(current_app, "cy")
+                        and hasattr(current_app, "cz")
+                    ):
+                        center = {
+                            "x": int(current_app.cx * current_app.scale["x"]),
+                            "y": int(current_app.cy * current_app.scale["y"]),
+                            "z": int(current_app.cz * current_app.scale["z"]),
+                        }
+                    else:
+                        raise AttributeError("No mesh coordinates available")
+            except Exception as e:
+                logging.warning(f"Could not use mesh coordinates: {str(e)}")
+                center = {}
+        else:
+            logging.info("No mesh coordinates available, using default position")
+            center["z"] = int(
+                (current_app.vol_dim[coordinate_order.index("z")] // 2)
+                * current_app.scale["z"]
+            )
+            center["y"] = int(
+                (current_app.vol_dim[coordinate_order.index("y")] // 2)
+                * current_app.scale["y"]
+            )
+            center["x"] = int(
+                (current_app.vol_dim[coordinate_order.index("x")] // 2)
+                * current_app.scale["x"]
+            )
 
     if current_app.ng_version is not None:
         with current_app.ng_viewer.txn() as s:

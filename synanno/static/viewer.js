@@ -171,7 +171,9 @@ function processSynapseCloudData(data, maxVolumeSize) {
 
         if (selectedSynapses.length > 0) {
             sizes[i] = selectedSynapses.includes(i.toString()) ? maxVolumeSize : 10;
-            alphas[i] = selectedSynapses.includes(i.toString()) ? 0.8 : 0.1;
+
+            window.synapseColors[i] === "green" || window.synapseColors[i] === "red" ? 0.7 : 0.3;
+            alphas[i] = selectedSynapses.includes(i.toString()) ? 0.8 : 0.3;
         } else {
             sizes[i] = 10;
             alphas[i] = 0.8;
@@ -443,7 +445,7 @@ function generateSectionColors(sectionArray) {
 
 function generateSectionMetadata(sectionArray) {
     return sectionArray.map((_, index) => ({
-        "label": `Section ${index + 1}`, // Assign a readable name
+        "label": `Sec. ${index + 1}`, // Assign a readable name
         "type": index  // Unique type ID for this section
     }));
 }
@@ -493,7 +495,7 @@ function createMetadataElement(metadata, colors, activeSections) {
     metadiv.style.zIndex = "1000"; // Move above SharkViewer
     metadiv.style.pointerEvents = "auto"; // Ensure it captures mouse input
 
-    let toinnerhtml = "<strong>Neuron Sections</strong><br>";
+    let toinnerhtml = "<strong>  Sections</strong><br>";
     metadata.forEach((m, index) => {
         let cssColor = colors[index] instanceof THREE.Color
             ? `rgb(${colors[index].r * 255}, ${colors[index].g * 255}, ${colors[index].b * 255})`

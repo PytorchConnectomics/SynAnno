@@ -12,12 +12,7 @@ from scipy.ndimage import center_of_mass
 from skimage.measure import label as label_cc
 from skimage.transform import resize
 
-from .utils import (
-    adjust_image_range,
-    draw_cylinder,
-    get_sub_dict_within_range,
-    img_to_png_bytes,
-)
+from .utils import adjust_image_range, draw_cylinder, img_to_png_bytes
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -170,14 +165,16 @@ def free_page() -> None:
             del current_app.target_image_data[str(key)]
 
 
-def retrieve_materialization_data() -> dict:
+def retrieve_materialization_data(df: pd.DataFrame) -> dict:
     """Retrieve the for the view style relevant columns from the materialization data.
+
+    Args:
+        df (pd.DataFrame): the material
 
     Returns:
         The selected materialization data as a dictionary.
     """
     if current_app.view_style == "synapse":
-        df = current_app.synapse_data
         df = df[
             [
                 "pre_pt_x",
@@ -189,10 +186,10 @@ def retrieve_materialization_data() -> dict:
                 "x",
                 "y",
                 "z",
+                "page",
             ]
         ]
     elif current_app.view_style == "neuron":
-        df = current_app.synapse_data
         df = df[
             [
                 "materialization_index",
@@ -207,6 +204,7 @@ def retrieve_materialization_data() -> dict:
                 "x",
                 "y",
                 "z",
+                "page",
             ]
         ]
     return df.to_dict("index")
@@ -223,46 +221,47 @@ def retrieve_instance_metadata(page: int = 0, mode: str = "annotate"):
         page (int): the current page number for which to compute the data.
     """
 
-    materialization = retrieve_materialization_data()
-
     # retrieve the order of the coordinates (xyz, xzy, yxz, yzx, zxy, zyx)
-    coordinate_order = list(current_app.coordinate_order.keys())
 
     with current_app.df_metadata_lock:
         page_empty = current_app.df_metadata.query("Page == @page").empty
 
-    crop_size_x = (
-        current_app.crop_size_z if mode == "annotate" else current_app.crop_size_z_draw
-    )
-
     if page_empty and not (
         mode == "draw" and current_app.df_metadata.query('Label != "Correct"').empty
     ):
-        bbox_dict = get_sub_dict_within_range(
-            materialization,
-            (page * current_app.per_page),
-            current_app.per_page + (page * current_app.per_page) - 1,
+
+        # retrieve the data for the current page
+        page_metadata = current_app.synapse_data.query("page == @page")
+
+        page_metadata = retrieve_materialization_data(page_metadata)
+
+        coordinate_order = list(current_app.coordinate_order.keys())
+
+        crop_size_x = (
+            current_app.crop_size_z
+            if mode == "annotate"
+            else current_app.crop_size_z_draw
         )
 
         instance_list = []
-        for idx in bbox_dict.keys():
+        for idx in page_metadata.keys():
 
             item = {
                 "Page": int(page),
                 "Image_Index": int(idx),
                 "materialization_index": (
-                    bbox_dict[idx]["materialization_index"]
-                    if "materialization_index" in bbox_dict[idx]
+                    page_metadata[idx]["materialization_index"]
+                    if "materialization_index" in page_metadata[idx]
                     else -1
                 ),
                 "section_index": (
-                    bbox_dict[idx]["section_index"]
-                    if "section_index" in bbox_dict[idx]
+                    page_metadata[idx]["section_index"]
+                    if "section_index" in page_metadata[idx]
                     else -1
                 ),
                 "tree_traversal_index": (
-                    bbox_dict[idx]["tree_traversal_index"]
-                    if "tree_traversal_index" in bbox_dict[idx]
+                    page_metadata[idx]["tree_traversal_index"]
+                    if "tree_traversal_index" in page_metadata[idx]
                     else -1
                 ),
                 "Label": "Correct",
@@ -276,16 +275,16 @@ def retrieve_instance_metadata(page: int = 0, mode: str = "annotate"):
                 "X_Index": coordinate_order.index("x"),
                 "Y_Index": coordinate_order.index("y"),
                 "Z_Index": coordinate_order.index("z"),
-                "Middle_Slice": int(bbox_dict[idx]["z"]),
-                "cz0": int(bbox_dict[idx]["z"]),
-                "cy0": int(bbox_dict[idx]["y"]),
-                "cx0": int(bbox_dict[idx]["x"]),
-                "pre_pt_x": int(bbox_dict[idx]["pre_pt_x"]),
-                "pre_pt_y": int(bbox_dict[idx]["pre_pt_y"]),
-                "pre_pt_z": int(bbox_dict[idx]["pre_pt_z"]),
-                "post_pt_x": int(bbox_dict[idx]["post_pt_x"]),
-                "post_pt_y": int(bbox_dict[idx]["post_pt_y"]),
-                "post_pt_z": int(bbox_dict[idx]["post_pt_z"]),
+                "Middle_Slice": int(page_metadata[idx]["z"]),
+                "cz0": int(page_metadata[idx]["z"]),
+                "cy0": int(page_metadata[idx]["y"]),
+                "cx0": int(page_metadata[idx]["x"]),
+                "pre_pt_x": int(page_metadata[idx]["pre_pt_x"]),
+                "pre_pt_y": int(page_metadata[idx]["pre_pt_y"]),
+                "pre_pt_z": int(page_metadata[idx]["pre_pt_z"]),
+                "post_pt_x": int(page_metadata[idx]["post_pt_x"]),
+                "post_pt_y": int(page_metadata[idx]["post_pt_y"]),
+                "post_pt_z": int(page_metadata[idx]["post_pt_z"]),
                 "crop_size_x": current_app.crop_size_x,
                 "crop_size_y": current_app.crop_size_y,
                 # The auto segmentation view needs a set number of slices per instance
@@ -757,7 +756,7 @@ def determine_volume_dimensions() -> tuple:
             return tuple([s - 1 for s in current_app.target_cv.volume_size])
 
 
-def calculate_number_of_pages(n_images: int, per_page: int) -> int:
+def calculate_number_of_pages(n_images: int) -> int:
     """
     Calculate the number of pages needed for the given number of images.
 
@@ -768,7 +767,66 @@ def calculate_number_of_pages(n_images: int, per_page: int) -> int:
     Returns:
         Number of pages.
     """
-    number_pages = n_images // per_page
-    if n_images % per_page != 0:
+    number_pages = n_images // current_app.per_page
+    if n_images % current_app.per_page != 0:
         number_pages += 1
+
+    current_app.synapse_data["page"] = -1  # Initialize pages to -1
+
+    # assign pages to synapses
+    for i, start_idx in enumerate(range(0, n_images, current_app.per_page)):
+        current_app.synapse_data.loc[
+            current_app.synapse_data.iloc[
+                start_idx : start_idx + current_app.per_page  # noqa: E203
+            ].index,
+            "page",
+        ] = i
+
     return number_pages
+
+
+def calculate_number_of_pages_for_neuron_section_based_loading():
+    """
+    Calculate the number of pages needed for neuron section-based loading.
+
+    This function:
+    - Groups synapses by `section_index`.
+    - Assigns page numbers within each section based on `current_app.per_page`.
+    - Adds an extra empty page per section.
+
+    Returns:
+        int: The total number of pages required.
+    """
+
+    number_of_pages = 0
+    current_app.synapse_data["page"] = -1  # Initialize pages to -1
+
+    # Group synapses by section_index
+    grouped = current_app.synapse_data.groupby("section_index")
+
+    # Iterate through sections
+    for sec_index in range(len(current_app.sections)):
+        if sec_index in grouped.groups:
+            synapse_group = grouped.get_group(sec_index)  # Store group once
+            total_synapses = len(synapse_group)
+
+            # Assign pages to synapses within the section
+            for i, start_idx in enumerate(
+                range(0, total_synapses, current_app.per_page)
+            ):
+                current_app.synapse_data.loc[
+                    synapse_group.iloc[
+                        start_idx : start_idx + current_app.per_page  # noqa: E203
+                    ].index,
+                    "page",
+                ] = (
+                    number_of_pages + i
+                )
+
+            # Increment by the number of pages needed
+            number_of_pages += np.ceil(total_synapses / current_app.per_page)
+
+        # Add one empty page for the section
+        number_of_pages += 1
+
+    return int(number_of_pages)  # Ensure integer output

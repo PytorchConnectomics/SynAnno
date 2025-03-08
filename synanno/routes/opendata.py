@@ -26,6 +26,7 @@ from synanno.backend.neuron_processing.partition_neuron import (
 )
 from synanno.backend.processing import (
     calculate_number_of_pages,
+    calculate_number_of_pages_for_neuron_section_based_loading,
     determine_volume_dimensions,
     load_cloud_volumes,
     retrieve_instance_metadata,
@@ -403,12 +404,15 @@ def upload_file():
 
         handle_neuron_view(neuropil_url)
         current_app.neuron_ready = "true"
+        current_app.n_pages = (
+            calculate_number_of_pages_for_neuron_section_based_loading()
+        )
     elif current_app.view_style == "synapse":
         handle_synapse_view()
 
-    if nr_instances == 0:
-        nr_instances = len(current_app.synapse_data.index)
-    current_app.n_pages = calculate_number_of_pages(nr_instances, current_app.per_page)
+        if nr_instances == 0:
+            nr_instances = len(current_app.synapse_data.index)
+        current_app.n_pages = calculate_number_of_pages(nr_instances)
 
     retrieve_instance_metadata(page=0, mode=current_app.draw_or_annotate)
 
@@ -584,8 +588,10 @@ def neuro():
     final_json = jsonify(
         {
             "ng_link": "http://"
-            + current_app.config["IP"]
-            + ":9015/v/"
+            + str(current_app.public_ip)
+            + ":"
+            + str(current_app.config["NG_PORT"])
+            + "/v/"
             + str(current_app.ng_version)
             + "/"
         }
@@ -643,6 +649,9 @@ def load_materialization():
         logger.info("Loading the materialization table...")
         path = materialization_path.replace("file://", "")
         current_app.synapse_data = pd.read_csv(path)
+
+        logger.info("Materialization table loaded successfully!")
+        logger.info(f"Materialization table shape: {current_app.synapse_data}")
 
         logger.info("Materialization table loaded successfully!")
         return jsonify({"status": "success"}), 200

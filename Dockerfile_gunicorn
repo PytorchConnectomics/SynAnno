@@ -1,0 +1,57 @@
+# Use official Python 3.11 image
+FROM python:3.11
+
+# Metadata
+LABEL Name="SynAnno" Version="1.0.0"
+
+# Set the working directory
+WORKDIR /app
+
+# Upgrade pip
+RUN pip install --no-cache-dir --upgrade pip
+
+# Install system dependencies (Only if needed)
+RUN apt-get update && apt-get install -y \
+    qtbase5-dev \
+    qtchooser \
+    qt5-qmake \
+    qttools5-dev-tools \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Rust (if needed)
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Verify Cargo version (if needed)
+RUN cargo --version
+
+RUN pip install uv
+RUN uv pip install --system --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
+RUN uv pip install --system --no-cache-dir torchsummary
+RUN uv pip install --system --no-cache-dir tqdm gunicorn
+
+# Copy application code, configuration, and setup files
+COPY setup.py /app/
+COPY synanno /app/synanno
+COPY run_production.py /app/
+COPY h01/h01_104_materialization.csv /app/h01/h01_104_materialization.csv
+
+# Install required Python packages
+RUN uv pip install --system --no-cache-dir -e .
+
+# Expose necessary ports
+EXPOSE 80 9015
+
+# Set environment variables
+ENV DEBUG_APP="False"
+ENV SECRET_KEY="your-secret-key"
+ENV APP_IP="0.0.0.0"
+ENV NG_IP="0.0.0.0"
+ENV NG_PORT="9015"
+ENV APP_PORT="80"
+ENV EXECUTION_ENV="docker"
+
+
+# Start the Flask application using Gunicorn (on port 80)
+CMD ["gunicorn", "-w", "1", "--timeout", "300", "-b", "0.0.0.0:80", "run_production:app"]

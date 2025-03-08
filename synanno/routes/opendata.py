@@ -26,6 +26,7 @@ from synanno.backend.neuron_processing.partition_neuron import (
 )
 from synanno.backend.processing import (
     calculate_number_of_pages,
+    calculate_number_of_pages_for_neuron_section_based_loading,
     determine_volume_dimensions,
     load_cloud_volumes,
     retrieve_instance_metadata,
@@ -403,12 +404,15 @@ def upload_file():
 
         handle_neuron_view(neuropil_url)
         current_app.neuron_ready = "true"
+        current_app.n_pages = (
+            calculate_number_of_pages_for_neuron_section_based_loading()
+        )
     elif current_app.view_style == "synapse":
         handle_synapse_view()
 
-    if nr_instances == 0:
-        nr_instances = len(current_app.synapse_data.index)
-    current_app.n_pages = calculate_number_of_pages(nr_instances, current_app.per_page)
+        if nr_instances == 0:
+            nr_instances = len(current_app.synapse_data.index)
+        current_app.n_pages = calculate_number_of_pages(nr_instances)
 
     retrieve_instance_metadata(page=0, mode=current_app.draw_or_annotate)
 
@@ -620,13 +624,7 @@ def launch_neuroglancer():
     target_url = request.args.get("target_url")
     neuropil_url = request.args.get("neuropil_url")
 
-    logger.info(
-        f"Launching Neuroglancer with source: {source_url}, target: {target_url}, "
-        f"and neuropil: {neuropil_url}"
-    )
-
     if not hasattr(current_app, "ng_viewer") or current_app.ng_viewer is None:
-        logger.info("Setting up Neuroglancer... " + str(current_app.synapse_data))
         ng_util.setup_ng(
             app=current_app._get_current_object(),
             source="precomputed://" + source_url,

@@ -158,7 +158,6 @@ def initialize_global_variables(app):
     }
 
     app.public_ip = get_public_ip()
-    logger.info(f"Public IP: {app.public_ip}")
 
     app.df_metadata = pd.DataFrame(columns=app.columns).astype(dtypes)
 

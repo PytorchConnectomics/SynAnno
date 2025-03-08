@@ -584,8 +584,10 @@ def neuro():
     final_json = jsonify(
         {
             "ng_link": "http://"
-            + current_app.config["IP"]
-            + ":9015/v/"
+            + str(current_app.public_ip)
+            + ":"
+            + str(current_app.config["NG_PORT"])
+            + "/v/"
             + str(current_app.ng_version)
             + "/"
         }
@@ -618,7 +620,13 @@ def launch_neuroglancer():
     target_url = request.args.get("target_url")
     neuropil_url = request.args.get("neuropil_url")
 
+    logger.info(
+        f"Launching Neuroglancer with source: {source_url}, target: {target_url}, "
+        f"and neuropil: {neuropil_url}"
+    )
+
     if not hasattr(current_app, "ng_viewer") or current_app.ng_viewer is None:
+        logger.info("Setting up Neuroglancer... " + str(current_app.synapse_data))
         ng_util.setup_ng(
             app=current_app._get_current_object(),
             source="precomputed://" + source_url,
@@ -643,6 +651,9 @@ def load_materialization():
         logger.info("Loading the materialization table...")
         path = materialization_path.replace("file://", "")
         current_app.synapse_data = pd.read_csv(path)
+
+        logger.info("Materialization table loaded successfully!")
+        logger.info(f"Materialization table shape: {current_app.synapse_data}")
 
         logger.info("Materialization table loaded successfully!")
         return jsonify({"status": "success"}), 200

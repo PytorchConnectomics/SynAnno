@@ -1,11 +1,16 @@
+import logging
 import os
 from collections import defaultdict
 from threading import Lock
 
 import pandas as pd
+import requests
 from flask import Flask
 from flask_cors import CORS
 from flask_session import Session
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def create_app():
@@ -50,8 +55,8 @@ def configure_app(app):
         CLOUD_VOLUME_BUCKETS=["gs:", "s3:", "file:"],
         IP=os.getenv("APP_IP", "0.0.0.0"),
         PORT=int(os.getenv("APP_PORT", 80)),
-        NG_IP=os.getenv("NG_IP", "localhost"),
-        NG_PORT="9015",
+        NG_IP=os.getenv("NG_IP", "0.0.0.0"),
+        NG_PORT=os.getenv("NG_PORT", "9015"),
     )
 
     # Initialize global variables
@@ -152,6 +157,9 @@ def initialize_global_variables(app):
         "Padding": object,  # Example: [[0, 0], [0, 0], [0, 0]]
     }
 
+    app.public_ip = get_public_ip()
+    logger.info(f"Public IP: {app.public_ip}")
+
     app.df_metadata = pd.DataFrame(columns=app.columns).astype(dtypes)
 
     app.synapse_data = {}
@@ -196,3 +204,34 @@ def setup_context_processors(app):
     @app.context_processor
     def handle_context():
         return dict(os=os)  # noqa: C408
+
+
+def get_public_ip():
+    try:
+        # Get the ECS Metadata URL from the environment variable
+        metadata_url = os.environ.get("ECS_CONTAINER_METADATA_URI_V4")
+        if metadata_url:
+            # Fetch the ECS task metadata
+            response = requests.get(f"{metadata_url}/task")
+            response.raise_for_status()
+            task_metadata = response.json()
+
+            logger.info(f"Task Metadata: {task_metadata}")
+
+            # Extract the Public IP Address
+            public_ip = (
+                task_metadata.get("Containers", [{}])[0]
+                .get("Networks", [{}])[0]
+                .get("IPv4Addresses", [None])[0]
+            )
+
+            logger.info(f"Public IP: {public_ip}")
+            return public_ip if public_ip else "localhost"
+        else:
+            logger.info(
+                "ECS_CONTAINER_METADATA_URI_V4 is not set. Falling back to localhost."
+            )
+            return "localhost"
+    except requests.RequestException as e:
+        logger.info(f"Error retrieving public IP: {e}")
+        return "localhost"

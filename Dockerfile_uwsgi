@@ -1,0 +1,56 @@
+FROM python:3.11
+
+# Metadata
+LABEL Name="SynAnno" Version="1.0.0"
+
+# Set working directory
+WORKDIR /app
+
+# Upgrade pip
+RUN python -m pip install --no-cache-dir --upgrade pip
+
+# Install system dependencies for PyQt5
+RUN apt-get update && apt-get install -y \
+    qtbase5-dev \
+    qtchooser \
+    qt5-qmake \
+    qttools5-dev-tools \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Verify Cargo version
+RUN cargo --version
+
+# Copy application code
+COPY setup.py /app/
+COPY synanno /app/synanno
+COPY run_production.py /app/
+COPY h01/h01_104_materialization.csv /app/h01/h01_104_materialization.csv
+
+# Install Python dependencies
+RUN python -m pip install uv
+RUN uv pip install --system --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
+RUN uv pip install --system --no-cache-dir torchsummary tqdm -e .
+RUN python -m pip install --no-cache-dir uwsgi
+
+# Copy uWSGI configuration
+COPY uwsgi.ini /app
+
+# Expose Flask (port 80) and Neuroglancer (port 9015)
+EXPOSE 80 9015
+
+# Environment Variables
+ENV DEBUG_APP="False"
+ENV SECRET_KEY="your-secret-key"
+ENV APP_IP="0.0.0.0"
+ENV NG_IP="0.0.0.0"
+ENV NG_PORT="9015"
+ENV APP_PORT="80"
+ENV EXECUTION_ENV="docker"
+
+# Start Flask (via uWSGI) and Neuroglancer
+CMD ["uwsgi", "--ini", "/app/uwsgi.ini", "--master", "--die-on-term"]

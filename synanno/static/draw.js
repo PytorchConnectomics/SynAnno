@@ -186,10 +186,43 @@ $(document).ready(() => {
       const pos = getXY(canvas_circle_pre, e, rect_circle);
       x_syn_crd = pos.x;
       y_syn_crd = pos.y;
+
+      // Draw the circle
       ctx_circle_pre.fillStyle = "rgb(0, 255, 0)";
       ctx_circle_pre.beginPath();
       ctx_circle_pre.arc(x_syn_crd, y_syn_crd, 10, 0, 2 * Math.PI);
       ctx_circle_pre.fill();
+
+      // Add a text label with improved readability
+      const text = "Pre";
+      const textX = x_syn_crd;
+      const textY = y_syn_crd - 20;
+
+      // Draw background with stronger opacity for better contrast
+      ctx_circle_pre.fillStyle = "rgba(0, 0, 0, 0.9)";
+      ctx_circle_pre.fillRect(
+        textX - 24,  // Fixed width for consistency
+        textY - 16,
+        48,          // Fixed width for consistency
+        22           // Slightly taller
+      );
+
+      // Draw text with brighter green for better visibility
+      ctx_circle_pre.fillStyle = "rgb(150, 255, 150)"; // Lighter green for better contrast
+      ctx_circle_pre.font = "bold 16px Arial";
+      ctx_circle_pre.textAlign = "center";
+      ctx_circle_pre.fillText(text, textX, textY);
+
+      // Draw border around text background for additional contrast
+      ctx_circle_pre.strokeStyle = "white";
+      ctx_circle_pre.lineWidth = 1;
+      ctx_circle_pre.strokeRect(
+        textX - 24,
+        textY - 16,
+        48,
+        22
+      );
+
       save_canvas(canvas_circle_pre, "circlePre");
       $("#canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonDrawMask, #canvasButtonAuto").prop("disabled", false);
       pre_CRD = false;
@@ -232,10 +265,43 @@ $(document).ready(() => {
       const pos = getXY(canvas_circle_post, e, rect_circle);
       x_syn_crd = pos.x;
       y_syn_crd = pos.y;
+
+      // Draw the circle
       ctx_circle_post.fillStyle = "rgb(0, 0, 255)";
       ctx_circle_post.beginPath();
       ctx_circle_post.arc(x_syn_crd, y_syn_crd, 10, 0, 2 * Math.PI);
       ctx_circle_post.fill();
+
+      // Add a text label with improved readability
+      const text = "Post";
+      const textX = x_syn_crd;
+      const textY = y_syn_crd - 20;
+
+      // Draw background with stronger opacity for better contrast
+      ctx_circle_post.fillStyle = "rgba(0, 0, 0, 0.9)";
+      ctx_circle_post.fillRect(
+        textX - 24,  // Wider background
+        textY - 16,
+        48,          // Fixed width for consistency
+        22           // Slightly taller
+      );
+
+      // Draw text with brighter blue for better visibility
+      ctx_circle_post.fillStyle = "rgb(100, 200, 255)"; // Lighter blue for better contrast
+      ctx_circle_post.font = "bold 16px Arial";
+      ctx_circle_post.textAlign = "center";
+      ctx_circle_post.fillText(text, textX, textY);
+
+      // Draw border around text background for additional contrast
+      ctx_circle_post.strokeStyle = "white";
+      ctx_circle_post.lineWidth = 1;
+      ctx_circle_post.strokeRect(
+        textX - 24,
+        textY - 16,
+        48,
+        22
+      );
+
       save_canvas(canvas_circle_post, "circlePost");
       $("#canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonDrawMask, #canvasButtonAuto").prop("disabled", false);
       post_CRD = false;

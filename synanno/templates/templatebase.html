@@ -42,7 +42,7 @@
     />
   </head>
 
-  <body>
+  <body style>
     <header class="mb-2">
       <div class="collapse bg-dark" id="navbarMenu">
         <div class="container">
@@ -138,8 +138,23 @@
         const staticBaseUrl = "{{ url_for('static', filename='') }}";
     </script>
 
-    <main class="m-2">
-      <div class="container">
+    <main class="m-2 d-flex flex-container">
+
+       <!-- Draggable Minimap Container -->
+       <div id="minimapContainer" class="minimap" data-minimap-state="collapsed">
+        <div id="minimapHeader" class="minimap-header">
+          Neuron Minimap
+          <button id="toggleButton" class="btn btn-sm btn-secondary toggle-btn">Toggle</button>
+        </div>
+        <div id="shark_container_minimap" class="minimap-content"></div>
+        <div id="minimapFooter" class="minimap-footer">
+          <div id="loading_container" class="minimap-loading-bar">
+            <div id="loading_progress" class="minimap-progress-bar"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="container" style="flex-grow-1">
         {% for message in get_flashed_messages() %}
         <div
           class="alert alert-warning alert-dismissible fade show"

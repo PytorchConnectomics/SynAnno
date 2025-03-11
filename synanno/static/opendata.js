@@ -138,59 +138,49 @@ $(document).ready(function () {
   document.getElementById('materialization_url').addEventListener('input', function() {
     clearTimeout(debounceTimer);
     const self = this;
-    debounceTimer = setTimeout(function() {
-      var materializationUrl = self.value.trim();
-      console.log("Materialization URL:", materializationUrl);
-      var openNeuronModalBtn = document.getElementById('openNeuronModalBtn');
+    debounceTimer = setTimeout(async function() {
+      const materializationUrl = self.value.trim();
+      const openNeuronModalBtn = document.getElementById('openNeuronModalBtn');
       openNeuronModalBtn.setAttribute('disabled', 'disabled');
       if (materializationUrl) {
-        fetch('/load_materialization', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ materialization_url: materializationUrl })
-        })
-        .then(response => response.json())
-        .then(data => {
+        try {
+          const response = await fetch('/load_materialization', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ materialization_url: materializationUrl })
+          });
+          const data = await response.json();
           if (data.status === "success") {
             console.log("Materialization table loaded.");
-            // Grab the form values
-            var source_url = document.getElementById('source_url').value.trim();
-            var target_url = document.getElementById('target_url').value.trim();
-            var neuropil_url = document.getElementById('neuropil_url').value.trim();
+            const source_url = document.getElementById('source_url').value.trim();
+            const target_url = document.getElementById('target_url').value.trim();
+            const neuropil_url = document.getElementById('neuropil_url').value.trim();
 
-            // Build the query string with proper URL encoding
-            var queryString = '?source_url=' + encodeURIComponent(source_url) +
-                              '&target_url=' + encodeURIComponent(target_url) +
-                              '&neuropil_url=' + encodeURIComponent(neuropil_url);
+            const queryString = '?source_url=' + encodeURIComponent(source_url) +
+                                '&target_url=' + encodeURIComponent(target_url) +
+                                '&neuropil_url=' + encodeURIComponent(neuropil_url);
 
-            // Use a GET request to fetch the Neuroglancer URL with our form data in tow!
-            fetch('/launch_neuroglancer' + queryString, { method: 'GET' })
-              .then(response => response.json())
-              .then(ngData => {
-                if (ngData.ng_url) {
-                  document.getElementById('neuroglancerIframe').src = ngData.ng_url;
-                  console.log("Neuroglancer URL set to:", ngData.ng_url);
-                  // Only enable the button upon successful processing without any alerts
-                  openNeuronModalBtn.removeAttribute('disabled');
-                } else {
-                  console.error("No Neuroglancer URL received:", ngData.error);
-                }
-              })
-              .catch(error => {
-                console.error("Error launching Neuroglancer:", error);
-              });
+            const ngResponse = await fetch('/launch_neuroglancer' + queryString, { method: 'GET' });
+            const ngData = await ngResponse.json();
+            if (ngData.ng_url) {
+              document.getElementById('neuroglancerIframe').src = ngData.ng_url;
+              console.log("Neuroglancer URL set to:", ngData.ng_url);
+              openNeuronModalBtn.removeAttribute('disabled');
+            } else {
+              console.error("No Neuroglancer URL received:", ngData.error);
+            }
           } else {
             console.error("Error loading materialization table:", data.error);
           }
-        })
-        .catch(error => {
+        } catch (error) {
           console.error("Error during fetch:", error);
-        });
+        }
       }
     }, debounceDelay);
   });
+
 
   let checkSelectedNeuronIDHandle;
   let initialID = null;

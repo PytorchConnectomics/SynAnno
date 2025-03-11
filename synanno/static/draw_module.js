@@ -1,5 +1,7 @@
 $(document).ready(function () {
 
+  const currentPage = parseInt($("script[src*='draw_module.js']").data("current-page")) || -1;
+
   $('[id^="drawButton-"]').click(async function () {
     var [page, data_id, label] = $(this)
       .attr("id")
@@ -309,10 +311,12 @@ $(document).ready(function () {
     $('#loading-bar').css('display', 'flex');
     // update the bb information with the manuel corrections and pass them to the backend
     // trigger the processing/save to the pandas df in the backend
+    console.log("currentPage", currentPage);
     $.ajax({
       url: "/ng_bbox_fn_save",
       type: "POST",
       data: {
+        currentPage: currentPage,
         z1: $("#d_z1").val(),
         z2: $("#d_z2").val(),
         my: $("#m_y").val(),
@@ -322,11 +326,11 @@ $(document).ready(function () {
       // hide modules
       $("#drawModalFNSave, #drawModalFN").modal("hide");
 
-      // Hide the loading bar after the operation completes
-      $('#loading-bar').css('display', 'none');
-
       // refresh page
       location.reload();
+
+      // Hide the loading bar after the operation completes
+      $('#loading-bar').css('display', 'none');
     });
   });
 

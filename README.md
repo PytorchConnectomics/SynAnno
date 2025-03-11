@@ -119,15 +119,16 @@ Repository includes a Dockerfile that enables you to build and run the applicati
 4. **Run the Docker container**: Run the Docker container using the image you just built.
 
    ```bash
-   docker run -p 8080:80 synanno
+   docker run -d --name synanno -p 80:80 -p 9015:9015 synanno
    ```
 
-   This command maps port 8080 on your local machine to port 80 on the Docker container.
+5. **Access the application**: Open a web browser and go to `http://localhost` to access the application running in the Docker container.
 
-5. **Access the application**: Open a web browser and go to `http://localhost:8080` to access the application running in the Docker container.
+6. **Stop the Docker container**: When you're done, you can stop the Docker container by pressing `Ctrl + C` in the terminal where the container is running or by running the following command:
 
-6. **Stop the Docker container**: When you're done, you can stop the Docker container by pressing `Ctrl + C` in the terminal where the container is running.
-
+   ```bash
+   docker stop synanno
+   ```
 
 ### Local Installation
 

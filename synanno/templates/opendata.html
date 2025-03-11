@@ -87,7 +87,7 @@
               />
             </p>
             <label for="materialization_url" class="form-label">
-              Materialization (url/name of the table containing the ID association and bounding box information)
+              Materialization (path to the table containing the ID association and bounding box information) - Required
             </label>
             <p>
               <input
@@ -224,7 +224,7 @@
                 <label for="formGroupExampleInput" class="form-label" style="margin-right: 50px; display: inline-block;">Instance crop size (in pixel)</label>
                 <input class="form-control" type="number" id="cropsize_x" placeholder="256" name="crop_size_c0" value="256" style="width: auto; display: inline-block;" />
                 <input class="form-control" type="number" id="cropsize_y" placeholder="256" name="crop_size_c1" value="256" style="width: auto; display: inline-block;"/>
-                <input class="form-control" type="number" id="cropsize_z" placeholder="16" name="crop_size_c2" value="{{ '16' if mode == 'draw' else '1' }}" style="width: auto; display: inline-block;" />
+                <input class="form-control" type="number" id="cropsize_z" placeholder="16" name="crop_size_c2" value="{{ '16' if mode == 'draw' else '6' }}" style="width: auto; display: inline-block;" />
                 <div class="mb-1"></div>
 
                 <div>
@@ -336,7 +336,7 @@
 <!-- add js file to disable the form on reset -->
 <script type="module" src="{{ url_for('static', filename='opendata.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='SharkViewer/three.min.js') }}"></script>
-<script type="module" src="{{ url_for('static', filename='viewer.js') }}" data-neuron-ready="{{ neuronReady }}" data-initial-load="true" data-neuron-section="{{ neuronSection }}"  data-synapse-point-cloud="{{ synapsePointCloud }}"></script>
+<script type="module" src="{{ url_for('static', filename='viewer.js') }}" data-neuron-ready="{{ neuronReady }}" data-initial-load="true" data-neuron-sections="{{ neuronSections }}"  data-synapse-point-cloud="{{ synapsePointCloud }}"></script>
 
 <script type="module" src="{{ url_for('static', filename='minimap.js') }}" data-neuron-ready="{{ neuronReady }}"></script>
 

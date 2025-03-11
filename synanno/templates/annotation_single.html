@@ -26,6 +26,7 @@
               height="512px"
               style="position: initial;"
             />
+            {% if fn_page != "true" %}
             <img
               id="imgDetails-GT"
               class="card-img-top mb-1"
@@ -37,19 +38,10 @@
                 opacity: 0.5;
               "
             />
+            {% endif %}
           </div>
         </div>
         <div class="center">
-          <input
-            id="rangeSlices"
-            type="range"
-            class="form-range"
-            value="0"
-            min="0"
-            max="30"
-            data_id=""
-            page=""
-          />
           <div class="container">
             <div class="row">
               <div class="col-4 d-flex justify-content-start">

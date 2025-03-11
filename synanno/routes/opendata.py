@@ -26,6 +26,7 @@ from synanno.backend.neuron_processing.partition_neuron import (
 )
 from synanno.backend.processing import (
     calculate_number_of_pages,
+    calculate_number_of_pages_for_neuron_section_based_loading,
     determine_volume_dimensions,
     load_cloud_volumes,
     retrieve_instance_metadata,
@@ -403,14 +404,17 @@ def upload_file():
 
         handle_neuron_view(neuropil_url)
         current_app.neuron_ready = "true"
+        current_app.n_pages = (
+            calculate_number_of_pages_for_neuron_section_based_loading()
+        )
     elif current_app.view_style == "synapse":
         handle_synapse_view()
 
-    if nr_instances == 0:
-        nr_instances = len(current_app.synapse_data.index)
-    current_app.n_pages = calculate_number_of_pages(nr_instances, current_app.per_page)
+        if nr_instances == 0:
+            nr_instances = len(current_app.synapse_data.index)
+        current_app.n_pages = calculate_number_of_pages(nr_instances)
 
-    retrieve_instance_metadata(page=0, mode=current_app.draw_or_annotate)
+    retrieve_instance_metadata(page=1, mode=current_app.draw_or_annotate)
 
     if current_app.ng_version is None:
         ng_util.setup_ng(
@@ -428,7 +432,7 @@ def upload_file():
         view_style=current_app.view_style,
         mode=current_app.draw_or_annotate,
         neuronReady=current_app.neuron_ready,
-        neuronSection=current_app.sections,
+        neuronSections=current_app.sections,
         synapsePointCloud=current_app.snapped_point_cloud,
     )
 
@@ -447,6 +451,8 @@ def set_data(task: str = "annotate"):
     Returns:
         Renders either the annotation or the draw view dependent on the user action
     """
+
+    page = 1
     if task == "draw":
         data = current_app.df_metadata.query('Label != "Correct"').sort_values(
             by="Image_Index"
@@ -454,11 +460,16 @@ def set_data(task: str = "annotate"):
         data = data.to_dict("records")
         return render_template("draw.html", images=data)
     else:
-        page = 0
         data = (
             current_app.df_metadata.query("Page == @page")
             .sort_values(by="Image_Index")
             .to_dict("records")
+        )
+
+        fn_page = (
+            current_app.page_section_mapping[page][1]
+            if page in current_app.page_section_mapping
+            else False
         )
 
         return render_template(
@@ -469,8 +480,14 @@ def set_data(task: str = "annotate"):
             grid_opacity=current_app.grid_opacity,
             neuron_id=current_app.selected_neuron_id,
             neuronReady=current_app.neuron_ready,
-            neuronSection=current_app.sections,
+            neuronSections=current_app.sections,
             synapsePointCloud=current_app.snapped_point_cloud,
+            activeNeuronSection=(
+                current_app.page_section_mapping[page][0]
+                if page in current_app.page_section_mapping
+                else 0
+            ),
+            fn_page="true" if fn_page else "false",
         )
 
 
@@ -484,7 +501,6 @@ def get_instance():
     """
     coordinate_order = list(current_app.coordinate_order.keys())
 
-    str(request.form["mode"])
     load = str(request.form["load"])
     page = int(request.form["page"])
     index = int(request.form["data_id"])
@@ -584,8 +600,10 @@ def neuro():
     final_json = jsonify(
         {
             "ng_link": "http://"
-            + current_app.config["IP"]
-            + ":9015/v/"
+            + current_app.config["NG_IP"]
+            + ":"
+            + str(current_app.config["NG_PORT"])
+            + "/v/"
             + str(current_app.ng_version)
             + "/"
         }

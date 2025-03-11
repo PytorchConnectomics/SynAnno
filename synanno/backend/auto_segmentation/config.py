@@ -106,4 +106,14 @@ def get_config() -> dict:
     if env == "slurm":
         return SLURM_CONFIG
     else:
+        if env == "docker":
+            config = LOCAL_CONFIG
+            # update path to materialization csv
+            config["materialization_csv"] = (
+                "/app/synanno/h01/h01_104_materialization.csv"
+            )
+            # update path to checkpoints
+            config["TRAINING_CONFIG"][
+                "checkpoints"
+            ] = "/app/synanno/backend/auto_segmentation/syn_anno_checkpoints/"
         return LOCAL_CONFIG

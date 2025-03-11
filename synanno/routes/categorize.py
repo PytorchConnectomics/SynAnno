@@ -77,8 +77,14 @@ def update_flags(flags, delete_fps):
         delete_fps: Boolean indicating if false positives should be deleted.
     """
     for flag in flags:
-        page_nr, img_nr, f = dict(flag).values()
-        if f == "falsePositive" and delete_fps:
+        page_nr, img_nr, error_flag = dict(flag).values()
+
+        # remove unwanted quotation marks; the pragmatically set the
+        # False Negative flag it will be set as "False Negative"
+        error_flag = error_flag.replace('"', "")
+        error_flag = error_flag.replace("'", "")
+
+        if error_flag == "falsePositive" and delete_fps:
             current_app.df_metadata.drop(
                 current_app.df_metadata[
                     (current_app.df_metadata["Page"] == int(page_nr))
@@ -91,7 +97,7 @@ def update_flags(flags, delete_fps):
                 (current_app.df_metadata["Page"] == int(page_nr))
                 & (current_app.df_metadata["Image_Index"] == int(img_nr)),
                 "Error_Description",
-            ] = f
+            ] = error_flag
 
 
 def stop_categorization_timer():
@@ -115,5 +121,6 @@ def custom_flag():
         & (current_app.df_metadata["Image_Index"] == int(img_id)),
         ["Error_Description"],
     ].to_dict(orient="records")[0]["Error_Description"]
+
     data = json.dumps(error_flag)
     return jsonify(message=data)

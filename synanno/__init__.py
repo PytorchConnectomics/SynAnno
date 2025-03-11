@@ -1,3 +1,4 @@
+import logging
 import os
 from collections import defaultdict
 from threading import Lock
@@ -6,6 +7,9 @@ import pandas as pd
 from flask import Flask
 from flask_cors import CORS
 from flask_session import Session
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def create_app():
@@ -50,8 +54,8 @@ def configure_app(app):
         CLOUD_VOLUME_BUCKETS=["gs:", "s3:", "file:"],
         IP=os.getenv("APP_IP", "0.0.0.0"),
         PORT=int(os.getenv("APP_PORT", 80)),
-        NG_IP="localhost",
-        NG_PORT="9015",
+        NG_IP=os.getenv("PUBLIC_DNS_SYNANNO", "0.0.0.0"),
+        NG_PORT=os.getenv("NG_PORT", "9015"),
     )
 
     # Initialize global variables
@@ -87,7 +91,7 @@ def initialize_global_variables(app):
     # The auto segmentation view needs a set number of slices per instance (depth)
     # see process_instances.py::load_missing_slices for more details
     app.crop_size_z_draw = 16
-    app.crop_size_z = 1
+    app.crop_size_z = 6
     app.crop_size_x = 256
     app.crop_size_y = 256
     app.columns = [
@@ -156,6 +160,9 @@ def initialize_global_variables(app):
 
     app.synapse_data = {}
 
+    # holds a dict of tuples with the page number and the section index
+    app.page_section_mapping = {}
+
     app.source_image_data = defaultdict(dict)
     app.target_image_data = defaultdict(dict)
 
@@ -173,6 +180,7 @@ def register_routes(app):
     from synanno.routes.annotation import blueprint as annotation_blueprint
     from synanno.routes.auto_annotate import blueprint as auto_annotate_blueprint
     from synanno.routes.categorize import blueprint as categorize_blueprint
+    from synanno.routes.false_negatives import blueprint as fn_blueprint
     from synanno.routes.file_access import blueprint as file_access_blueprint
     from synanno.routes.finish import blueprint as finish_blueprint
     from synanno.routes.landingpage import blueprint as landingpage_blueprint
@@ -188,6 +196,7 @@ def register_routes(app):
     app.register_blueprint(landingpage_blueprint)
     app.register_blueprint(manual_annotate_blueprint)
     app.register_blueprint(auto_annotate_blueprint)
+    app.register_blueprint(fn_blueprint)
 
 
 def setup_context_processors(app):

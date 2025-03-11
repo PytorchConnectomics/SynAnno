@@ -107,7 +107,7 @@ def partition_segments(
     validate_segments(segments, undirected_graph)
 
     logger.info(
-        f"{len((segments))} segments with"
+        f"{len((segments))} segments with "
         f"a joint length of {sum([len(s) for s in segments])}."
     )
     num_sections = len(branch_points) // 4

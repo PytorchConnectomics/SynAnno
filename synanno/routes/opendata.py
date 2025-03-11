@@ -64,14 +64,14 @@ def open_data(task: str):
             modenext="d-none",
             modereset="inline",
             mode=current_app.draw_or_annotate,
-            view_style="synapse",
+            view_style="volume",  # Changed from "synapse" to "volume"
             neuronReady="false",
         )
     return render_template(
         "opendata.html",
         modenext="disabled",
         mode=current_app.draw_or_annotate,
-        view_style="synapse",
+        view_style="volume",  # Changed from "synapse" to "volume"
         neuronReady="false",
     )
 
@@ -312,21 +312,38 @@ def handle_neuron_view(neuropil_url: str):
     current_app.sections = sorted_sections
 
 
-def handle_synapse_view():
-    """Handle the synapse view processing."""
-    preid = int(request.form.get("preid")) if request.form.get("preid") else None
-    postid = int(request.form.get("postid")) if request.form.get("postid") else None
+def handle_volume_view():
+    """Handle the volume view processing."""
+    # Create a subvolume dictionary from the form values
+    coordinate_order = list(current_app.coordinate_order.keys())
+    subvolume = {}
+    for coord in coordinate_order:
+        x_min = request.form.get(coord + "1")
+        x_max = request.form.get(coord + "2")
 
-    if preid is None:
-        preid = 0
-    if postid is None:
-        postid = len(current_app.synapse_data.index)
+        subvolume[coord + "1"] = int(x_min) if x_min and x_min.strip() else 0
+        subvolume[coord + "2"] = int(x_max) if x_max and x_max.strip() else -1
 
+    # Update the limits if they are set to default (-1)
+    for coord in coordinate_order:
+        if subvolume[coord + "2"] == -1:
+            if coord == "x":
+                subvolume[coord + "2"] = current_app.vol_dim[0]
+            elif coord == "y":
+                subvolume[coord + "2"] = current_app.vol_dim[1]
+            elif coord == "z":
+                subvolume[coord + "2"] = current_app.vol_dim[2]
+
+    logger.info(f"Volume view processing with subvolume: {subvolume}")
+
+    # Filter synapse data based on subvolume constraints
+    current_app.synapse_data = current_app.synapse_data.query(
+        'x >= @subvolume["x1"] and x <= @subvolume["x2"] and '
+        'y >= @subvolume["y1"] and y <= @subvolume["y2"] and '
+        'z >= @subvolume["z1"] and z <= @subvolume["z2"]'
+    )
     current_app.synapse_data["materialization_index"] = (
         current_app.synapse_data.index.to_series()
-    )
-    current_app.synapse_data = current_app.synapse_data.query(
-        "index >= @preid and index <= @postid"
     )
     current_app.synapse_data.reset_index(drop=True, inplace=True)
 
@@ -403,8 +420,9 @@ def upload_file():
 
         handle_neuron_view(neuropil_url)
         current_app.neuron_ready = "true"
-    elif current_app.view_style == "synapse":
-        handle_synapse_view()
+    elif current_app.view_style == "volume":
+        handle_volume_view()
+        current_app.neuron_ready = "false"
 
     if nr_instances == 0:
         nr_instances = len(current_app.synapse_data.index)

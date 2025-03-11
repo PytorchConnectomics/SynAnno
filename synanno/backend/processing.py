@@ -176,7 +176,7 @@ def retrieve_materialization_data() -> dict:
     Returns:
         The selected materialization data as a dictionary.
     """
-    if current_app.view_style == "synapse":
+    if current_app.view_style == "volume":
         df = current_app.synapse_data
         df = df[
             [

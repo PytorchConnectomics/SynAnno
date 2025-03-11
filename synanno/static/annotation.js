@@ -1,6 +1,7 @@
 $(document).ready(function () {
 
   const neuronReady = $("script[src*='minimap.js']").data("neuron-ready") === true;
+  const fnPage = $("script[src*='annotation.js']").data("fn-page") === true;
   const $sharkContainerAnnotate = $("#shark_container_minimap");
 
   // show progress bar when scrolling pages
@@ -80,40 +81,60 @@ $(document).ready(function () {
       let $card = $(this).find(".image-card-btn"); // The card representing the instance
       let data_id = $card.attr("data_id"); // Instance identifier
 
-      let $imgTarget = $("#imgTarget-" + data_id);
       let $imgSource = $("#imgSource-" + data_id);
+      let $imgTarget = $("#imgTarget-" + data_id);
 
-      let currentSlice = parseInt($imgTarget.data("current-slice") || $imgTarget.data("current-slice")); // Current slice
+      let currentSlice = parseInt($imgSource.data("current-slice")); // Current slice
 
       // Determine scroll direction
       let newSlice = currentSlice + (event.originalEvent.deltaY > 0 ? 1 : -1);
 
       try {
-        let response = await $.ajax({
-            url: `/source_and_target_exist/${data_id}/${newSlice}`,
-            type: "GET"
-        });
+        let response;
+        if (fnPage) {
+          response = await $.ajax({
+            url: `/source_img_exists/${data_id}/${newSlice}`,
+            type: "GET",
+          });
+        } else {
+          response = await $.ajax({
+              url: `/source_and_target_exist/${data_id}/${newSlice}`,
+              type: "GET"
+          });
+        }
 
         if (response) {  // Only execute if the slice exists
+            let newTargetImg;
             let newSourceImg = new Image();
-            let newTargetImg = new Image();
+
+
 
             newSourceImg.src = `/get_source_image/${data_id}/${newSlice}`;
-            newTargetImg.src = `/get_target_image/${data_id}/${newSlice}`;
 
-            // Wait for both images to load before updating
-            await Promise.all([
+            if (fnPage) {
+              await new Promise(resolve => newSourceImg.onload = resolve);
+            } else {
+              newTargetImg = new Image();
+              newTargetImg.src = `/get_target_image/${data_id}/${newSlice}`;
+
+              // Wait for both images to load before updating
+              await Promise.all([
                 new Promise(resolve => newSourceImg.onload = resolve),
                 new Promise(resolve => newTargetImg.onload = resolve)
-            ]);
+              ]);
+            }
 
-            // Update the displayed images **only after both have fully loaded**
-            $imgSource.attr("src", newSourceImg.src);
-            $imgTarget.attr("src", newTargetImg.src);
-
-            // Update the slice attribute
-            $imgTarget.data("current-slice", newSlice);
-            $imgSource.data("current-slice", newSlice);
+            if (fnPage) {
+              // Update the displayed images **only after both have fully loaded**
+              $imgSource.attr("src", newSourceImg.src);
+              $imgSource.data("current-slice", newSlice);
+            }
+            else {
+              $imgSource.attr("src", newSourceImg.src);
+              $imgSource.data("current-slice", newSlice);
+              $imgTarget.attr("src", newTargetImg.src);
+              $imgTarget.data("current-slice", newSlice);
+            }
         }
     } catch (error) {
         console.error("Error loading images:", error);
@@ -137,6 +158,7 @@ window.dec_opacity_grid =  function dec_opacity_grid() {
   }
   $("#value-opacity-grid").attr("value", new_value);
   $("#value-opacity-grid").text(new_value.toFixed(1));
+
   $('[id^="imgTarget-"]').each(function () {
     $(this).css("opacity", new_value);
   });

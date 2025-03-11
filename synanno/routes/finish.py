@@ -53,7 +53,7 @@ def download_json():
         - Returns 200 for HEAD requests if data exists.
         - Renders an error page if no data is available.
     """
-    if current_app.n_pages <= 0 or current_app.df_metadata.empty:
+    if current_app.n_pages < 1 or current_app.df_metadata.empty:
         flash("No file - session data is empty.", "error")
         return render_template("export_annotate.html", disable_snp=" ")
 

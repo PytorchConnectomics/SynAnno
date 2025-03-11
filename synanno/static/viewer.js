@@ -6,12 +6,16 @@ window.onload = async () => {
 
     const neuronReady = $("script[src*='viewer.js']").data("neuron-ready") === true;
     const initialLoad = $("script[src*='viewer.js']").data("initial-load") === true;
-    const sectionArray = $("script[src*='viewer.js']").data("neuron-section");
+    const sectionArrays = $("script[src*='viewer.js']").data("neuron-sections");
     const synapsePointCloud = $("script[src*='viewer.js']").data("synapse-point-cloud");
 
+    let activeNeuronSection = parseInt($("script[src*='viewer.js']").data("active-neuron-section"))
+    activeNeuronSection = isNaN(activeNeuronSection) ? -1 : activeNeuronSection;
+
+    console.log("activeNeuronSection:", activeNeuronSection);
     const $sharkContainerMinimap = $("#shark_container_minimap");
 
-    window.sectionColors = generateSectionColors(sectionArray);
+    window.sectionColors = generateSectionColors(sectionArrays);
 
     if (neuronReady) {
         if (initialLoad) {
@@ -20,10 +24,10 @@ window.onload = async () => {
         }
 
         try {
-            await initializeViewer($sharkContainerMinimap[0], maxVolumeSize, sectionArray);
+            await initializeViewer($sharkContainerMinimap[0], maxVolumeSize, sectionArrays, activeNeuronSection);
 
             const swcTxt = await loadSwcFile();
-            processSwcFile(swcTxt, sectionArray);
+            processSwcFile(swcTxt, sectionArrays, activeNeuronSection);
 
             if (synapsePointCloud) {
                 updateLoadingBar(parseInt(synapsePointCloud.length / 3));
@@ -41,8 +45,8 @@ window.onload = async () => {
     }
 };
 
-async function initializeViewer(sharkContainerMinimap, maxVolumeSize, sectionArray) {
-    const sectionMetadata = generateSectionMetadata(sectionArray);
+async function initializeViewer(sharkContainerMinimap, maxVolumeSize, sectionArrays, activeNeuronSection) {
+    const sectionMetadata = generateSectionMetadata(sectionArrays);
 
     window.window.shark = new SharkViewer({
         mode: 'particle',
@@ -56,9 +60,7 @@ async function initializeViewer(sharkContainerMinimap, maxVolumeSize, sectionArr
     await window.shark.init();
     window.shark.animate();
 
-    const collectSectionIndices = getDisplayedSectionIndices(true);
-
-    const mElement = createMetadataElement(sectionMetadata, window.sectionColors, collectSectionIndices);
+    const mElement = createMetadataElement(sectionMetadata, window.sectionColors, activeNeuronSection);
     const oldElement = document.getElementById("node_key");
     if (oldElement) {
         oldElement.remove();
@@ -92,7 +94,7 @@ async function loadSwcFile() {
     }
 }
 
-function processSwcFile(swcTxt, sectionArray) {
+function processSwcFile(swcTxt, sectionArrays, activeNeuronSection) {
     const swc = swcParser(swcTxt);
 
     if (!swc || Object.keys(swc).length === 0) {
@@ -102,7 +104,7 @@ function processSwcFile(swcTxt, sectionArray) {
 
     window.window.shark.swc = swc;
 
-    const neuronData = window.shark.loadNeuron('neuron', 'red', swc, sectionArray, true, false, true);
+    const neuronData = window.shark.loadNeuron('neuron', 'red', swc, sectionArrays, true, false, true);
     const neuronObject = neuronData[0];
 
     if (neuronObject && neuronObject.isObject3D) {
@@ -116,7 +118,7 @@ function processSwcFile(swcTxt, sectionArray) {
 
     if (neuron) {
         console.log("Neuron found! Proceeding with color update.");
-        updateNodeAndEdgeColors(window.shark, sectionArray);
+        updateNodeAndEdgeColors(window.shark, sectionArrays, activeNeuronSection);
         setTimeout(() => adjustCameraForNeuron(window.shark), 500);
     } else {
         console.warn("Neuron still not found in the scene.");
@@ -215,7 +217,7 @@ function processSynapseCloudData(data, maxVolumeSize) {
     console.log("Synapse cloud successfully added.");
 }
 
-function updateNodeAndEdgeColors(viewer, sectionArray) {
+function updateNodeAndEdgeColors(viewer, sectionArrays, activeNeuronSection) {
     const neuron = viewer.scene.getObjectByName("neuron");
     if (!neuron) {
         console.error("Neuron object not found.");
@@ -239,12 +241,10 @@ function updateNodeAndEdgeColors(viewer, sectionArray) {
     const vertexColors = new Float32Array(numVertices * itemSizeVertices);
     const edgeColors = new Float32Array(numVertices * 6 * itemSizeEdges);
 
-    const collectSectionIndices = getDisplayedSectionIndices();
-    console.log("Displayed section indices:", collectSectionIndices);
 
     let vertexGreyOut = [];
     let edgeGreyOut = [];
-    if (collectSectionIndices.length > 0) {
+    if (activeNeuronSection >= 0) {
         console.log("Some sections get greyed out");
         vertexGreyOut = new Float32Array(numVertices).fill(1.0);
         edgeGreyOut = new Float32Array(numVertices * 6).fill(1.0);
@@ -254,7 +254,7 @@ function updateNodeAndEdgeColors(viewer, sectionArray) {
         edgeGreyOut = new Float32Array(numVertices * 6).fill(0.0);
     }
 
-    sectionArray.forEach((nodeGroup, index) => {
+    sectionArrays.forEach((nodeGroup, index) => {
         const color = new THREE.Color(window.sectionColors[index] || 0xffffff);
 
         nodeGroup.forEach(nodeIndex => {
@@ -271,7 +271,7 @@ function updateNodeAndEdgeColors(viewer, sectionArray) {
                 edgeColors.set([color.r, color.g, color.b], (nodeIndex - 1) * 6 * 3 + 15);
             }
 
-            if (collectSectionIndices.includes(index.toString())) {
+            if (activeNeuronSection === index) {
                 vertexGreyOut[(nodeIndex - 1)] = 0.0;
                 edgeGreyOut[(nodeIndex - 1) * 6] = 0.0;
                 edgeGreyOut[(nodeIndex - 1) * 6 + 1] = 0.0;
@@ -300,7 +300,7 @@ function updateNodeAndEdgeColors(viewer, sectionArray) {
     viewer.render();
 }
 
-window.greyOutSectionsAlpha = (viewer, sectionArray, greyOutSections) => {
+window.greyOutSectionsAlpha = (viewer, sectionArrays, greyOutSections) => {
     const neuron = viewer.scene.getObjectByName("neuron");
     if (!neuron) {
         console.error("Neuron object not found.");
@@ -322,7 +322,7 @@ window.greyOutSectionsAlpha = (viewer, sectionArray, greyOutSections) => {
     const edgeGreyOut = new Float32Array(numVertices * 6).fill(0.0);
 
     greyOutSections.forEach(sectionIndex => {
-        sectionArray[sectionIndex].forEach(vertexIndex => {
+        sectionArrays[sectionIndex].forEach(vertexIndex => {
             vertexGreyOut[vertexIndex - 1] = 1.0;
 
             edgeGreyOut[(vertexIndex - 1) * 6] = 1.0;
@@ -432,9 +432,9 @@ function addLights(scene) {
     }
 }
 
-function generateSectionColors(sectionArray) {
+function generateSectionColors(sectionArrays) {
     const colors = [];
-    const numSections = sectionArray.length;
+    const numSections = sectionArrays.length;
 
     for (let i = 0; i < numSections; i++) {
         const hue = (i / numSections) * 1.0; // Spread colors evenly
@@ -443,8 +443,8 @@ function generateSectionColors(sectionArray) {
     return colors;
 }
 
-function generateSectionMetadata(sectionArray) {
-    return sectionArray.map((_, index) => ({
+function generateSectionMetadata(sectionArrays) {
+    return sectionArrays.map((_, index) => ({
         "label": `Sec. ${index + 1}`, // Assign a readable name
         "type": index  // Unique type ID for this section
     }));
@@ -475,7 +475,7 @@ window.onWindowResize = function(sharkContainerMinimap) {
     window.window.shark.render();
 }
 
-function createMetadataElement(metadata, colors, activeSections) {
+function createMetadataElement(metadata, colors, activeNeuronSection) {
     const metadiv = document.createElement("div");
     metadiv.id = "node_key";
     metadiv.style.position = "absolute";  // Ensure positioning does not affect layout
@@ -501,7 +501,7 @@ function createMetadataElement(metadata, colors, activeSections) {
             ? `rgb(${colors[index].r * 255}, ${colors[index].g * 255}, ${colors[index].b * 255})`
             : convertToHexColor(colors[index]);
 
-        let isActive = activeSections.includes(index)
+        let isActive = activeNeuronSection === index
             ? "font-weight: bold; background: rgba(229, 218, 6, 0.41);"
             : "";
 
@@ -526,39 +526,25 @@ function createMetadataElement(metadata, colors, activeSections) {
 }
 
 
-function getDisplayedSectionIndices(parse_int = false) {
-    const collectSectionIndices = [];
-    $(".image-card-btn").each(function () {
-        let sectionIdx = $(this).attr("sectionIdx");
-        if (parse_int) {
-            sectionIdx = parseInt(sectionIdx);
-        }
-        if (!isNaN(sectionIdx)) {
-            collectSectionIndices.push(sectionIdx);
-        }
-    });
-
-    return [...new Set(collectSectionIndices)]; // Remove duplicates
-}
 
 function getDisplayedDataID() {
-    const collectSectionIndices = [];
+    const instanceIndices = [];
     $(".image-card-btn").each(function () {
         let data_id = $(this).attr("data_id");
         if (!isNaN(data_id)) {
-            collectSectionIndices.push(data_id);
+            instanceIndices.push(data_id);
         }
     });
 
-    return [...new Set(collectSectionIndices)];
+    return [...new Set(instanceIndices)];
 }
 
 function updateLoadingBar(synapse_count) {
-    const displayedSectionIndices = getDisplayedDataID();
+    const displayedInstanceIndices = getDisplayedDataID();
 
-    if (displayedSectionIndices.length === 0) return;
+    if (displayedInstanceIndices.length === 0) return;
 
-    const lowestDisplayedSectionIdx = Math.min(...displayedSectionIndices);
+    const lowestDisplayedSectionIdx = Math.min(...displayedInstanceIndices);
     const progressPercent = (lowestDisplayedSectionIdx / synapse_count) * 100;
 
     document.getElementById("loading_progress").style.width = `${progressPercent}%`;

@@ -137,7 +137,7 @@ def setup_ng(
 
     # setup a Tornado web server and create viewer instance
     neuroglancer.set_server_bind_address(
-        bind_address=app.config["NG_IP"], bind_port=app.config["NG_PORT"]
+        bind_address="0.0.0.0", bind_port=app.config["NG_PORT"]
     )
     app.ng_viewer = neuroglancer.Viewer(token=app.ng_version)
 

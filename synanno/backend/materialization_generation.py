@@ -129,8 +129,6 @@ def process_avro_files(avro_dir_path: str, output_csv_path: str):
         avro_file_path = os.path.join(avro_dir_path, avro_file)
         process_avro_file(avro_file_path, output_csv_path)
 
-    print(f"Materialization table saved to {output_csv_path}")
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

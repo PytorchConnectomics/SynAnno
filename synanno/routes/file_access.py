@@ -38,6 +38,20 @@ def source_and_target_exist(image_index, slice_id):
     return "Image not found", 204
 
 
+@blueprint.route("/source_img_exists/<image_index>/<slice_id>", methods=["GET"])
+@cross_origin()
+def source_img_exists(image_index, slice_id):
+    """Serves EM images from memory."""
+    image_index = str(image_index)
+    slice_id = str(slice_id)
+    if (
+        image_index in current_app.source_image_data
+        and slice_id in current_app.source_image_data[image_index]
+    ):
+        return "Image found", 200
+    return "Image not found", 204
+
+
 @blueprint.route("/get_source_image/<image_index>/<slice_id>", methods=["GET", "HEAD"])
 @cross_origin()
 def get_source_image(image_index, slice_id):

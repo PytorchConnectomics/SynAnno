@@ -210,7 +210,7 @@ def retrieve_materialization_data(df: pd.DataFrame) -> dict:
     return df.to_dict("index")
 
 
-def retrieve_instance_metadata(page: int = 0, mode: str = "annotate"):
+def retrieve_instance_metadata(page: int = 1, mode: str = "annotate"):
     """Visualize the synapse and EM images in 2D slices for each instance.
 
         Cropping the bounding box of the instance. Processing each instance
@@ -509,22 +509,21 @@ def save_slices_in_memory(
 
     for s in range(cropped_img_pad.shape[slice_axis]):
 
-        # Define slicing
-        slicing_img = [s if idx == slice_axis else slice(None) for idx in range(3)]
-        slicing_seg = [s if idx == slice_axis else slice(None) for idx in range(4)]
-
         image_index = str(item["Image_Index"])
         img_z_index = str(item["Adjusted_Bbox"][slice_axis * 2] + s)
 
         # Process EM image
+        slicing_img = [s if idx == slice_axis else slice(None) for idx in range(3)]
         current_app.source_image_data[image_index][img_z_index] = img_to_png_bytes(
             adjust_image_range(cropped_img_pad[tuple(slicing_img)])
         )
 
         # Process Synapse Segmentation image
-        current_app.target_image_data[image_index][img_z_index] = img_to_png_bytes(
-            apply_transparency(vis_label[tuple(slicing_seg)])
-        )
+        if item["Error_Description"] != "False Negative":
+            slicing_seg = [s if idx == slice_axis else slice(None) for idx in range(4)]
+            current_app.target_image_data[image_index][img_z_index] = img_to_png_bytes(
+                apply_transparency(vis_label[tuple(slicing_seg)])
+            )
 
 
 def process_instance(item: dict) -> None:
@@ -605,48 +604,50 @@ def process_instance(item: dict) -> None:
         cropped_img_pad.shape == cropped_seg_pad.shape
     ), "The shape of the source and target images do not match."
 
-    (
-        pre_pt_x,
-        pre_pt_y,
-        pre_pt_z,
-        post_pt_x,
-        post_pt_y,
-        post_pt_z,
-    ) = adjust_synapse_points(item, crop_box_dict, img_padding, coord_order)
+    vis_label = None
+    if item["Error_Description"] != "False Negative":
+        (
+            pre_pt_x,
+            pre_pt_y,
+            pre_pt_z,
+            post_pt_x,
+            post_pt_y,
+            post_pt_z,
+        ) = adjust_synapse_points(item, crop_box_dict, img_padding, coord_order)
 
-    (
-        pre_pt_x,
-        pre_pt_y,
-        pre_pt_z,
-        post_pt_x,
-        post_pt_y,
-        post_pt_z,
-    ) = scale_synapse_points(
-        pre_pt_x, pre_pt_y, pre_pt_z, post_pt_x, post_pt_y, post_pt_z
-    )
+        (
+            pre_pt_x,
+            pre_pt_y,
+            pre_pt_z,
+            post_pt_x,
+            post_pt_y,
+            post_pt_z,
+        ) = scale_synapse_points(
+            pre_pt_x, pre_pt_y, pre_pt_z, post_pt_x, post_pt_y, post_pt_z
+        )
 
-    vis_label = syn2rgb(cropped_seg_pad)
+        vis_label = syn2rgb(cropped_seg_pad)
 
-    vis_label = draw_cylinder(
-        vis_label,
-        pre_pt_x,
-        pre_pt_y,
-        pre_pt_z,
-        radius=10,
-        color_main=current_app.pre_id_color_main,
-        color_sub=current_app.pre_id_color_sub,
-        layout=coord_order,
-    )
-    vis_label = draw_cylinder(
-        vis_label,
-        post_pt_x,
-        post_pt_y,
-        post_pt_z,
-        radius=10,
-        color_main=current_app.post_id_color_main,
-        color_sub=current_app.post_id_color_sub,
-        layout=coord_order,
-    )
+        vis_label = draw_cylinder(
+            vis_label,
+            pre_pt_x,
+            pre_pt_y,
+            pre_pt_z,
+            radius=10,
+            color_main=current_app.pre_id_color_main,
+            color_sub=current_app.pre_id_color_sub,
+            layout=coord_order,
+        )
+        vis_label = draw_cylinder(
+            vis_label,
+            post_pt_x,
+            post_pt_y,
+            post_pt_z,
+            radius=10,
+            color_main=current_app.post_id_color_main,
+            color_sub=current_app.post_id_color_sub,
+            layout=coord_order,
+        )
 
     save_slices_in_memory(
         cropped_img_pad,
@@ -774,7 +775,7 @@ def calculate_number_of_pages(n_images: int) -> int:
     current_app.synapse_data["page"] = -1  # Initialize pages to -1
 
     # assign pages to synapses
-    for i, start_idx in enumerate(range(0, n_images, current_app.per_page)):
+    for i, start_idx in enumerate(range(0, n_images, current_app.per_page), start=1):
         current_app.synapse_data.loc[
             current_app.synapse_data.iloc[
                 start_idx : start_idx + current_app.per_page  # noqa: E203
@@ -799,12 +800,14 @@ def calculate_number_of_pages_for_neuron_section_based_loading():
     """
 
     number_of_pages = 0
+
     current_app.synapse_data["page"] = -1  # Initialize pages to -1
 
     # Group synapses by section_index
     grouped = current_app.synapse_data.groupby("section_index")
 
     # Iterate through sections
+
     for sec_index in range(len(current_app.sections)):
         if sec_index in grouped.groups:
             synapse_group = grouped.get_group(sec_index)  # Store group once
@@ -812,7 +815,7 @@ def calculate_number_of_pages_for_neuron_section_based_loading():
 
             # Assign pages to synapses within the section
             for i, start_idx in enumerate(
-                range(0, total_synapses, current_app.per_page)
+                range(0, total_synapses, current_app.per_page), start=1
             ):
                 current_app.synapse_data.loc[
                     synapse_group.iloc[
@@ -823,10 +826,17 @@ def calculate_number_of_pages_for_neuron_section_based_loading():
                     number_of_pages + i
                 )
 
+                current_app.page_section_mapping[number_of_pages + i] = (
+                    sec_index,
+                    False,
+                )
+
             # Increment by the number of pages needed
-            number_of_pages += np.ceil(total_synapses / current_app.per_page)
+            number_of_pages += int(np.ceil(total_synapses / current_app.per_page))
 
         # Add one empty page for the section
         number_of_pages += 1
+
+        current_app.page_section_mapping[number_of_pages] = (sec_index, True)
 
     return int(number_of_pages)  # Ensure integer output

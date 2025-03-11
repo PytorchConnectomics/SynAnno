@@ -336,7 +336,7 @@
 <!-- add js file to disable the form on reset -->
 <script type="module" src="{{ url_for('static', filename='opendata.js') }}"></script>
 <script type="text/javascript" src="{{ url_for('static', filename='SharkViewer/three.min.js') }}"></script>
-<script type="module" src="{{ url_for('static', filename='viewer.js') }}" data-neuron-ready="{{ neuronReady }}" data-initial-load="true" data-neuron-section="{{ neuronSection }}"  data-synapse-point-cloud="{{ synapsePointCloud }}"></script>
+<script type="module" src="{{ url_for('static', filename='viewer.js') }}" data-neuron-ready="{{ neuronReady }}" data-initial-load="true" data-neuron-sections="{{ neuronSections }}"  data-synapse-point-cloud="{{ synapsePointCloud }}"></script>
 
 <script type="module" src="{{ url_for('static', filename='minimap.js') }}" data-neuron-ready="{{ neuronReady }}"></script>
 

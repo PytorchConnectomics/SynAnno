@@ -36,24 +36,43 @@
   </div>
 
   <div class="row justify-content-center card-group">
-    {% for image in images %}
+    {% if fn_page == "true" %}
     <div class="annotate-item mb-3">
-      <div id="id{{image.Image_Index}}" class="card border-0 p-2 {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}">
+      <div id="add_new_instance" class="card border-0 p-2 incorrect">
         <div id="main-image" style="position: relative">
-          <img id="imgTarget-{{image.Image_Index}}" class="img_annotate" src="{{ url_for('file_access.get_target_image', image_index=image.Image_Index, slice_id=image.Middle_Slice)}}" style="position: absolute; opacity: {{grid_opacity if grid_opacity else '0.5'}};" data-current-slice="{{image.Middle_Slice}}"/>
-          <img id="imgSource-{{image.Image_Index}}" class="img_annotate" src="{{ url_for('file_access.get_source_image', image_index=image.Image_Index, slice_id=image.Middle_Slice)}}" style="position: initial" data-current-slice="{{image.Middle_Slice}}"/>
+          <img
+          id="add_new_instance"
+          class="img_annotate"
+          src="/static/placeholder/place_holder_fn.png"
+          style="cursor: pointer;"
+          data-bs-toggle="modal"
+          data-bs-target="#drawModalFN"
+        />
         </div>
-        <a id="id-a-{{image.Image_Index}}" class="stretched-link image-card-btn" page="{{page}}" data_id="{{ image.Image_Index }}" label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}" sectionIdx ="{{ image.section_index }}"></a>
       </div>
     </div>
+    {% endif %}
+    {% for image in images %}
+      <div class="annotate-item mb-3">
+        <div id="id{{image.Image_Index}}" class="card border-0 p-2 {% if image.Label == 'Correct' %}correct{% elif image.Label == 'Incorrect'%}incorrect{% elif image.Label == 'Unsure'%}unsure{% endif %}">
+          <div id="main-image" style="position: relative">
+            <!-- In case of a FN we depict we use the source image also as the target to act as placholder -->
+            {% if fn_page != "true" %}
+            <img id="imgTarget-{{image.Image_Index}}" class="img_annotate" src="{{ url_for('file_access.get_target_image', image_index=image.Image_Index, slice_id=image.Middle_Slice)}}" style="position: absolute; opacity: {{grid_opacity if grid_opacity else '0.5'}};" data-current-slice="{{image.Middle_Slice}}"/>
+            {% endif %}
+            <img id="imgSource-{{image.Image_Index}}" class="img_annotate" src="{{ url_for('file_access.get_source_image', image_index=image.Image_Index, slice_id=image.Middle_Slice)}}" style="position: initial" data-current-slice="{{image.Middle_Slice}}"/>
+          </div>
+          <a id="id-a-{{image.Image_Index}}" class="stretched-link image-card-btn" page="{{page}}" data_id="{{ image.Image_Index }}" label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}" sectionIdx ="{{ image.section_index }}"></a>
+        </div>
+      </div>
     {% endfor %}
-  </div>
+    </div>
 </div>
 
 <!-- Page Navigation -->
 <nav aria-label="Page navigation mt-5" class="position-fixed bottom-0 start-50 translate-middle-x mb-4">
   <ul class="pagination justify-content-center">
-    {% if page > 0 %}
+    {% if page > 1 %}
     <li class="page-item">
       <a type="button" class="page-link btn btn-secondary nav-anno" href="{{ url_for('annotation.annotation_page', page=page-1) }}">
         <i class="bi bi-arrow-left"></i>
@@ -66,11 +85,10 @@
       </a>
     </li>
     {% endif %}
-    <li style="padding: 0.375rem 0.75rem">{{page+1}} / {{n_pages}}</li>
-    {% if page+1 < n_pages %}
-    <li class="page-item"></li>
+    <li style="padding: 0.375rem 0.75rem">{{page}} / {{n_pages}}</li>
+    {% if page < n_pages %}
     <li class="page-item">
-      <a type="button" class="page-link btn btn-secondary nav-anno" href="{{ url_for('annotation.annotation_page', page=page+1)}}">
+      <a type="button" class="page-link btn btn-secondary nav-anno" href="{{ url_for('annotation.annotation_page', page=page+1) }}">
         <i class="bi bi-arrow-right"></i>
       </a>
     </li>
@@ -84,25 +102,11 @@
   </ul>
 </nav>
 
+
 <!-- Error Processing Button Across Pages -->
 <div class="position-fixed bottom-0 end-0 m-4">
   <a class="btn btn-secondary" href="{{ url_for('categorize.categorize') }}">Error Processing</a>
 </div>
-
-<!-- Draggable Minimap Container -->
-<div id="minimapContainer" class="minimap" data-minimap-state="collapsed">
-  <div id="minimapHeader" class="minimap-header">
-    Neuron Minimap
-    <button id="toggleButton" class="btn btn-sm btn-secondary toggle-btn">Toggle</button>
-  </div>
-  <div id="shark_container_minimap" class="minimap-content"></div>
-  <div id="minimapFooter" class="minimap-footer">
-    <div id="loading_container" class="minimap-loading-bar">
-      <div id="loading_progress" class="minimap-progress-bar"></div>
-    </div>
-  </div>
-</div>
-
 
 
 <!-- Modal to indicating active loading -->
@@ -114,13 +118,20 @@
 <!-- Modal for neuroglancer slice -->
 {% include "annotation_neuro.html" %}
 
-<!-- Add js file to change the card colors -->
-<script type="module" src="{{ url_for('static', filename='annotation_module.js') }}"></script>
-<script type="module" src="{{ url_for('static', filename='annotation.js') }}" data-neuron-id="{{ neuron_id }}"></script>
+<!-- Modal for adding false positve synapses -->
+{% include "draw_modal_fn.html" %}
 
 <!-- Load the SharkViewer -->
 <script type="text/javascript" src="{{ url_for('static', filename='SharkViewer/three.min.js') }}"></script>
-<script type="module" src="{{ url_for('static', filename='viewer.js') }}" data-neuron-ready="{{ neuronReady }}" data-neuron-section="{{ neuronSection }}" data-synapse-point-cloud="{{ synapsePointCloud }}"></script>
-
+<script type="module" src="{{ url_for('static', filename='viewer.js') }}" data-neuron-ready="{{ neuronReady }}" data-neuron-sections="{{ neuronSections }}" data-synapse-point-cloud="{{ synapsePointCloud }}", data-active-neuron-section="{{ activeNeuronSection }}"></script>
 <script type="module" src="{{ url_for('static', filename='minimap.js') }}" data-neuron-ready="{{ neuronReady }}"></script>
+
+
+<!-- Add js file to change the card colors -->
+<script type="module" src="{{ url_for('static', filename='annotation_module.js') }}" data-fn-page="{{ fn_page }}"></script>
+<script type="module" src="{{ url_for('static', filename='annotation.js') }}" data-neuron-id="{{ neuron_id }}" data-fn-page="{{ fn_page }}"></script>
+
+
+<script type="module" src="{{ url_for('static', filename='draw_module.js') }}" data-current-page="{{ page }}""></script>
+
 {% endblock %}

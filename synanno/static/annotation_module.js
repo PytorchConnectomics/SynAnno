@@ -1,6 +1,7 @@
 $(document).ready(function () {
 
   const neuronID = $("script[src*='annotation.js']").data("neuron-id");
+  const fnPage = $("script[src*='annotation.js']").data("fn-page") === true;
 
   // link to the NG, edited when ever right clicking an instance in the grid view
   var ng_link;
@@ -12,6 +13,7 @@ $(document).ready(function () {
 
   let data_id;
   let page;
+  let currentSlice;
 
   // Ensure inert is removed when showing the modal
   $('#detailsModal').on('show.bs.modal', function () {
@@ -78,16 +80,21 @@ $(".image-card-btn").bind("contextmenu", async function (e) {
 
     await req_data.done(function (data) {
         let data_json = JSON.parse(data.data);
-        let middleSlice = data_json.Middle_Slice;
+
+        // set the initial slice to the center slice
+        currentSlice = data_json.Middle_Slice;
+
 
         // Load the initial middle slice
-        $("#imgDetails-EM")
-            .attr("src", `/get_source_image/${data_id}/${middleSlice}`)
-            .attr("data-current-slice", middleSlice)
-
-        $("#imgDetails-GT")
-            .attr("src", `/get_target_image/${data_id}/${middleSlice}`)
-            .attr("data-current-slice", middleSlice)
+        if (fnPage) {
+           $("#imgDetails-EM")
+              .attr("src", `/get_source_image/${data_id}/${currentSlice}`)
+        }else{
+            $("#imgDetails-EM")
+                .attr("src", `/get_source_image/${data_id}/${currentSlice}`)
+            $("#imgDetails-GT")
+              .attr("src", `/get_target_image/${data_id}/${currentSlice}`)
+        }
 
         // Show modal
         $("#detailsModal").modal("show").removeAttr("inert");
@@ -139,37 +146,59 @@ $("#detailsModal").on("wheel", async function (event) {
     let $imgTarget = $("#imgDetails-GT");
     let $imgSource = $("#imgDetails-EM");
 
-    let currentSlice = parseInt($imgTarget.attr("data-current-slice"));
-
     // Determine scroll direction
     let newSlice = currentSlice + (event.originalEvent.deltaY > 0 ? 1 : -1);
 
+    console.log("Current slice:", currentSlice, "New slice:", newSlice);
+    console.log("$imgTarget, $imgSource", $imgTarget, $imgSource);
+
     try {
-        let response = await $.ajax({
-            url: `/source_and_target_exist/${data_id}/${newSlice}`,
-            type: "GET"
-        });
+        let response;
+        if (fnPage) {
+          response = await $.ajax({
+            url: `/source_img_exists/${data_id}/${newSlice}`,
+            type: "GET",
+          });
+        } else {
+          response = await $.ajax({
+              url: `/source_and_target_exist/${data_id}/${newSlice}`,
+              type: "GET"
+          });
+        }
 
         if (response) {  // Only execute if the slice exists
+            let newTargetImg;
             let newSourceImg = new Image();
-            let newTargetImg = new Image();
 
             newSourceImg.src = `/get_source_image/${data_id}/${newSlice}`;
-            newTargetImg.src = `/get_target_image/${data_id}/${newSlice}`;
 
-            // Wait for both images to load before updating
-            await Promise.all([
+            if (fnPage) {
+              await new Promise(resolve => newSourceImg.onload = resolve);
+            }
+            else {
+              newTargetImg = new Image();
+
+              newSourceImg.src = `/get_source_image/${data_id}/${newSlice}`;
+              newTargetImg.src = `/get_target_image/${data_id}/${newSlice}`;
+
+              // Wait for both images to load before updating
+              await Promise.all([
                 new Promise(resolve => newSourceImg.onload = resolve),
                 new Promise(resolve => newTargetImg.onload = resolve)
-            ]);
+              ]);
+            }
+
 
             // Update the displayed images **only after both have fully loaded**
-            $imgSource.attr("src", newSourceImg.src);
-            $imgTarget.attr("src", newTargetImg.src);
+            if (fnPage) {
+              $imgSource.attr("src", newSourceImg.src);
+            }else{
+              $imgSource.attr("src", newSourceImg.src);
+              $imgTarget.attr("src", newTargetImg.src);
+            }
 
-            // Update the slice attribute
-            $imgSource.attr("data-current-slice", newSlice);
-            $imgTarget.attr("data-current-slice", newSlice);
+            currentSlice = newSlice;
+
         }
     } catch (error) {
         console.error("Error loading images:", error);

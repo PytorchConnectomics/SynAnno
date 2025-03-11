@@ -4,7 +4,6 @@ from collections import defaultdict
 from threading import Lock
 
 import pandas as pd
-import requests
 from flask import Flask
 from flask_cors import CORS
 from flask_session import Session
@@ -55,7 +54,7 @@ def configure_app(app):
         CLOUD_VOLUME_BUCKETS=["gs:", "s3:", "file:"],
         IP=os.getenv("APP_IP", "0.0.0.0"),
         PORT=int(os.getenv("APP_PORT", 80)),
-        NG_IP=os.getenv("NG_IP", "0.0.0.0"),
+        NG_IP=os.getenv("PUBLIC_DNS_SYNANNO", "0.0.0.0"),
         NG_PORT=os.getenv("NG_PORT", "9015"),
     )
 
@@ -157,11 +156,12 @@ def initialize_global_variables(app):
         "Padding": object,  # Example: [[0, 0], [0, 0], [0, 0]]
     }
 
-    app.public_ip = get_public_ip()
-
     app.df_metadata = pd.DataFrame(columns=app.columns).astype(dtypes)
 
     app.synapse_data = {}
+
+    # holds a dict of tuples with the page number and the section index
+    app.page_section_mapping = {}
 
     app.source_image_data = defaultdict(dict)
     app.target_image_data = defaultdict(dict)
@@ -180,6 +180,7 @@ def register_routes(app):
     from synanno.routes.annotation import blueprint as annotation_blueprint
     from synanno.routes.auto_annotate import blueprint as auto_annotate_blueprint
     from synanno.routes.categorize import blueprint as categorize_blueprint
+    from synanno.routes.false_negatives import blueprint as fn_blueprint
     from synanno.routes.file_access import blueprint as file_access_blueprint
     from synanno.routes.finish import blueprint as finish_blueprint
     from synanno.routes.landingpage import blueprint as landingpage_blueprint
@@ -195,6 +196,7 @@ def register_routes(app):
     app.register_blueprint(landingpage_blueprint)
     app.register_blueprint(manual_annotate_blueprint)
     app.register_blueprint(auto_annotate_blueprint)
+    app.register_blueprint(fn_blueprint)
 
 
 def setup_context_processors(app):
@@ -203,34 +205,3 @@ def setup_context_processors(app):
     @app.context_processor
     def handle_context():
         return dict(os=os)  # noqa: C408
-
-
-def get_public_ip():
-    try:
-        # Get the ECS Metadata URL from the environment variable
-        metadata_url = os.environ.get("ECS_CONTAINER_METADATA_URI_V4")
-        if metadata_url:
-            # Fetch the ECS task metadata
-            response = requests.get(f"{metadata_url}/task")
-            response.raise_for_status()
-            task_metadata = response.json()
-
-            logger.info(f"Task Metadata: {task_metadata}")
-
-            # Extract the Public IP Address
-            public_ip = (
-                task_metadata.get("Containers", [{}])[0]
-                .get("Networks", [{}])[0]
-                .get("IPv4Addresses", [None])[0]
-            )
-
-            logger.info(f"Public IP: {public_ip}")
-            return public_ip if public_ip else "localhost"
-        else:
-            logger.info(
-                "ECS_CONTAINER_METADATA_URI_V4 is not set. Falling back to localhost."
-            )
-            return "localhost"
-    except requests.RequestException as e:
-        logger.info(f"Error retrieving public IP: {e}")
-        return "localhost"

@@ -25,6 +25,7 @@
           label="{% if image.Label == 'Correct' %}Correct{% elif image.Label == 'Incorrect'%}Incorrect{% elif image.Label == 'Unsure'%}Unsure{% endif %}"
         >
           <div class="main-image-categorize">
+            {% if image.Error_Description != 'False Negative' %}
             <img
               id="imgTarget-{{image.Image_Index}}"
               class="img_categorize"
@@ -33,6 +34,7 @@
               height="64px"
               style="opacity: 0.5"
             />
+            {% endif %}
             <img
               id="imgSource-{{image.Image_Index}}"
               class="img_categorize"

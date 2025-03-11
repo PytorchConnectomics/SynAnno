@@ -19,16 +19,13 @@ from jinja2 import Template
 
 from synanno.backend.processing import free_page, retrieve_instance_metadata
 
-# io operations
-
-
 # define a Blueprint for annotation routes
 blueprint = Blueprint("annotation", __name__)
 
 
 @blueprint.route("/annotation/<int:page>", endpoint="annotation_page")
 @blueprint.route("/annotation")
-def annotation(page: int = 0) -> Template:
+def annotation(page: int = 1) -> Template:
     """Start the proofreading timer and load the annotation view.
 
     Args:
@@ -55,6 +52,12 @@ def annotation(page: int = 0) -> Template:
         .to_dict("records")
     )
 
+    fn_page = (
+        current_app.page_section_mapping[page][1]
+        if page in current_app.page_section_mapping
+        else False
+    )
+
     return render_template(
         "annotation.html",
         images=data,
@@ -63,8 +66,14 @@ def annotation(page: int = 0) -> Template:
         grid_opacity=current_app.grid_opacity,
         neuron_id=current_app.selected_neuron_id,
         neuronReady=current_app.neuron_ready,
-        neuronSection=current_app.sections,
+        neuronSections=current_app.sections,
         synapsePointCloud=current_app.snapped_point_cloud,
+        fn_page="true" if fn_page else "false",
+        activeNeuronSection=(
+            current_app.page_section_mapping[page][0]
+            if page in current_app.page_section_mapping
+            else 0
+        ),
     )
 
 

@@ -52,7 +52,7 @@ def center_annotation(app, coordinate_space):
 
 
 def get_hovered_neuron_id(app):
-    """Retrieve and logging.info the neuron ID at the voxel under the mouse cursor."""
+    """Retrieve and toggle the neuron ID at the voxel under the mouse cursor."""
 
     def _get_hovered_neuron_id(s):
         # get the current mouse voxel coordinates
@@ -64,6 +64,21 @@ def get_hovered_neuron_id(app):
             return
 
         logging.info(f"Mouse Voxel Coordinates: {voxel_coords}")
+
+        # If a neuron is already selected, deselect it
+        if getattr(app, "selected_neuron_id", None) is not None:
+            logging.info(f"Deselecting neuron ID: {app.selected_neuron_id}")
+            app.selected_neuron_id = None
+
+            # Clear the selection in the neuropil layer
+            with app.ng_viewer.txn() as layer:
+                layer.layers["neuropil"].segments = frozenset([])
+                layer.layers["neuropil"].selectedAlpha = 0.5
+                layer.layers["neuropil"].notSelectedAlpha = 0.1
+
+                # Clear any markers
+                layer.layers["marker_dot"].annotations = []
+            return
 
         # retrieve the selected neuron ID from the segmentation layer
         neuron_info = s.selected_values.get("neuropil")

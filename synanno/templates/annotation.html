@@ -26,6 +26,12 @@
     <div class="legend-item">
       <span class="color-block" style="background-color: #d7dbdd"></span>Unsure
     </div>
+    <div class="legend-item">
+      <span class="color-block" style="background-color: #00ff00; border-radius: 40%;"></span>Pre-Synapse
+    </div>
+    <div class="legend-item">
+      <span class="color-block" style="background-color: #0000ff; border-radius: 40%;"></span>Post-Synapse
+    </div>
 
     <div class="btn-group btn-group-sm ms-auto" role="group" aria-label="Basic example">
       <span style="margin-right: 8px; margin-top: 2px">Label opacity: </span>
@@ -70,7 +76,7 @@
 </div>
 
 <!-- Page Navigation -->
-<nav aria-label="Page navigation mt-5" class="position-fixed bottom-0 start-50 translate-middle-x mb-4">
+<nav aria-label="Page navigation mt-5" class="position-fixed bottom-0 start-50 translate-middle-x mb-4" style="z-index: 1050;">
   <ul class="pagination justify-content-center">
     {% if page > 1 %}
     <li class="page-item">
@@ -104,7 +110,7 @@
 
 
 <!-- Error Processing Button Across Pages -->
-<div class="position-fixed bottom-0 end-0 m-4">
+<div class="position-fixed bottom-0 end-0 m-4" style="z-index: 1050;">
   <a class="btn btn-secondary" href="{{ url_for('categorize.categorize') }}">Error Processing</a>
 </div>
 

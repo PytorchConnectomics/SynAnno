@@ -65,14 +65,14 @@ def open_data(task: str):
             modenext="d-none",
             modereset="inline",
             mode=current_app.draw_or_annotate,
-            view_style="synapse",
+            view_style="volume",  # Changed from "synapse" to "volume"
             neuronReady="false",
         )
     return render_template(
         "opendata.html",
         modenext="disabled",
         mode=current_app.draw_or_annotate,
-        view_style="synapse",
+        view_style="volume",  # Changed from "synapse" to "volume"
         neuronReady="false",
     )
 
@@ -313,21 +313,38 @@ def handle_neuron_view(neuropil_url: str):
     current_app.sections = sorted_sections
 
 
-def handle_synapse_view():
-    """Handle the synapse view processing."""
-    preid = int(request.form.get("preid")) if request.form.get("preid") else None
-    postid = int(request.form.get("postid")) if request.form.get("postid") else None
+def handle_volume_view():
+    """Handle the volume view processing."""
+    # Create a subvolume dictionary from the form values
+    coordinate_order = list(current_app.coordinate_order.keys())
+    subvolume = {}
+    for coord in coordinate_order:
+        x_min = request.form.get(coord + "1")
+        x_max = request.form.get(coord + "2")
 
-    if preid is None:
-        preid = 0
-    if postid is None:
-        postid = len(current_app.synapse_data.index)
+        subvolume[coord + "1"] = int(x_min) if x_min and x_min.strip() else 0
+        subvolume[coord + "2"] = int(x_max) if x_max and x_max.strip() else -1
 
+    # Update the limits if they are set to default (-1)
+    for coord in coordinate_order:
+        if subvolume[coord + "2"] == -1:
+            if coord == "x":
+                subvolume[coord + "2"] = current_app.vol_dim[0]
+            elif coord == "y":
+                subvolume[coord + "2"] = current_app.vol_dim[1]
+            elif coord == "z":
+                subvolume[coord + "2"] = current_app.vol_dim[2]
+
+    logger.info(f"Volume view processing with subvolume: {subvolume}")
+
+    # Filter synapse data based on subvolume constraints
+    current_app.synapse_data = current_app.synapse_data.query(
+        'x >= @subvolume["x1"] and x <= @subvolume["x2"] and '
+        'y >= @subvolume["y1"] and y <= @subvolume["y2"] and '
+        'z >= @subvolume["z1"] and z <= @subvolume["z2"]'
+    )
     current_app.synapse_data["materialization_index"] = (
         current_app.synapse_data.index.to_series()
-    )
-    current_app.synapse_data = current_app.synapse_data.query(
-        "index >= @preid and index <= @postid"
     )
     current_app.synapse_data.reset_index(drop=True, inplace=True)
 
@@ -407,8 +424,8 @@ def upload_file():
         current_app.n_pages = (
             calculate_number_of_pages_for_neuron_section_based_loading()
         )
-    elif current_app.view_style == "synapse":
-        handle_synapse_view()
+    elif current_app.view_style == "volume":
+        handle_volume_view()
 
         if nr_instances == 0:
             nr_instances = len(current_app.synapse_data.index)
@@ -566,18 +583,51 @@ def neuro():
         center["y"] = int(int(request.form["cy0"]) * current_app.scale["y"])
         center["x"] = int(int(request.form["cx0"]) * current_app.scale["x"])
     elif mode == "draw":
-        center["z"] = int(
-            (current_app.vol_dim[coordinate_order.index("z")] // 2)
-            * current_app.scale["z"]
-        )
-        center["y"] = int(
-            (current_app.vol_dim[coordinate_order.index("y")] // 2)
-            * current_app.scale["y"]
-        )
-        center["x"] = int(
-            (current_app.vol_dim[coordinate_order.index("x")] // 2)
-            * current_app.scale["x"]
-        )
+        if getattr(current_app, "selected_neuron_id", None) is not None:
+            try:
+                # check if we have access to the current synapse point cloud coordinates
+                if (
+                    hasattr(current_app, "synapse_data")
+                    and not current_app.synapse_data.empty
+                ):
+                    # get the first point from the synapse data as a reference
+                    first_point = current_app.synapse_data.iloc[0]
+                    center = {
+                        "x": int(first_point["x"] * current_app.scale["x"]),
+                        "y": int(first_point["y"] * current_app.scale["y"]),
+                        "z": int(first_point["z"] * current_app.scale["z"]),
+                    }
+                else:
+                    # fall back to current_app coordinates if available
+                    if (
+                        hasattr(current_app, "cx")
+                        and hasattr(current_app, "cy")
+                        and hasattr(current_app, "cz")
+                    ):
+                        center = {
+                            "x": int(current_app.cx * current_app.scale["x"]),
+                            "y": int(current_app.cy * current_app.scale["y"]),
+                            "z": int(current_app.cz * current_app.scale["z"]),
+                        }
+                    else:
+                        raise AttributeError("No mesh coordinates available")
+            except Exception as e:
+                logging.warning(f"Could not use mesh coordinates: {str(e)}")
+                center = {}
+        else:
+            logging.info("No mesh coordinates available, using default position")
+            center["z"] = int(
+                (current_app.vol_dim[coordinate_order.index("z")] // 2)
+                * current_app.scale["z"]
+            )
+            center["y"] = int(
+                (current_app.vol_dim[coordinate_order.index("y")] // 2)
+                * current_app.scale["y"]
+            )
+            center["x"] = int(
+                (current_app.vol_dim[coordinate_order.index("x")] // 2)
+                * current_app.scale["x"]
+            )
 
     if current_app.ng_version is not None:
         with current_app.ng_viewer.txn() as s:

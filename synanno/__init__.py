@@ -77,7 +77,9 @@ def initialize_global_variables(app):
     app.ng_version = None
     app.selected_neuron_id = None
     app.grid_opacity = 0.5
-    app.coordinate_order = {}
+    # default coordinate order to pass in if processing route not undergone
+    # TODO: set scales before the neuron button gets pressed and remove need for default
+    app.coordinate_order = {"x": (4, 8), "y": (4, 8), "z": (33, 33)}
     app.vol_dim = (0, 0, 0)
     app.vol_dim_scaled = (0, 0, 0)
     app.source = None

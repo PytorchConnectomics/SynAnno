@@ -52,7 +52,7 @@ def center_annotation(app, coordinate_space):
 
 
 def get_hovered_neuron_id(app):
-    """Retrieve and logging.info the neuron ID at the voxel under the mouse cursor."""
+    """Retrieve and toggle the neuron ID at the voxel under the mouse cursor."""
 
     def _get_hovered_neuron_id(s):
         # get the current mouse voxel coordinates
@@ -65,8 +65,28 @@ def get_hovered_neuron_id(app):
 
         logging.info(f"Mouse Voxel Coordinates: {voxel_coords}")
 
+        # If a neuron is already selected, deselect it
+        if getattr(app, "selected_neuron_id", None) is not None:
+            logging.info(f"Deselecting neuron ID: {app.selected_neuron_id}")
+            app.selected_neuron_id = None
+
+            # Clear the selection in the neuropil layer
+            with app.ng_viewer.txn() as layer:
+                layer.layers["neuropil"].segments = frozenset([])
+                layer.layers["neuropil"].selectedAlpha = 0.5
+                layer.layers["neuropil"].notSelectedAlpha = 0.1
+
+                # Clear any markers
+                layer.layers["marker_dot"].annotations = []
+            return
+
         # retrieve the selected neuron ID from the segmentation layer
-        neuron_info = s.selected_values["neuropil"].value
+        neuron_info = s.selected_values.get("neuropil")
+        if neuron_info is None:
+            logging.info("No neuron selected in neuropil layer.")
+            return
+
+        neuron_info = neuron_info.value
         logging.info(f"Raw Selected Neuron ID: {neuron_info}")
 
         neuron_id = None
@@ -86,8 +106,16 @@ def get_hovered_neuron_id(app):
         logging.info(f"Selected Neuron ID: {neuron_id}")
         app.selected_neuron_id = int(neuron_id)
 
-        # add a marker at the neuron ID location
+        # Highlight the selected neuron in the neuropil layer
         with app.ng_viewer.txn() as layer:
+            # Set the segments to just the selected neuron ID
+            layer.layers["neuropil"].segments = frozenset([neuron_id])
+
+            # Make the neuron visible by setting appropriate alpha values
+            layer.layers["neuropil"].selectedAlpha = 0.8
+            layer.layers["neuropil"].notSelectedAlpha = 0.0
+
+            # Add a marker at the neuron ID location
             layer.layers["marker_dot"].annotations = []  # Clear previous annotations
             pt = neuroglancer.PointAnnotation(
                 point=[
@@ -122,16 +150,16 @@ def setup_ng(
     target: Union[npt.NDArray, str],
     neuropil: Union[npt.NDArray, str],
 ) -> None:
-    """Setup function for the Neuroglancer (ng) that enables the recording and depiction
-    of center markers for newly identified FN instances.
+    """Setup function for the Neuroglancer (ng) that enables the recording and
+    depiction of center markers for newly identified FN instances.
 
     Args:
         app: a handle to the application context
         source: The image volume depicted by the ng
         target: The target volume depicted by the ng
-        neuropil: Neuropil segmentation volume when undergoing view-centric analysis
+        neuropil: Neuropil segmentation volume when undergoing view-centric
+                analysis
     """
-
     # generate a version number
     app.ng_version = str(randint(0, 3200))
 
@@ -141,21 +169,13 @@ def setup_ng(
     )
     app.ng_viewer = neuroglancer.Viewer(token=app.ng_version)
 
-    # default coordinate order to pass in if processing route not undergone
-    # TODO: set scales before the neuron button gets pressed and remove need for default
-    default_coordinate_order = {"x": (4, 4), "y": (4, 4), "z": (33, 33)}
-
-    # specify the NG coordinate space
-    if hasattr(app, "coordinate_order") and app.coordinate_order:
-        coordinate_order = app.coordinate_order
-    else:
-        coordinate_order = default_coordinate_order
-
     # parse the coordinate space into neuroglancer
     coordinate_space = neuroglancer.CoordinateSpace(
-        names=list(coordinate_order.keys()),
+        names=list(app.coordinate_order.keys()),
         units=["nm", "nm", "nm"],
-        scales=np.array([int(res[0]) for res in coordinate_order.values()], dtype=int),
+        scales=np.array(
+            [int(res[0]) for res in app.coordinate_order.values()], dtype=int
+        ),
     )
 
     # config viewer: Add image layer, add segmentation mask layer, define position
@@ -224,6 +244,14 @@ def setup_ng(
         # choose a random row, skipping the first row
         random_row = app.synapse_data.iloc[1:].sample(n=1).iloc[0]
 
+        # select row where pre_neuron_id is 2947140078 and post_neuron_id is 2103991145
+        # neuron_row = app.synapse_data[
+        #    (app.synapse_data["pre_neuron_id"] == 32181422235)
+        #    & (app.synapse_data["post_neuron_id"] == 4873639924)
+        # ].iloc[0]
+
+        # print(random_row)
+
         # extract xyz coordinates and set them as the starting position
         new_position = [
             int(
@@ -238,8 +266,7 @@ def setup_ng(
 
         # additional layer that lets the user mark the center of FPs
         s.layers["marker"] = neuroglancer.LocalAnnotationLayer(
-            dimensions=coordinate_space,
-            annotations=[],
+            dimensions=coordinate_space, annotations=[]
         )
 
     # add the center dot as action
@@ -250,9 +277,15 @@ def setup_ng(
 
     # bind the action to a key, e.g., 'n'
     app.ng_viewer.actions.add("get_neuron_id", get_hovered_neuron_id(app))
-
     with app.ng_viewer.config_state.txn() as s:
         s.input_event_bindings.viewer["keyn"] = "get_neuron_id"
+
+    # if a neuron id is already set in the app context, explicitly select it
+    if getattr(app, "selected_neuron_id", None) is not None:
+        with app.ng_viewer.txn() as s:
+            s.layer.layers["neuropil"].segments = frozenset(
+                [getattr(app, "selected_neuron_id", None)]
+            )
 
     logging.info(
         f"Starting a Neuroglancer instance at "

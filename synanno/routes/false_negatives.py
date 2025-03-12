@@ -123,8 +123,6 @@ def create_new_item(request) -> dict:
         else:
             item["Page"] = len(current_app.df_metadata) // current_app.per_page
 
-    print("current_page", current_page)
-
     coordinate_order = list(current_app.coordinate_order.keys())
 
     # max index+1 of current_app.synapse_data pd
@@ -154,7 +152,6 @@ def create_new_item(request) -> dict:
     item["cy0"] = int(int(current_app.cy) / current_app.scale["y"])
     item["cx0"] = int(int(current_app.cx) / current_app.scale["x"])
 
-    print("item", item)
     return item
 
 

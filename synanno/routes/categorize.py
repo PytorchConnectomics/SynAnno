@@ -110,17 +110,37 @@ def stop_categorization_timer():
         )
 
 
-@blueprint.route("/custom_flag", methods=["GET", "POST"])
+@blueprint.route("/update-status", methods=["POST"])
 @cross_origin()
-def custom_flag():
-    """Serves Ajax request, retrieving the custom error message."""
-    page = request.get_json()["page"]
-    img_id = request.get_json()["img_id"]
-    error_flag = current_app.df_metadata.loc[
-        (current_app.df_metadata["Page"] == int(page))
-        & (current_app.df_metadata["Image_Index"] == int(img_id)),
-        ["Error_Description"],
-    ].to_dict(orient="records")[0]["Error_Description"]
+def update_status():
+    """Toggles the status of an instance between 'Correct' and its original state.
 
-    data = json.dumps(error_flag)
-    return jsonify(message=data)
+    Returns:
+        JSON response with the updated label.
+    """
+    page = int(request.form["page"])
+    index = int(request.form["data_id"])
+    current_label = request.form["label"]
+
+    # Get the current row
+    mask = (current_app.df_metadata["Page"] == page) & (
+        current_app.df_metadata["Image_Index"] == index
+    )
+
+    # Toggle between states
+    if current_label == "Correct":
+        # Return to original state (Incorrect or Unsure)
+        original_label = current_app.df_metadata.loc[mask, "Original_Label"].iloc[0]
+        new_label = original_label
+    else:
+        # Store original label if not already stored
+        if "Original_Label" not in current_app.df_metadata.columns:
+            current_app.df_metadata["Original_Label"] = current_app.df_metadata["Label"]
+
+        # Set to Correct
+        new_label = "Correct"
+
+    # Update the label
+    current_app.df_metadata.loc[mask, "Label"] = new_label
+
+    return jsonify({"result": "success", "label": new_label})

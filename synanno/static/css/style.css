@@ -141,8 +141,8 @@
 .minimap {
   display: none; /* Initially hidden */
   position: relative; /* Default inside flex container */
-  width: 33%; /* Takes one-third of the screen */
-  height: 80vh; /* Always take 80% of the screen height */
+  width: 33vw; /* Always take 33% of the screen width */
+  height: 90vh; /* Always take 80% of the screen height */
   margin-top: 10px;
   background: #fff;
   border: 1px solid #ccc;

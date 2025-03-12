@@ -128,13 +128,13 @@
                 {% if view_style == "neuron" %} checked {% endif %}
               />
               <label class="form-check-label" for="toggleSynapseSelection">
-                Toggle between Neuron Centric and Synapse IDs Range
+                Toggle between Neuron Centric and Volume Centric
               </label>
             </div>
 
             <input type="hidden" id="view_style" name="view_style" value="{{ view_style }}">
 
-            <div id="neuron-form" class="mt-3" {% if view_style == "synapse" %} style="display:none;" {% endif %}>
+            <div id="neuron-form" class="mt-3" {% if view_style == "volume" %} style="display:none;" {% endif %}>
               <!-- Button to Open the Embedded Neuroglancer Modal -->
               <button
                 id="openNeuronModalBtn"
@@ -148,25 +148,29 @@
               </button>
             </div>
 
-            <div id="synapse-id-form" class="mt-3" {% if view_style == "neuron" %} style="display:none;" {% endif %}>
+            <div id="volume-form" class="mt-3" {% if view_style == "neuron" %} style="display:none;" {% endif %}>
+              <label for="coordinate-container-view" class="form-label">Slicing Indices for the Segmentation Volume</label>
               <div class="row">
-                <div class="col">
-                  <input
-                    class="form-control"
-                    type="number"
-                    id="preid"
-                    name="preid"
-                    placeholder="Presynaptic ID"
-                  />
+                <div class="col-md-4">
+                  <div class="input-group mb-2">
+                    <span class="input-group-text">X</span>
+                    <input class="form-control" type="number" id="x1" name="x1" placeholder="X Min - Default: 0" />
+                    <input class="form-control" type="number" id="x2" name="x2" placeholder="X Max - Default: max(X)" />
+                  </div>
                 </div>
-                <div class="col">
-                  <input
-                    class="form-control"
-                    type="number"
-                    id="postid"
-                    name="postid"
-                    placeholder="Postsynaptic ID"
-                  />
+                <div class="col-md-4">
+                  <div class="input-group mb-2">
+                    <span class="input-group-text">Y</span>
+                    <input class="form-control" type="number" id="y1" name="y1" placeholder="Y Min - Default: 0" />
+                    <input class="form-control" type="number" id="y2" name="y2" placeholder="Y Max - Default: max(Y)" />
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="input-group mb-2">
+                    <span class="input-group-text">Z</span>
+                    <input class="form-control" type="number" id="z1" name="z1" placeholder="Z Min - Default: 0" />
+                    <input class="form-control" type="number" id="z2" name="z2" placeholder="Z Max - Default: max(Z)" />
+                  </div>
                 </div>
               </div>
             </div>

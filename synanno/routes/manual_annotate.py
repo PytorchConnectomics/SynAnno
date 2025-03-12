@@ -123,7 +123,6 @@ def load_missing_slices() -> dict:
     ).to_dict("records")
 
     for instance in data:
-        print(instance)
         process_instance(instance)
 
     return jsonify({"result": "success"})

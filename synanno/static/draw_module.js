@@ -1,6 +1,7 @@
 $(document).ready(function () {
 
   const currentPage = parseInt($("script[src*='draw_module.js']").data("current-page")) || -1;
+  const current_view = $("script[src*='draw_module.js']").data("current-view") || "draw";
 
   $('[id^="drawButton-"]').click(async function () {
     var [page, data_id, label] = $(this)
@@ -306,73 +307,40 @@ $(document).ready(function () {
     });
   });
 
-  $("#save_bbox").click(function () {
-    // show loading-bar
-    $('#loading-bar').css('display', 'flex');
-    // update the bb information with the manuel corrections and pass them to the backend
-    // trigger the processing/save to the pandas df in the backend
-    console.log("currentPage", currentPage);
-    $.ajax({
-      url: "/ng_bbox_fn_save",
-      type: "POST",
-      data: {
-        currentPage: currentPage,
-        z1: $("#d_z1").val(),
-        z2: $("#d_z2").val(),
-        my: $("#m_y").val(),
-        mx: $("#m_x").val(),
-      },
-    }).done(function () {
-      // hide modules
-      $("#drawModalFNSave, #drawModalFN").modal("hide");
+  // add event listener if current view is draw
+  if (current_view === "draw") {
+    $("#save_bbox").click(async function () {
 
-      // refresh page
-      location.reload();
+      // show loading-bar
+      $('#loading-bar').css('display', 'flex');
 
-      // Hide the loading bar after the operation completes
-      $('#loading-bar').css('display', 'none');
-    });
-  });
+      try {
+        // update the bb information with the manual corrections and pass them to the backend
+        // trigger the processing/save to the pandas df in the backend
+        await $.ajax({
+          url: "/ng_bbox_fn_save",
+          type: "POST",
+          data: {
+            currentPage: currentPage,
+            z1: $("#d_z1").val(),
+            z2: $("#d_z2").val(),
+            my: $("#m_y").val(),
+            mx: $("#m_x").val(),
+          },
+        });
 
-  let checkCoordinatesInterval;
-  let initialCoordinates = { cz: null, cy: null, cx: null };
+        // hide modules
+        $("#drawModalFNSave, #drawModalFN").modal("hide");
 
-  // Start checking coordinates when the ng modal is shown
-  $("#drawModalFN").on("shown.bs.modal", function () {
-    // Pull initial coordinates
-    $.ajax({
-      type: 'GET',
-      url: '/get_coordinates',
-      success: function (response) {
-        // start puling the coordinates every 500ms
-        checkCoordinatesInterval = setInterval(checkCoordinates, 500);
-      },
-      error: function (error) {
-        console.error('Error fetching initial coordinates:', error);
-      }
-    });
-  });
-
-  // Stop checking coordinates when the modal is hidden
-  $("#drawModalFN").on("hidden.bs.modal", function () {
-    clearInterval(checkCoordinatesInterval);
-  });
-
-  // Function to check for changes in app.cz, app.cy, app.cx
-  function checkCoordinates() {
-    $.ajax({
-      type: 'GET',
-      url: '/get_coordinates',
-      success: function (response) {
-        const { cz, cy, cx } = response;
-        if (cz !== initialCoordinates.cz || cy !== initialCoordinates.cy || cx !== initialCoordinates.cx) {
-          $('#neuron-id-draw').text(`cx: ${parseInt(cx)}, cy: ${parseInt(cy)}, cz: ${parseInt(cz)}`);
-          initialCoordinates = { cz, cy, cx };
-        }
-      },
-      error: function (error) {
-        console.error('Error fetching coordinates:', error);
+        // refresh page
+        location.reload();
+      } catch (error) {
+        console.error('Error saving bbox:', error);
+      } finally {
+        // Hide the loading bar after the operation completes
+        $('#loading-bar').css('display', 'none');
       }
     });
   }
+
 });

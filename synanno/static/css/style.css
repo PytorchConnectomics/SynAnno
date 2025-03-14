@@ -33,12 +33,6 @@
     height: 100%;
   }
 
-  /*
-  .card-group {
-    justify-content: center;
-  }
-  */
-
   .legend {
     position: sticky;
     top: 0;
@@ -135,6 +129,23 @@
 
   .progress {
     position: relative;
+  }
+
+  #card-group-container {
+    position: relative; /* Ensures absolute positioning works inside */
+  }
+
+  #loading-bar-card-group {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 80vh; /* Always take 80% of the screen height */
+    background: rgba(0, 0, 0, 0.2); /* Same semi-transparent gray background */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
   }
 
 /* Shark Viewer Minimap */

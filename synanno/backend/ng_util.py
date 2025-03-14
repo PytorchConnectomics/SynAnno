@@ -244,14 +244,6 @@ def setup_ng(
         # choose a random row, skipping the first row
         random_row = app.synapse_data.iloc[1:].sample(n=1).iloc[0]
 
-        # select row where pre_neuron_id is 2947140078 and post_neuron_id is 2103991145
-        # neuron_row = app.synapse_data[
-        #    (app.synapse_data["pre_neuron_id"] == 32181422235)
-        #    & (app.synapse_data["post_neuron_id"] == 4873639924)
-        # ].iloc[0]
-
-        # print(random_row)
-
         # extract xyz coordinates and set them as the starting position
         new_position = [
             int(

@@ -23,6 +23,16 @@ from synanno.backend.processing import free_page, retrieve_instance_metadata
 blueprint = Blueprint("annotation", __name__)
 
 
+@blueprint.route("/retrive_first_page_of_section/<int:section_index>")
+def retrieve_first_page_of_section(section_index):
+    print(current_app.page_section_mapping)
+    print(section_index)
+    for page, (sec_idx, _) in current_app.page_section_mapping.items():
+        if sec_idx == section_index:
+            return jsonify({"page": page})
+    return jsonify({"error": "Section not found"}), 404
+
+
 @blueprint.route("/annotation/<int:page>", endpoint="annotation_page")
 @blueprint.route("/annotation")
 def annotation(page: int = 1) -> Template:
@@ -38,12 +48,43 @@ def annotation(page: int = 1) -> Template:
     # remove the synapse and image slices for the previous and next page
     free_page()
 
-    # load the data for the current page
-    retrieve_instance_metadata(page=page)
-
     # start the timer for the annotation process
     if current_app.proofread_time["start_grid"] is None:
         current_app.proofread_time["start_grid"] = datetime.datetime.now()
+
+    print(current_app.df_metadata)
+
+    return render_template(
+        "annotation.html",
+        page=page,
+        n_pages=current_app.n_pages,
+        neuron_id=current_app.selected_neuron_id,
+        grid_opacity=current_app.grid_opacity,
+        neuronReady=current_app.neuron_ready,
+        neuronSections=current_app.sections,
+        synapsePointCloud=current_app.snapped_point_cloud,
+        activeNeuronSection=(
+            current_app.page_section_mapping[page][0]
+            if page in current_app.page_section_mapping
+            else 0
+        ),
+        activeSynapseIDs=current_app.synapse_data.query("page == @page").index.tolist(),
+    )
+
+
+@blueprint.route("/loading_bar_image_tiles", methods=["GET"])
+@cross_origin()
+def loading_bar_image_tiles() -> Template:
+    return render_template("loading_bar_image_tiles.html")
+
+
+@blueprint.route("/update_image_tiles/<int:page>", endpoint="update_image_tiles_page")
+@blueprint.route("/update_image_tiles", methods=["POST"])
+@cross_origin()
+def update_images(page: int = 1) -> Template:
+    # Fetch updated image data
+    # load the data for the current page
+    retrieve_instance_metadata(page=page)
 
     # retrieve the data for the current page
     data = (
@@ -52,6 +93,8 @@ def annotation(page: int = 1) -> Template:
         .to_dict("records")
     )
 
+    # retrieve image index for the first page
+
     fn_page = (
         current_app.page_section_mapping[page][1]
         if page in current_app.page_section_mapping
@@ -59,15 +102,12 @@ def annotation(page: int = 1) -> Template:
     )
 
     return render_template(
-        "annotation.html",
+        "annotation_image_tiles.html",
         images=data,
         page=page,
-        n_pages=current_app.n_pages,
-        grid_opacity=current_app.grid_opacity,
         neuron_id=current_app.selected_neuron_id,
+        grid_opacity=current_app.grid_opacity,
         neuronReady=current_app.neuron_ready,
-        neuronSections=current_app.sections,
-        synapsePointCloud=current_app.snapped_point_cloud,
         fn_page="true" if fn_page else "false",
         activeNeuronSection=(
             current_app.page_section_mapping[page][0]

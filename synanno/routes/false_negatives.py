@@ -113,7 +113,11 @@ def create_new_item(request) -> dict:
     if pd.isna(current_app.df_metadata["Image_Index"].max()):
         item["Image_Index"] = 0
     else:
-        item["Image_Index"] = current_app.df_metadata["Image_Index"].max() + 1
+        index = max(
+            current_app.df_metadata["Image_Index"].max(),
+            current_app.synapse_data.index.max(),
+        )
+        item["Image_Index"] = index + 1
 
     if current_page > -1:
         item["Page"] = current_page

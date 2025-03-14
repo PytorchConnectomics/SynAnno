@@ -9,10 +9,21 @@ window.onload = async () => {
     const sectionArrays = $("script[src*='viewer.js']").data("neuron-sections");
     const synapsePointCloud = $("script[src*='viewer.js']").data("synapse-point-cloud");
 
-    let activeNeuronSection = parseInt($("script[src*='viewer.js']").data("active-neuron-section"))
+    let activeNeuronSection = parseInt($("script[src*='viewer.js']").data("active-neuron-section"));
     activeNeuronSection = isNaN(activeNeuronSection) ? -1 : activeNeuronSection;
 
-    console.log("activeNeuronSection:", activeNeuronSection);
+    let activeSynapseIDs = $("script[src*='viewer.js']").data("active-synapse-ids");
+
+    // Ensure it's an array
+    if (!Array.isArray(activeSynapseIDs)) {
+        try {
+            activeSynapseIDs = JSON.parse(activeSynapseIDs || "[]");
+        } catch (e) {
+            console.error("Error parsing active-synapse-ids:", e);
+            activeSynapseIDs = [];
+        }
+    }
+
     const $sharkContainerMinimap = $("#shark_container_minimap");
 
     window.sectionColors = generateSectionColors(sectionArrays);
@@ -27,11 +38,11 @@ window.onload = async () => {
             await initializeViewer($sharkContainerMinimap[0], maxVolumeSize, sectionArrays, activeNeuronSection);
 
             const swcTxt = await loadSwcFile();
-            processSwcFile(swcTxt, sectionArrays, activeNeuronSection);
+            processSwcFile(swcTxt, sectionArrays, activeNeuronSection, activeSynapseIDs);
 
             if (synapsePointCloud) {
-                updateLoadingBar(parseInt(synapsePointCloud.length / 3));
-                processSynapseCloudData(synapsePointCloud, maxVolumeSize);
+                updateLoadingBar(parseInt(synapsePointCloud.length / 3), activeSynapseIDs);
+                processSynapseCloudData(synapsePointCloud, maxVolumeSize, activeSynapseIDs, initialLoad);
             } else {
                 console.error("No synapse cloud path provided.");
             }
@@ -94,7 +105,7 @@ async function loadSwcFile() {
     }
 }
 
-function processSwcFile(swcTxt, sectionArrays, activeNeuronSection) {
+function processSwcFile(swcTxt, sectionArrays, activeNeuronSection, activeSynapseIDs) {
     const swc = swcParser(swcTxt);
 
     if (!swc || Object.keys(swc).length === 0) {
@@ -119,7 +130,7 @@ function processSwcFile(swcTxt, sectionArrays, activeNeuronSection) {
     if (neuron) {
         console.log("Neuron found! Proceeding with color update.");
         updateNodeAndEdgeColors(window.shark, sectionArrays, activeNeuronSection);
-        setTimeout(() => adjustCameraForNeuron(window.shark), 500);
+        setTimeout(() => adjustCameraForNeuron(window.shark, sectionArrays, activeNeuronSection, activeSynapseIDs), 500);
     } else {
         console.warn("Neuron still not found in the scene.");
     }
@@ -128,13 +139,11 @@ function processSwcFile(swcTxt, sectionArrays, activeNeuronSection) {
     window.shark.render();
 }
 
-
-function processSynapseCloudData(data, maxVolumeSize) {
+function processSynapseCloudData(data, maxVolumeSize, activeSynapseIDs, initialLoad) {
     if (!Array.isArray(data) || data.length % 3 !== 0) {
         console.error("JSON data is not an Array or length is not a multiple of 3.");
         return;
     }
-    console.log("Data", data);
 
     window.synapseColors = JSON.parse(sessionStorage.getItem("synapseColors")) || {};
 
@@ -147,11 +156,6 @@ function processSynapseCloudData(data, maxVolumeSize) {
     const colors = new Float32Array(points.length * 4);
     const alphas = new Float32Array(points.length);
     const sizes = new Float32Array(points.length);
-
-    const selectedSynapses = [];
-    $(".image-card-btn").each(function () {
-        selectedSynapses.push($(this).attr("data_id"));
-    });
 
     for (let i = 0; i < points.length; i++) {
         positions[i * 3] = points[i].x + Math.random() * 50;
@@ -171,14 +175,17 @@ function processSynapseCloudData(data, maxVolumeSize) {
         colors[i * 4 + 2] = color.b;
         colors[i * 4 + 3] = 1.0;
 
-        if (selectedSynapses.length > 0) {
-            sizes[i] = selectedSynapses.includes(i.toString()) ? maxVolumeSize : 10;
+        if (activeSynapseIDs.length > 0) {
+            sizes[i] = activeSynapseIDs.includes(i) ? maxVolumeSize : 10;
 
             window.synapseColors[i] === "green" || window.synapseColors[i] === "red" ? 0.7 : 0.3;
-            alphas[i] = selectedSynapses.includes(i.toString()) ? 0.8 : 0.3;
-        } else {
+            alphas[i] = activeSynapseIDs.includes(i) ? 0.8 : 0.3;
+        } else if (initialLoad) {
             sizes[i] = 10;
             alphas[i] = 0.8;
+        } else {
+            sizes[i] = 10;
+            alphas[i] = 0.1;
         }
     }
 
@@ -240,7 +247,6 @@ function updateNodeAndEdgeColors(viewer, sectionArrays, activeNeuronSection) {
 
     const vertexColors = new Float32Array(numVertices * itemSizeVertices);
     const edgeColors = new Float32Array(numVertices * 6 * itemSizeEdges);
-
 
     let vertexGreyOut = [];
     let edgeGreyOut = [];
@@ -337,9 +343,6 @@ window.greyOutSectionsAlpha = (viewer, sectionArrays, greyOutSections) => {
     skeletonVertex.geometry.setAttribute("grey_out", new THREE.Float32BufferAttribute(vertexGreyOut, 1));
     skeletonEdge.geometry.setAttribute("grey_out", new THREE.Float32BufferAttribute(edgeGreyOut, 1));
 
-    console.log("Length of vertexGreyOut:", vertexGreyOut.length);
-    console.log("Length of edgeGreyOut:", edgeGreyOut.length);
-
     skeletonVertex.geometry.attributes.color.needsUpdate = true;
     skeletonEdge.geometry.attributes.color.needsUpdate = true;
 
@@ -387,12 +390,15 @@ window.updateSynapse = (index, newPosition = null, newColor = null, newSize = nu
         sizes.needsUpdate = true;
     }
 
-    console.log("Synapse index:", index, "Position:", positions.getX(index), positions.getY(index), positions.getZ(index));
-
     window.shark.render();
 };
 
-function adjustCameraForNeuron(viewer) {
+function adjustCameraForNeuron(viewer, sectionArrays, activeNeuronSection, activeSynapseIDs) {
+    if (!viewer || !viewer.camera || !viewer.scene) {
+        console.error("Viewer or camera not initialized yet.");
+        return;
+    }
+
     const neuron = viewer.scene.getObjectByName('neuron');
     if (!neuron) {
         console.error("Neuron object not found in scene.");
@@ -407,13 +413,62 @@ function adjustCameraForNeuron(viewer) {
     const fov = viewer.camera.fov * (Math.PI / 180);
     let distance = (maxDim / 2) / Math.tan(fov / 2);
 
-    if (distance < 50) distance = 50;
-    if (distance > 1000000) distance = 1000000;
+    distance = Math.max(50, Math.min(distance, 1000000)); // Keep within reasonable bounds
 
     console.log("Adjusting camera. Distance:", distance, "Bounding box size:", size);
 
-    viewer.camera.position.set(center.x, center.y, center.z + distance * 0.5);
-    viewer.camera.lookAt(center);
+    let targetPosition = center;
+
+    if (activeSynapseIDs.length > 0) {
+        const firstSynapseIndex = activeSynapseIDs[0];
+        const pointsMesh = viewer.scene.getObjectByName("synapse-cloud");
+        if (pointsMesh) {
+            const positions = pointsMesh.geometry.getAttribute("position");
+            targetPosition = new THREE.Vector3(
+                positions.getX(firstSynapseIndex),
+                positions.getY(firstSynapseIndex),
+                positions.getZ(firstSynapseIndex)
+            );
+        }
+    } else if (activeNeuronSection >= 0) {
+        const sectionNodes = sectionArrays[activeNeuronSection];
+        if (sectionNodes && sectionNodes.length > 0) {
+            const firstNodeIndex = sectionNodes[0];
+            const skeletonVertex = neuron.children.find(child => child.name === "skeleton-vertex");
+            if (skeletonVertex && skeletonVertex.geometry) {
+                const positions = skeletonVertex.geometry.getAttribute("position");
+                targetPosition = new THREE.Vector3(
+                    positions.getX(firstNodeIndex),
+                    positions.getY(firstNodeIndex),
+                    positions.getZ(firstNodeIndex)
+                );
+            } else {
+                console.error("skeleton-vertex or its geometry not found.");
+            }
+        }
+    }
+
+    // Set camera position
+    viewer.camera.position.set(targetPosition.x, targetPosition.y, targetPosition.z + distance * 0.5);
+    viewer.camera.lookAt(targetPosition);
+
+    // Ensure trackControls (OrbitUnlimitedControls) is used correctly
+    if (viewer.trackControls) {
+        viewer.trackControls.target.set(targetPosition.x, targetPosition.y, targetPosition.z);
+        viewer.trackControls.update();
+    } else {
+        console.warn("Viewer trackControls not initialized yet. Retrying in 500ms...");
+        setTimeout(() => {
+            if (viewer.trackControls) {
+                viewer.trackControls.target.set(targetPosition.x, targetPosition.y, targetPosition.z);
+                viewer.trackControls.update();
+            } else {
+                console.error("Viewer trackControls still not available.");
+            }
+        }, 500);
+    }
+
+    // Adjust camera properties
     viewer.camera.near = 1;
     viewer.camera.far = distance * 2;
     viewer.camera.updateProjectionMatrix();
@@ -478,7 +533,7 @@ window.onWindowResize = function(sharkContainerMinimap) {
 function createMetadataElement(metadata, colors, activeNeuronSection) {
     const metadiv = document.createElement("div");
     metadiv.id = "node_key";
-    metadiv.style.position = "absolute";  // Ensure positioning does not affect layout
+    metadiv.style.position = "absolute";
     metadiv.style.top = "60px";
     metadiv.style.right = "10px";
     metadiv.style.background = "white";
@@ -488,24 +543,26 @@ function createMetadataElement(metadata, colors, activeNeuronSection) {
     metadiv.style.fontFamily = "Arial, sans-serif";
     metadiv.style.fontSize = "12px";
     metadiv.style.maxWidth = "150px";
+    metadiv.style.maxHeight = "calc(75%)";
+    metadiv.style.overflowY = "auto";
+    metadiv.style.zIndex = "1000";
+    metadiv.style.pointerEvents = "auto";
 
-    // Must-have styles for scrolling & visibility
-    metadiv.style.maxHeight = "calc(75%)"; // Subtract header height if needed
-    metadiv.style.overflowY = "auto"; // Enable scrolling inside the div
-    metadiv.style.zIndex = "1000"; // Move above SharkViewer
-    metadiv.style.pointerEvents = "auto"; // Ensure it captures mouse input
-
-    let toinnerhtml = "<strong>  Sections</strong><br>";
+    let toinnerhtml = "<strong>Sections</strong><br>";
     metadata.forEach((m, index) => {
         let cssColor = colors[index] instanceof THREE.Color
             ? `rgb(${colors[index].r * 255}, ${colors[index].g * 255}, ${colors[index].b * 255})`
             : convertToHexColor(colors[index]);
 
-        let isActive = activeNeuronSection === index
-            ? "font-weight: bold; background: rgba(229, 218, 6, 0.41);"
-            : "";
+        let isActive = activeNeuronSection === index;
+        let activeStyle = isActive ? "font-weight: bold; background: rgba(229, 218, 6, 0.41);" : "";
+        let hoverStyle = "onmouseover=\"if (!this.classList.contains('active-section')) this.style.background='rgba(200, 200, 200, 0.5)';\""
+                       + " onmouseout=\"if (!this.classList.contains('active-section')) this.style.background='';\"";
 
-        toinnerhtml += `<div style='padding: 3px; ${isActive}'>
+        toinnerhtml += `<div class='section-entry ${isActive ? "active-section" : ""}'
+                            data-section-index="${index}"
+                            style='padding: 3px; cursor: pointer; ${activeStyle}'
+                            ${hoverStyle}>
             <span style='display: inline-block; width: 12px; height: 12px; background: ${cssColor}; margin-right: 5px; border-radius: 4px; position: relative; top: 2px;'></span>
             ${m.label}
         </div>`;
@@ -513,12 +570,28 @@ function createMetadataElement(metadata, colors, activeNeuronSection) {
 
     metadiv.innerHTML = toinnerhtml;
 
-    // Prevent scroll propagation to SharkViewer
-    metadiv.addEventListener("wheel", (e) => {
-        e.stopPropagation(); // Stops scroll from affecting the parent (SharkViewer)
+    // Click event for each section entry
+    metadiv.querySelectorAll(".section-entry").forEach(entry => {
+        entry.addEventListener("click", function () {
+            const sectionIndex = this.getAttribute("data-section-index");
+
+            fetch(`/retrive_first_page_of_section/${sectionIndex}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.page) {
+                        window.location.href = `/annotation/${data.page}`;
+                    } else {
+                        alert("Failed to retrieve section page.");
+                    }
+                })
+                .catch(error => console.error("Error fetching first page:", error));
+        });
     });
 
-    // Append metadata div inside minimap container
+    metadiv.addEventListener("wheel", (e) => {
+        e.stopPropagation();
+    });
+
     const minimapContainer = document.getElementById("shark_container_minimap");
     minimapContainer.appendChild(metadiv);
 
@@ -526,25 +599,15 @@ function createMetadataElement(metadata, colors, activeNeuronSection) {
 }
 
 
+function updateLoadingBar(synapse_count, activeSynapseIDs) {
+    if (!Array.isArray(activeSynapseIDs)) {
+        console.error("activeSynapseIDs is not an array!", activeSynapseIDs);
+        activeSynapseIDs = [];
+    }
 
-function getDisplayedDataID() {
-    const instanceIndices = [];
-    $(".image-card-btn").each(function () {
-        let data_id = $(this).attr("data_id");
-        if (!isNaN(data_id)) {
-            instanceIndices.push(data_id);
-        }
-    });
+    if (activeSynapseIDs.length === 0) return;
 
-    return [...new Set(instanceIndices)];
-}
-
-function updateLoadingBar(synapse_count) {
-    const displayedInstanceIndices = getDisplayedDataID();
-
-    if (displayedInstanceIndices.length === 0) return;
-
-    const lowestDisplayedSectionIdx = Math.min(...displayedInstanceIndices);
+    const lowestDisplayedSectionIdx = Math.min(...activeSynapseIDs);
     const progressPercent = (lowestDisplayedSectionIdx / synapse_count) * 100;
 
     document.getElementById("loading_progress").style.width = `${progressPercent}%`;

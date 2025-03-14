@@ -477,21 +477,9 @@ def set_data(task: str = "annotate"):
         data = data.to_dict("records")
         return render_template("draw.html", images=data)
     else:
-        data = (
-            current_app.df_metadata.query("Page == @page")
-            .sort_values(by="Image_Index")
-            .to_dict("records")
-        )
-
-        fn_page = (
-            current_app.page_section_mapping[page][1]
-            if page in current_app.page_section_mapping
-            else False
-        )
 
         return render_template(
             "annotation.html",
-            images=data,
             page=page,
             n_pages=current_app.n_pages,
             grid_opacity=current_app.grid_opacity,
@@ -504,7 +492,9 @@ def set_data(task: str = "annotate"):
                 if page in current_app.page_section_mapping
                 else 0
             ),
-            fn_page="true" if fn_page else "false",
+            activeSynapseIDs=current_app.synapse_data.query(
+                "page == @page"
+            ).index.tolist(),
         )
 
 

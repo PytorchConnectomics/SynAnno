@@ -1,5 +1,7 @@
 $(document).ready(function () {
+
     const neuronReady = $("script[src*='minimap.js']").data("neuron-ready") === true;
+
     const $minimap = $("#minimapContainer");
     const $header = $("#minimapHeader");
     const $toggleButton = $("#toggleButton");

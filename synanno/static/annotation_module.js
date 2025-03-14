@@ -1,7 +1,7 @@
 $(document).ready(function () {
 
-  const neuronID = $("script[src*='annotation.js']").data("neuron-id");
-  const fnPage = $("script[src*='annotation.js']").data("fn-page") === true;
+  const neuronID = $("script[src*='annotation_module.js']").data("neuron-id");
+  const fnPage = $("script[src*='annotation_module.js']").data("fn-page") === true;
 
   // link to the NG, edited when ever right clicking an instance in the grid view
   var ng_link;

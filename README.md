@@ -206,7 +206,6 @@ Why Use `uv`?
 SynAnno can be configured via environment variables or the `.env` file.
 
    ```md
-   SECRET_KEY=********
    APP_IP=0.0.0.0
    APP_PORT=5000
    ```

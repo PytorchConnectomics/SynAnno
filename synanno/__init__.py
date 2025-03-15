@@ -41,7 +41,6 @@ def configure_app(app):
     app.config["CORS_HEADERS"] = "Content-Type"
 
     # Secret key and session settings
-    app.secret_key = os.getenv("SECRET_KEY", os.urandom(32))
     app.config["SESSION_PERMANENT"] = bool(os.getenv("DEBUG_APP", "False") == "True")
     app.config["SESSION_TYPE"] = "filesystem"
     app.config["SESSION_FILE_DIR"] = "/tmp/flask_session"
@@ -89,7 +88,6 @@ def initialize_global_variables(app):
     # Neuron skeleton info/data
     app.sections = None
     app.neuron_ready = None
-    app.pruned_navis_swc_file_name = None
     # The auto segmentation view needs a set number of slices per instance (depth)
     # see process_instances.py::load_missing_slices for more details
     app.crop_size_z_draw = 16
@@ -169,7 +167,6 @@ def initialize_global_variables(app):
     app.target_image_data = defaultdict(dict)
 
     app.snapped_point_cloud = None
-    app.neuron_skeleton_bytes = None
 
     app.pre_id_color_main = (0, 255, 0)
     app.pre_id_color_sub = (200, 255, 200)

@@ -50,7 +50,6 @@ EXPOSE 80 9015
 
 # Set environment variables
 ENV DEBUG_APP="False"
-ENV SECRET_KEY="your-secret-key"
 ENV APP_IP="0.0.0.0"
 ENV NG_IP="0.0.0.0"
 ENV APP_PORT="80"

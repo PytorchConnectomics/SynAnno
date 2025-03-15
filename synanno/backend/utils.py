@@ -1,8 +1,7 @@
-import concurrent.futures
 import io
 import json
 import logging
-from typing import Callable, Dict, Tuple
+from typing import Tuple
 
 import numpy as np
 from PIL import Image
@@ -69,54 +68,6 @@ def adjust_datatype(data: np.ndarray) -> Tuple[np.ndarray, str]:
         return data.astype(np.uint32), "uint32"
     else:
         return data.astype(np.uint64), "uint64"
-
-
-def get_sub_dict_within_range(dictionary: Dict, start_key: int, end_key: int) -> Dict:
-    """Get a sub-dictionary of the given dictionary within the given key range.
-
-    Args:
-        dictionary: Dictionary to be sliced.
-        start_key: Start key of the sub-dictionary.
-        end_key: End key of the sub-dictionary.
-
-    Returns:
-        Sub-dictionary within the given key range.
-    """
-    return {
-        key: value
-        for key, value in dictionary.items()
-        if start_key <= int(key) <= end_key
-    }
-
-
-def submit_with_retry(
-    executor: concurrent.futures.Executor,
-    func: Callable[[dict, str, str], None],
-    *args,
-    retries: int = 3,
-) -> object:
-    """Submit a task to the given executor and retry if it fails.
-
-    Args:
-        executor: Executor to submit the task to.
-        func: Function to be executed.
-        retries: Number of retries. Defaults to 3.
-
-    Raises:
-        exc: Exception thrown by the function.
-
-    Returns:
-        Result of the function.
-    """
-    for attempt in range(retries):
-        future = executor.submit(func, *args)
-        try:
-            _ = future.result(timeout=15)  # adjust timeout as needed
-            return future
-        except Exception as e:
-            logger.error(f"Attempt {attempt+1} failed with error: {str(e)}")
-    logger.error(f"All {retries} attempts failed.")
-    return None
 
 
 def draw_cylinder(

@@ -3,8 +3,6 @@ from random import randint
 from typing import Union
 
 import neuroglancer
-
-# for type hinting
 import numpy as np
 import numpy.typing as npt
 from flask import Flask
@@ -25,7 +23,7 @@ def center_annotation(app, coordinate_space):
 
         # prevent crashes if off ng view
         if center is None:
-            logging.info("No mouse coordinates available.")
+            logger.info("No mouse coordinates available.")
             return
 
         center_coord = {
@@ -37,7 +35,7 @@ def center_annotation(app, coordinate_space):
         app.cy = int(center_coord["y"])
         app.cx = int(center_coord["x"])
 
-        logging.info(f"Center Coordinates: {[app.cx, app.cy, app.cz]}")
+        logger.info(f"Center Coordinates: {[app.cx, app.cy, app.cz]}")
 
         # add a yellow dot at the recorded position within the NG
         with app.ng_viewer.txn() as layer:
@@ -60,14 +58,14 @@ def get_hovered_neuron_id(app):
 
         # prevent crashes if off ng view
         if voxel_coords is None:
-            logging.info("No mouse coordinates available.")
+            logger.info("No mouse coordinates available.")
             return
 
-        logging.info(f"Mouse Voxel Coordinates: {voxel_coords}")
+        logger.info(f"Mouse Voxel Coordinates: {voxel_coords}")
 
         # If a neuron is already selected, deselect it
         if getattr(app, "selected_neuron_id", None) is not None:
-            logging.info(f"Deselecting neuron ID: {app.selected_neuron_id}")
+            logger.info(f"Deselecting neuron ID: {app.selected_neuron_id}")
             app.selected_neuron_id = None
 
             # Clear the selection in the neuropil layer
@@ -83,11 +81,11 @@ def get_hovered_neuron_id(app):
         # retrieve the selected neuron ID from the segmentation layer
         neuron_info = s.selected_values.get("neuropil")
         if neuron_info is None:
-            logging.info("No neuron selected in neuropil layer.")
+            logger.info("No neuron selected in neuropil layer.")
             return
 
         neuron_info = neuron_info.value
-        logging.info(f"Raw Selected Neuron ID: {neuron_info}")
+        logger.info(f"Raw Selected Neuron ID: {neuron_info}")
 
         neuron_id = None
 
@@ -99,11 +97,11 @@ def get_hovered_neuron_id(app):
         elif isinstance(neuron_info, str) and neuron_info.isdigit():
             neuron_id = int(neuron_info)
         else:
-            logging.info("No valid neuron ID found at this voxel.")
+            logger.info("No valid neuron ID found at this voxel.")
             return
 
         # store the neuron ID globally in the app context
-        logging.info(f"Selected Neuron ID: {neuron_id}")
+        logger.info(f"Selected Neuron ID: {neuron_id}")
         app.selected_neuron_id = int(neuron_id)
 
         # Highlight the selected neuron in the neuropil layer
@@ -128,20 +126,6 @@ def get_hovered_neuron_id(app):
             layer.layers["marker_dot"].annotations.append(pt)
 
     return _get_hovered_neuron_id
-
-
-def enable_neuropil_layer(app):
-    """Enable the neuropil neuron segmentation layer."""
-    with app.ng_viewer.txn() as s:
-        s.layers["neuropil"].selectedAlpha = 0.5
-        s.layers["neuropil"].notSelectedAlpha = 0.1
-
-
-def disable_neuropil_layer(app):
-    """Disable the neuropil neuron segmentation layer."""
-    with app.ng_viewer.txn() as s:
-        s.layers["neuropil"].selectedAlpha = 0.0
-        s.layers["neuropil"].notSelectedAlpha = 0.0
 
 
 def setup_ng(
@@ -279,7 +263,7 @@ def setup_ng(
                 [getattr(app, "selected_neuron_id", None)]
             )
 
-    logging.info(
+    logger.info(
         f"Starting a Neuroglancer instance at "
         f"{app.ng_viewer}, centered at x,y,z {0,0,0}."
     )

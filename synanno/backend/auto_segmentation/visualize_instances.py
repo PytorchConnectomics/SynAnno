@@ -30,7 +30,7 @@ def visualize_instances(
         raise ValueError("Axis must be 0, 1, or 2.")
 
     # Create the plot
-    fig, axes = plt.subplots(1, 2, figsize=(12, 6))
+    _, axes = plt.subplots(1, 2, figsize=(12, 6))
 
     # EM Image Slice
     axes[0].imshow(img_slice, cmap="gray")

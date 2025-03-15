@@ -1,92 +1,10 @@
 from typing import Any
 
 import numpy as np
-import pandas as pd
 from cloudvolume import Bbox
 from skimage.transform import resize
 
-from synanno.backend.processing import calculate_crop_pad, process_syn
-
-
-def compute_instance_metadata(
-    idx: int,
-    materialization_df: pd.DataFrame,
-    coordinate_order: list[str],
-    crop_size_x: int,
-    crop_size_y: int,
-    crop_size_z: int,
-    vol_dim: tuple[int, int, int],
-) -> dict[str, Any]:
-    """
-    Compute metadata for a synapse instance.
-
-    Args:
-        idx (int): Index of the instance.
-        materialization_df (pd.DataFrame): DataFrame containing materialization data.
-        coordinate_order (list[str]): Order of coordinates.
-        crop_size_x (int): Crop size in x dimension.
-        crop_size_y (int): Crop size in y dimension.
-        crop_size_z (int): Crop size in z dimension.
-        vol_dim (tuple[int, int, int]): Volume dimensions.
-
-    Returns:
-        dict[str, Any]: Metadata dictionary for the instance.
-    """
-    materialization_selection = materialization_df.query("index == @idx").iloc[0]
-    materialization_selection = materialization_selection[
-        [
-            "pre_pt_x",
-            "pre_pt_y",
-            "pre_pt_z",
-            "post_pt_x",
-            "post_pt_y",
-            "post_pt_z",
-            "x",
-            "y",
-            "z",
-        ]
-    ]
-
-    item = {
-        "Image_Index": int(idx),
-        "X_Index": coordinate_order.index("x"),
-        "Y_Index": coordinate_order.index("y"),
-        "Z_Index": coordinate_order.index("z"),
-        "cz0": int(materialization_selection["z"]),
-        "cy0": int(materialization_selection["y"]),
-        "cx0": int(materialization_selection["x"]),
-        "pre_pt_x": int(materialization_selection["pre_pt_x"]),
-        "pre_pt_y": int(materialization_selection["pre_pt_y"]),
-        "pre_pt_z": int(materialization_selection["pre_pt_z"]),
-        "post_pt_x": int(materialization_selection["post_pt_x"]),
-        "post_pt_y": int(materialization_selection["post_pt_y"]),
-        "post_pt_z": int(materialization_selection["post_pt_z"]),
-        "crop_size_x": crop_size_x,
-        "crop_size_y": crop_size_y,
-        "crop_size_z": crop_size_z,
-    }
-
-    z1, z2 = item["cz0"] - crop_size_z // 2, item["cz0"] + crop_size_z // 2
-    y1, y2 = item["cy0"] - crop_size_y // 2, item["cy0"] + crop_size_y // 2
-    x1, x2 = item["cx0"] - crop_size_x // 2, item["cx0"] + crop_size_x // 2
-
-    bbox_org = list(map(int, [z1, z2, y1, y2, x1, x2]))
-
-    item["Original_Bbox"] = []
-
-    for coord in ["z", "y", "x"]:
-        for i in range(2):
-            item["Original_Bbox"].append(
-                bbox_org[coordinate_order.index(coord) * 2 + i]
-            )
-
-    crop_bbox, img_padding = calculate_crop_pad(
-        item["Original_Bbox"], vol_dim, coordinate_order
-    )
-
-    item["Adjusted_Bbox"], item["Padding"] = crop_bbox, img_padding
-
-    return item
+from synanno.backend.processing import process_syn
 
 
 def retrieve_instance_from_cv(

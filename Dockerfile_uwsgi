@@ -45,7 +45,6 @@ EXPOSE 80 9015
 
 # Environment Variables
 ENV DEBUG_APP="False"
-ENV SECRET_KEY="your-secret-key"
 ENV APP_IP="0.0.0.0"
 ENV NG_IP="0.0.0.0"
 ENV NG_PORT="9015"

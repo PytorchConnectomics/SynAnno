@@ -39,7 +39,7 @@ def process_syn(gt: np.ndarray) -> np.ndarray:
     # assign each synapse a unique index
     seg = label_cc(gt).astype(int)
     # identify the centers largest connected component and mask out the rest
-    unique, counts = np.unique(seg, return_counts=True)
+    unique, _ = np.unique(seg, return_counts=True)
     if len(unique) > 1:
         center_blob_value = get_center_blob_value_vectorized(seg, np.unique(seg)[1:])
         seg *= seg == center_blob_value

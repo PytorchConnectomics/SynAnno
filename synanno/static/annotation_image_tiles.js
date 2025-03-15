@@ -3,183 +3,150 @@ $(document).ready(() => {
   const fnPage = $("script[src*='annotation_image_tiles.js']").data("fn-page") === true;
   const $sharkContainerAnnotate = $("#shark_container_minimap");
 
-  // Trigger updateSynapseColors on page navigation for all instances on the page
-  $(".nav-anno").on("click", () => {
-    updateSynapseColors();
-  });
+  // Delegated event binding for page navigation
+  $(document).on("click", ".nav-anno", updateSynapseColors);
 
-  // Update the instance specific values
-  $(".image-card-btn").on("click", function () {
+  // Delegated event binding for image card updates
+  $(document).on("click", ".image-card-btn", async function () {
     const dataId = $(this).attr("data_id");
     const page = $(this).attr("page");
     const label = $(this).attr("label");
 
-    // Update the label in the backend
-    const reqLabel = $.ajax({
-      url: "/update-card",
-      type: "POST",
-      data: { data_id: dataId, page: page, label: label },
-    });
-
-    // Update the label in the frontend
-    reqLabel.done((data) => {
+    try {
+      const data = await $.post("/update-card", { data_id: dataId, page, label });
       updateLabelClasses(dataId, label);
 
       if (neuronReady) {
-        const newLabel = $("#id-a-" + dataId).attr("label");
+        const newLabel = $(`#id-a-${dataId}`).attr("label");
         updateSynapseColor(dataId, newLabel);
         window.setupWindowResizeHandler($sharkContainerAnnotate[0]);
       }
-    });
+    } catch (error) {
+      console.error("Error updating label:", error);
+    }
   });
 
-  let isScrollingLocked = false; // Prevents rapid scrolling
-  let scrollDelta = 0; // Accumulate scroll movement
-  const SCROLL_THRESHOLD = 50; // Adjust this value for sensitivity (higher = less sensitive)
+  let isScrollingLocked = false;
+  let scrollDelta = 0;
+  const SCROLL_THRESHOLD = 50;
 
   $(".annotate-item").on("wheel", async function (event) {
-    event.preventDefault(); // Prevent page scrolling
+    const $this = $(this);
 
-    if (isScrollingLocked) return; // Stop execution if another scroll event is already in progress
+    // Prevent the main page from scrolling
+    event.preventDefault();
 
-    // Accumulate the scroll movement
+    if (isScrollingLocked) return;
+
     scrollDelta += event.originalEvent.deltaY;
+    if (Math.abs(scrollDelta) < SCROLL_THRESHOLD) return;
 
-    // Only trigger a slice change when scroll exceeds the threshold
-    if (Math.abs(scrollDelta) < SCROLL_THRESHOLD) {
-      return; // Do nothing until enough scrolling has occurred
-    }
-    scrollDelta = 0; // Reset the accumulated scroll after triggering a slice change
-
+    scrollDelta = 0;
     isScrollingLocked = true;
 
-    const $card = $(this).find(".image-card-btn"); // The card representing the instance
-    const dataId = $card.attr("data_id"); // Instance identifier
-
-    const $imgSource = $("#imgSource-" + dataId);
-    const $imgTarget = $("#imgTarget-" + dataId);
-
-    const currentSlice = parseInt($imgSource.data("current-slice")); // Current slice
-
-    // Determine scroll direction
+    const $card = $this.find(".image-card-btn");
+    const dataId = $card.attr("data_id");
+    const $imgSource = $(`#imgSource-${dataId}`);
+    const $imgTarget = $(`#imgTarget-${dataId}`);
+    const currentSlice = parseInt($imgSource.attr("data-current-slice"), 10);
     const newSlice = currentSlice + (event.originalEvent.deltaY > 0 ? 1 : -1);
 
     try {
       const response = await fetchImageExistence(dataId, newSlice, fnPage);
-
-      if (response) { // Only execute if the slice exists
-        await updateImages(dataId, newSlice, fnPage, $imgSource, $imgTarget);
-      }
+      if (response) await updateImages(dataId, newSlice, fnPage, $imgSource, $imgTarget);
     } catch (error) {
       console.error("Error loading images:", error);
+    } finally {
+      isScrollingLocked = false;
     }
-
-    isScrollingLocked = false;
   });
 
-  // Grid view: decrease the opacity of the GT masks
-  window.dec_opacity_grid = function () {
-    updateGridOpacity(-0.1);
+  // Grid opacity controls
+  const gridOpacityController = {
+    adjust(delta) {
+      const $valueOpacityGrid = $("#value-opacity-grid");
+      let value = parseFloat($valueOpacityGrid.attr("value")) + delta;
+      value = Math.max(0, Math.min(value, 1));
+
+      $valueOpacityGrid.attr("value", value).text(value.toFixed(1));
+      $('[id^="imgTarget-"]').css("opacity", value);
+
+      $.post("/set_grid_opacity", { grid_opacity: value }).fail((error) => console.error("Failed to update opacity:", error));
+    },
   };
 
-  // Grid view: increase the opacity of the GT masks
-  window.add_opacity_grid = function () {
-    updateGridOpacity(0.1);
-  };
+  window.dec_opacity_grid = () => gridOpacityController.adjust(-0.1);
+  window.add_opacity_grid = () => gridOpacityController.adjust(0.1);
 });
 
 function updateSynapseColors() {
-  if ($("script[src*='viewer.js']").data("neuron-ready") === true) {
+  if ($("script[src*='viewer.js']").attr("data-neuron-ready") === "true") {
     $(".image-card-btn").each(function () {
-      const dataId = $(this).attr("data_id");
-      const label = $(this).attr("label");
-      updateSynapseColor(dataId, label);
+      updateSynapseColor($(this).attr("data_id"), $(this).attr("label"));
     });
-    // Save to colors to storage
     sessionStorage.setItem("synapseColors", JSON.stringify(window.synapseColors));
   }
 }
 
 function updateLabelClasses(dataId, label) {
-  if (label === "Unsure") {
-    $("#id" + dataId).removeClass("unsure").addClass("correct");
-    $("#id-a-" + dataId).attr("label", "Correct");
-  } else if (label === "Incorrect") {
-    $("#id" + dataId).removeClass("incorrect").addClass("unsure");
-    $("#id-a-" + dataId).attr("label", "Unsure");
-  } else if (label === "Correct") {
-    $("#id" + dataId).removeClass("correct").addClass("incorrect");
-    $("#id-a-" + dataId).attr("label", "Incorrect");
+  const labelMappings = {
+    Unsure: { remove: "unsure", add: "correct", newLabel: "Correct" },
+    Incorrect: { remove: "incorrect", add: "unsure", newLabel: "Unsure" },
+    Correct: { remove: "correct", add: "incorrect", newLabel: "Incorrect" },
+  };
+
+  if (labelMappings[label]) {
+    const { remove, add, newLabel } = labelMappings[label];
+    $(`#id${dataId}`).removeClass(remove).addClass(add);
+    $(`#id-a-${dataId}`).attr("label", newLabel);
   }
 }
 
 function updateSynapseColor(dataId, label) {
-  if (label === "Correct") {
-    window.updateSynapse(dataId, null, new THREE.Color(0x00ff00), null, true);
-    window.synapseColors[dataId] = "green";
-  } else if (label === "Unsure") {
-    window.updateSynapse(dataId, null, new THREE.Color(0xffff00), null, true);
-    window.synapseColors[dataId] = "yellow";
-  } else if (label === "Incorrect") {
-    window.updateSynapse(dataId, null, new THREE.Color(0xff0000), null, true);
-    window.synapseColors[dataId] = "red";
+  const labelColors = {
+    Correct: { color: 0x00ff00, name: "green" },
+    Unsure: { color: 0xffff00, name: "yellow" },
+    Incorrect: { color: 0xff0000, name: "red" },
+  };
+
+  if (labelColors[label]) {
+    const { color, name } = labelColors[label];
+    window.updateSynapse(dataId, null, new THREE.Color(color), null, true);
+    window.synapseColors[dataId] = name;
   }
 }
 
 async function fetchImageExistence(dataId, newSlice, fnPage) {
-  if (fnPage) {
-    return await $.ajax({
-      url: `/source_img_exists/${dataId}/${newSlice}`,
-      type: "GET",
-    });
-  } else {
-    return await $.ajax({
-      url: `/source_and_target_exist/${dataId}/${newSlice}`,
-      type: "GET",
-    });
+  try {
+    const url = fnPage ? `/source_img_exists/${dataId}/${newSlice}` : `/source_and_target_exist/${dataId}/${newSlice}`;
+    return await $.get(url);
+  } catch (error) {
+    console.error("Image existence check failed:", error);
+    return false;
   }
 }
 
 async function updateImages(dataId, newSlice, fnPage, $imgSource, $imgTarget) {
-  const newSourceImg = new Image();
-  newSourceImg.src = `/get_source_image/${dataId}/${newSlice}`;
+  try {
+    const newSourceImg = new Image();
+    newSourceImg.src = `/get_source_image/${dataId}/${newSlice}`;
 
-  if (fnPage) {
-    await new Promise((resolve) => (newSourceImg.onload = resolve));
-    $imgSource.attr("src", newSourceImg.src);
-    $imgSource.data("current-slice", newSlice);
-  } else {
-    const newTargetImg = new Image();
-    newTargetImg.src = `/get_target_image/${dataId}/${newSlice}`;
+    if (fnPage) {
+      await new Promise((resolve) => (newSourceImg.onload = resolve));
+      $imgSource.attr("src", newSourceImg.src).attr("data-current-slice", newSlice);
+    } else {
+      const newTargetImg = new Image();
+      newTargetImg.src = `/get_target_image/${dataId}/${newSlice}`;
 
-    await Promise.all([
-      new Promise((resolve) => (newSourceImg.onload = resolve)),
-      new Promise((resolve) => (newTargetImg.onload = resolve)),
-    ]);
+      await Promise.all([
+        new Promise((resolve) => (newSourceImg.onload = resolve)),
+        new Promise((resolve) => (newTargetImg.onload = resolve)),
+      ]);
 
-    $imgSource.attr("src", newSourceImg.src);
-    $imgSource.data("current-slice", newSlice);
-    $imgTarget.attr("src", newTargetImg.src);
-    $imgTarget.data("current-slice", newSlice);
+      $imgSource.attr("src", newSourceImg.src).attr("data-current-slice", newSlice);
+      $imgTarget.attr("src", newTargetImg.src).attr("data-current-slice", newSlice);
+    }
+  } catch (error) {
+    console.error("Error updating images:", error);
   }
-}
-
-function updateGridOpacity(delta) {
-  const $valueOpacityGrid = $("#value-opacity-grid");
-  let value = parseFloat($valueOpacityGrid.attr("value"));
-  let newValue = value + delta;
-  newValue = Math.max(0, Math.min(newValue, 1));
-  $valueOpacityGrid.attr("value", newValue);
-  $valueOpacityGrid.text(newValue.toFixed(1));
-
-  $('[id^="imgTarget-"]').each(function () {
-    $(this).css("opacity", newValue);
-  });
-
-  // Ajax sending the new grid opacity to the backend
-  $.ajax({
-    url: "/set_grid_opacity",
-    type: "POST",
-    data: { grid_opacity: newValue },
-  });
 }

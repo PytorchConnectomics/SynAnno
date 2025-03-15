@@ -29,7 +29,6 @@ from synanno.backend.processing import (
     calculate_number_of_pages_for_neuron_section_based_loading,
     determine_volume_dimensions,
     load_cloud_volumes,
-    retrieve_instance_metadata,
     update_slice_number,
 )
 
@@ -430,8 +429,6 @@ def upload_file():
         if nr_instances == 0:
             nr_instances = len(current_app.synapse_data.index)
         current_app.n_pages = calculate_number_of_pages(nr_instances)
-
-    retrieve_instance_metadata(page=1, mode=current_app.draw_or_annotate)
 
     if current_app.ng_version is None:
         ng_util.setup_ng(

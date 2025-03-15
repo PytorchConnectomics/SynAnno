@@ -365,7 +365,7 @@ $(document).ready(() => {
 
   async function save_canvas(canvas, canvas_type) {
     const dataURL = canvas.toDataURL();
-    const viewed_instance_slice = $("#rangeSlices").data("viewed_instance_slice");
+    const viewed_instance_slice = parseInt($("#rangeSlices").data("viewed_instance_slice"));
 
     try {
       const response = await $.ajax({

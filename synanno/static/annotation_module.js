@@ -1,251 +1,162 @@
 $(document).ready(function () {
-
   const neuronID = $("script[src*='annotation_module.js']").data("neuron-id");
   const fnPage = $("script[src*='annotation_module.js']").data("fn-page") === true;
 
-  // link to the NG, edited when ever right clicking an instance in the grid view
-  var ng_link;
+  let ngLink, cz0, cy0, cx0, dataId, page, currentSlice;
 
-  // variables for the coordinates of the focus of the view with in the NG
-  var cz0;
-  var cy0;
-  var cx0;
+  // Cache frequently used elements
+  const $detailsModal = $('#detailsModal');
+  const $neuroModel = $('#neuroModel');
+  const $imageCardBtns = $('.image-card-btn');
+  const $ngIframe = $('#ng-iframe');
+  const $imgSource = $('#imgDetails-EM');
+  const $imgTarget = $('#imgDetails-GT');
+  const $valueOpacity = $('#value-opacity');
+  const $toggleLabel = $('#toggle-label');
 
-  let data_id;
-  let page;
-  let currentSlice;
+  // Handle modal accessibility
+  function toggleInert(modal, enable) {
+    modal.attr('inert', enable ? '' : null);
+  }
 
-  // Ensure inert is removed when showing the modal
-  $('#detailsModal').on('show.bs.modal', function () {
-    $(this).removeAttr('inert'); // Make modal interactive
-    $('#toggle-label').focus(); // Move focus inside the modal
+  function focusFirstButton() {
+    $imageCardBtns.first().focus();
+  }
+
+  $detailsModal.on({
+    'show.bs.modal': function () {
+      toggleInert($(this), false);
+      $toggleLabel.focus();
+    },
+    'hide.bs.modal': function () {
+      toggleInert($(this), true);
+    },
+    'hidden.bs.modal': focusFirstButton
   });
 
-  // Apply inert when hiding the modal
-  $('#detailsModal').on('hide.bs.modal', function () {
-    $(this).attr('inert', ''); // Disable interaction
-    $('.image-card-btn').first().focus(); // Return focus to trigger button
+  $neuroModel.on({
+    'show.bs.modal': function () {
+      toggleInert($(this), false);
+      $ngIframe.focus();
+    },
+    'hide.bs.modal': function () {
+      toggleInert($(this), true);
+      toggleInert($detailsModal, false);
+    },
+    'hidden.bs.modal': focusFirstButton
   });
 
-  // Prevent focus issues when closing the modal via backdrop click
-  $('#detailsModal').on('hidden.bs.modal', function () {
-    $('.image-card-btn').first().focus(); // Move focus back to trigger button
-  });
-
-  // Ensure inert is removed when showing the Neuroglancer modal
-  $('#neuroModel').on('show.bs.modal', function () {
-    $(this).removeAttr('inert'); // Enable interaction
-    $('#ng-iframe').focus(); // Move focus inside the modal (to the iframe)
-  });
-
-  // Apply inert when hiding the Neuroglancer modal
-  $('#neuroModel').on('hide.bs.modal', function () {
-    $(this).attr('inert', ''); // Disable interaction
-    $('#detailsModal').removeAttr('inert'); // Ensure 2D modal regains interaction if switching
-  });
-
-  // Move focus back to the button that opened the modal
-  $('#neuroModel').on('hidden.bs.modal', function () {
-    $('.image-card-btn').first().focus(); // Return focus to the trigger button
-  });
-
-  // Ensure `neuroModel` modal is properly toggled from `detailsModal`
   $('[data-bs-target="#neuroModel"]').on('click', function () {
-    $('#detailsModal').attr('inert', ''); // Disable the 2D modal while viewing Neuroglancer
-    $('#neuroModel').modal('show').removeAttr('inert');
+    toggleInert($detailsModal, true);
+    $neuroModel.modal('show');
   });
 
-  // Handle switching back to `detailsModal`
   $('[data-bs-target="#detailsModal"]').on('click', function () {
-    $('#neuroModel').attr('inert', ''); // Disable Neuroglancer modal
-    $('#detailsModal').modal('show').removeAttr('inert');
+    toggleInert($neuroModel, true);
+    $detailsModal.modal('show');
   });
 
-// Retrieve and set the information for the modal instance view
-$(".image-card-btn").bind("contextmenu", async function (e) {
+  async function fetchInstanceData() {
+    try {
+      const response = await $.post("/get_instance", {
+        mode: "annotate", load: "full", data_id: dataId, page: page
+      });
+      const dataJson = JSON.parse(response.data);
+      currentSlice = dataJson.Middle_Slice;
+      cz0 = dataJson.cz0;
+      cy0 = dataJson.cy0;
+      cx0 = dataJson.cx0;
+
+      $imgSource.attr("src", `/get_source_image/${dataId}/${currentSlice}`);
+      if (!fnPage) {
+        $imgTarget.attr("src", `/get_target_image/${dataId}/${currentSlice}`);
+      }
+
+      $detailsModal.modal("show");
+    } catch (error) {
+      console.error("Error fetching instance data:", error);
+    }
+  }
+
+  async function fetchNeuroglancerLink() {
+    try {
+      const response = await $.post("/neuro", {
+        cz0, cy0, cx0, mode: "annotate"
+      });
+      ngLink = response.ng_link;
+    } catch (error) {
+      console.error("Error fetching NG link:", error);
+    }
+  }
+
+  $imageCardBtns.on("contextmenu", async function (e) {
     e.preventDefault();
-
-    // Instance identifiers
-    data_id = $(this).attr("data_id");
+    dataId = $(this).attr("data_id");
     page = $(this).attr("page");
-
     $("#neuron-id").text(neuronID);
 
-    // Retrieve instance data from backend
-    let req_data = $.ajax({
-        url: "/get_instance",
-        type: "POST",
-        data: { mode: "annotate", load: "full", data_id: data_id, page: page },
-    });
+    await fetchInstanceData();
+    await fetchNeuroglancerLink();
+  });
 
-    await req_data.done(function (data) {
-        let data_json = JSON.parse(data.data);
-
-        // set the initial slice to the center slice
-        currentSlice = data_json.Middle_Slice;
-
-
-        // Load the initial middle slice
-        if (fnPage) {
-           $("#imgDetails-EM")
-              .attr("src", `/get_source_image/${data_id}/${currentSlice}`)
-        }else{
-            $("#imgDetails-EM")
-                .attr("src", `/get_source_image/${data_id}/${currentSlice}`)
-            $("#imgDetails-GT")
-              .attr("src", `/get_target_image/${data_id}/${currentSlice}`)
-        }
-
-        // Show modal
-        $("#detailsModal").modal("show").removeAttr("inert");
-
-        cz0 = data_json.cz0;
-        cy0 = data_json.cy0;
-        cx0 = data_json.cx0;
-    });
-
-    // Retrieve the updated NG link
-    let req_ng = $.ajax({
-        url: "/neuro",
-        type: "POST",
-        data: { cz0: cz0, cy0: cy0, cx0: cx0, mode: "annotate" },
-    });
-
-    req_ng.done(function (data) {
-        ng_link = data.ng_link;
-    });
-
-});
-
-$("#ng-link").on("click", function () {
-  // update the NG link on click
-  $("#ng-iframe").attr("src", ng_link);
-});
-
-let isModalScrollingLocked = false; // Prevents multiple rapid scrolls
-let modalScrollDelta = 0;           // Accumulate scroll movement
-const MODAL_SCROLL_THRESHOLD = 65;  // Adjust for sensitivity
-
-// Handle mouse wheel scrolling inside the modal
-$("#detailsModal").on("wheel", async function (event) {
-
-    event.preventDefault(); // Prevent page scrolling
-
-    if (isModalScrollingLocked) return; // Stop execution if another scroll event is already in progress
-
-    // Accumulate the scroll movement
-    modalScrollDelta += event.originalEvent.deltaY;
-    // Only trigger a slice change when scroll exceeds the threshold
-    if (Math.abs(modalScrollDelta) < MODAL_SCROLL_THRESHOLD) {
-        return; // Do nothing until enough scrolling has occurred
+  $("#ng-link").on("click", function () {
+    if (ngLink) {
+      $ngIframe.attr("src", ngLink);
     }
-    modalScrollDelta = 0; // Reset the accumulated scroll after triggering a slice change
+  });
 
+  let isModalScrollingLocked = false;
+  let modalScrollDelta = 0;
+  const MODAL_SCROLL_THRESHOLD = 65;
+
+  $detailsModal.on("wheel", async function (event) {
+    event.preventDefault();
+    if (isModalScrollingLocked) return;
+    modalScrollDelta += event.originalEvent.deltaY;
+    if (Math.abs(modalScrollDelta) < MODAL_SCROLL_THRESHOLD) return;
+    modalScrollDelta = 0;
     isModalScrollingLocked = true;
 
-    let $imgTarget = $("#imgDetails-GT");
-    let $imgSource = $("#imgDetails-EM");
-
-    // Determine scroll direction
-    let newSlice = currentSlice + (event.originalEvent.deltaY > 0 ? 1 : -1);
-
-    console.log("Current slice:", currentSlice, "New slice:", newSlice);
-    console.log("$imgTarget, $imgSource", $imgTarget, $imgSource);
-
+    const newSlice = currentSlice + (event.originalEvent.deltaY > 0 ? 1 : -1);
     try {
-        let response;
+      const exists = await $.get(fnPage ?
+        `/source_img_exists/${dataId}/${newSlice}` :
+        `/source_and_target_exist/${dataId}/${newSlice}`);
+
+      if (exists) {
+        const newSourceImg = new Image();
+        newSourceImg.src = `/get_source_image/${dataId}/${newSlice}`;
         if (fnPage) {
-          response = await $.ajax({
-            url: `/source_img_exists/${data_id}/${newSlice}`,
-            type: "GET",
-          });
+          await newSourceImg.decode();
         } else {
-          response = await $.ajax({
-              url: `/source_and_target_exist/${data_id}/${newSlice}`,
-              type: "GET"
-          });
+          const newTargetImg = new Image();
+          newTargetImg.src = `/get_target_image/${dataId}/${newSlice}`;
+          await Promise.all([newSourceImg.decode(), newTargetImg.decode()]);
+          $imgTarget.attr("src", newTargetImg.src);
         }
-
-        if (response) {  // Only execute if the slice exists
-            let newTargetImg;
-            let newSourceImg = new Image();
-
-            newSourceImg.src = `/get_source_image/${data_id}/${newSlice}`;
-
-            if (fnPage) {
-              await new Promise(resolve => newSourceImg.onload = resolve);
-            }
-            else {
-              newTargetImg = new Image();
-
-              newSourceImg.src = `/get_source_image/${data_id}/${newSlice}`;
-              newTargetImg.src = `/get_target_image/${data_id}/${newSlice}`;
-
-              // Wait for both images to load before updating
-              await Promise.all([
-                new Promise(resolve => newSourceImg.onload = resolve),
-                new Promise(resolve => newTargetImg.onload = resolve)
-              ]);
-            }
-
-
-            // Update the displayed images **only after both have fully loaded**
-            if (fnPage) {
-              $imgSource.attr("src", newSourceImg.src);
-            }else{
-              $imgSource.attr("src", newSourceImg.src);
-              $imgTarget.attr("src", newTargetImg.src);
-            }
-
-            currentSlice = newSlice;
-
-        }
+        $imgSource.attr("src", newSourceImg.src);
+        currentSlice = newSlice;
+      }
     } catch (error) {
-        console.error("Error loading images:", error);
+      console.error("Error loading images:", error);
     }
-
     isModalScrollingLocked = false;
-});
+  });
 
+  window.dec_opacity = function () {
+    let newValue = Math.max(parseFloat($valueOpacity.attr("value")) - 0.1, 0);
+    $valueOpacity.attr("value", newValue).text(newValue.toFixed(1));
+    $imgTarget.css("opacity", newValue);
+  };
 
-// modal view: decrease the opacity of the GT mask
-window.dec_opacity =  function dec_opacity() {
-  var value = $("#value-opacity").attr("value");
-  var new_value = value - 0.1;
-  if (new_value < 0) {
-    new_value = 0;
-  }
-  $("#value-opacity").attr("value", new_value);
-  $("#value-opacity").text(new_value.toFixed(1));
-  $("#imgDetails-GT").css("opacity", new_value);
-}
+  window.add_opacity = function () {
+    let newValue = Math.min(parseFloat($valueOpacity.attr("value")) + 0.1, 1);
+    $valueOpacity.attr("value", newValue).text(newValue.toFixed(1));
+    $imgTarget.css("opacity", newValue);
+  };
 
-// modal view: increase the opacity of the GT mask
-window.add_opacity =  function add_opacity() {
-  var value = $("#value-opacity").attr("value");
-  var new_value = parseFloat(value) + 0.1;
-  if (new_value >= 1) {
-    new_value = 1;
-  }
-  $("#value-opacity").attr("value", new_value);
-  $("#value-opacity").text(new_value.toFixed(1));
-  $("#imgDetails-GT").css("opacity", new_value);
-}
-
-// toggle the GT mask in the modal view
-window.check_gt = function check_gt() {
-  const imgDetailsGT = document.getElementById("imgDetails-GT");
-  const toggleLabelButton = document.getElementById("toggle-label");
-
-  if (imgDetailsGT.style.display === "none") {
-    imgDetailsGT.style.display = "block";
-    toggleLabelButton.classList.remove("btn-secondary");
-    toggleLabelButton.classList.add("btn-secondary");
-  } else {
-    imgDetailsGT.style.display = "none";
-    toggleLabelButton.classList.remove("btn-secondary");
-    toggleLabelButton.classList.add("btn-secondary");
-  }
-}
-
+  window.check_gt = function () {
+    $imgTarget.toggle();
+    $toggleLabel.toggleClass("btn-secondary");
+  };
 });

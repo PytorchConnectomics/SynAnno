@@ -112,7 +112,7 @@ def create_zip_with_masks() -> io.BytesIO:
             meta_data = get_metadata_for_image_index(img_index)
             coordinates = "_".join(map(str, meta_data["Adjusted_Bbox"]))
 
-            for canvas_type in ["circlePre", "circlePost", "curve"]:
+            for canvas_type in ["circlePre", "circlePost", "curve", "auto_curve"]:
                 if canvas_type in mask_data:
                     for slice_id, image_bytes in mask_data[canvas_type].items():
                         img = png_bytes_to_pil_img(image_bytes)

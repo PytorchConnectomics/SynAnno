@@ -575,7 +575,7 @@ function createMetadataElement(metadata, colors, activeNeuronSection) {
         entry.addEventListener("click", function () {
             const sectionIndex = this.getAttribute("data-section-index");
 
-            fetch(`/retrive_first_page_of_section/${sectionIndex}`)
+            fetch(`/retrieve_first_page_of_section/${sectionIndex}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.page) {

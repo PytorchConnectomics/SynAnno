@@ -23,10 +23,8 @@ from synanno.backend.processing import free_page, retrieve_instance_metadata
 blueprint = Blueprint("annotation", __name__)
 
 
-@blueprint.route("/retrive_first_page_of_section/<int:section_index>")
+@blueprint.route("/retrieve_first_page_of_section/<int:section_index>")
 def retrieve_first_page_of_section(section_index):
-    print(current_app.page_section_mapping)
-    print(section_index)
     for page, (sec_idx, _) in current_app.page_section_mapping.items():
         if sec_idx == section_index:
             return jsonify({"page": page})
@@ -51,8 +49,6 @@ def annotation(page: int = 1) -> Template:
     # start the timer for the annotation process
     if current_app.proofread_time["start_grid"] is None:
         current_app.proofread_time["start_grid"] = datetime.datetime.now()
-
-    print(current_app.df_metadata)
 
     return render_template(
         "annotation.html",

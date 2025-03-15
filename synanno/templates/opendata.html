@@ -1,20 +1,10 @@
 {% extends "templatebase.html" %}
 {% block help_content %}
 <p class="text-muted">
-  The opendata view asks you to provide a source bucket and target bucket (both
-  in Neuroglancer's precomputed format), a URL to a materialization table,
-  bucket secrets (defaults to ~/.cloudvolume/secrets), and optionally a JSON
-  file containing instance metadata. The JSON file can be used to save and
-  restore sessions or start a "Revise Dataset" workflow with information from a
-  "Proofread Annotation" workflow. You can load instances by querying the
-  materialization table based on sub-volume constraints in the 'View Centric'
-  approach or based on pre-/post-synaptic coordinates in the 'Neuron Centric'
-  approach. You'll also need to specify the coordinate layout of the referenced
-  precomputed datasets, the source volume resolution (in nm), the target volume
-  resolution (in nm), and instance crop size (in pixels). After providing the
-  required information, click 'Submit' to prepare the data for the first page or
-  revision. Then, click "Start Data Proofread"/"Start Drawing" to begin
-  proofreading or revision.
+  The OpenData view requires a source and target bucket (both in Neuroglancer's precomputed format), a URL to a materialization table, bucket secrets, and optionally, a JSON file with instance metadata. This file helps save/restore sessions or start the "Revise Dataset" workflow using data from the "Proofread Annotation" workflow.
+</p>
+<p class="text-muted">
+  Instances can be loaded via sub-volume constraints in the 'View Centric' approach or pre-/post-synaptic coordinates in the 'Neuron Centric' approach. You must also specify the coordinate layout, source volume resolution (nm), target volume resolution (nm), and instance crop size (pixels). Click 'Submit' to prepare data, then "Start Data Proofread" or "Start Drawing" to begin proofreading or revision.
 </p>
 {% endblock %} {% block content %}
 
@@ -258,8 +248,9 @@
           >
             <div class="modal-dialog modal-xl">
             <div class="modal-content">
-              <div class="card-header text-center">
-                Neuron ID: <span id="neuron-id-open"></span>
+              <div class="card-header text-center d-flex justify-content-center align-items-center">
+                <span class="ps-1">Neuron ID: <span id="neuron-id-open"></span></span>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
             <div class="modal-body">
             <!-- Embedded Neuroglancer Viewer -->

@@ -1,27 +1,35 @@
-{% extends "templatebase.html" %} {% block help_content%}
-<p class="text-muted">
-  SynAnno is a tool designed for proofreading and correcting synaptic polarity
-  annotation from electron microscopy (EM) volumes - specifically the H01
-  dataset. On this landing page you can choose between two workflows: "Revise
-  Dataset" and "Proofread Annotation". The former allows you to redraw
-  segmentation masks, assign pre-/post-synaptic IDs, and add missed false
-  negatives. The latter allows you to review existing segmentations and
-  pre-/post-synaptic IDs, mark incorrect instances, and assign error
-  descriptions to those instances. After categorizing all erroneous instances in
-  the "Proofread Annotation" workflow, you can automatically proceed with the
-  "Revise Dataset" workflow. Each page has three buttons: "Home", "Question
-  Mark", and "Menu". The first returns you to the landing page. The second
-  provides an explanation of the current view and its functionality. The third
-  provides general information and contact details.
-</p>
-{% endblock %} {% block content %}
+{% extends "templatebase.html" %}
 
+{% block help_content %}
+<p class="text-muted">
+  SynAnno is a tool for proofreading and correcting synaptic polarity annotations from
+  electron microscopy (EM) volumes, specifically the H01 dataset. On this landing page,
+  you can choose between two workflows: "Revise Dataset" and "Proofread Annotation."
+</p>
+<p class="text-muted">
+  "Revise Dataset" allows you to redraw segmentation masks, assign pre-/post-synaptic IDs,
+  and add missed false negatives. "Proofread Annotation" lets you review existing segmentations,
+  verify pre-/post-synaptic IDs, mark incorrect instances, and assign error descriptions.
+  After categorizing all erroneous instances in "Proofread Annotation," you can automatically
+  proceed to "Revise Dataset."
+</p>
+<p class="text-muted">
+  Each page has a navigation bar at the top with three icons:
+  <!--white text color-->
+  <ul class="text-muted">
+    <li><i class="fa fa-home text-secondary"></i> Returns to the landing page</li>
+    <li><i class="fa fa-question text-secondary"></i> Explain the current view and its functionality</li>
+    <li><i class="fa fa-bars text-secondary"></i> Provides general information and contact details</li>
+  </ul>
+</p>
+{% endblock %}
+
+{% block content %}
 <div class="container-fluid vh-100 w-75">
   <div class="pt-5 text-center">
     <h2 class="mb-2">Welcome to SynAnno Annotation Tool</h2>
     <p>
-      Choose your path! Annotate a newly acquired dataset or proof read existing
-      annotations...
+      Choose your workflow: annotate a newly acquired dataset or proofread existing annotations.
     </p>
   </div>
   <div class="row justify-content-center h-50">
@@ -29,33 +37,18 @@
       <div class="card text-center border-primary">
         <h4 class="card-title">Revise Dataset</h4>
         <div class="card-body">
-          <a
-            type="button"
-            class="btn"
-            href="{{ url_for('open_data.open_data_task', task='draw') }}"
-          >
-            <h2>
-              <i
-                class="fa fa-object-group fa-5x"
-                style="color: rgb(80, 80, 80)"
-              ></i>
-            </h2>
+          <a class="btn" href="{{ url_for('open_data.open_data_task', task='draw') }}">
+            <h2><i class="fa fa-object-group fa-5x" style="color: rgb(80, 80, 80)"></i></h2>
           </a>
         </div>
       </div>
     </div>
     <div class="col my-auto">
-      <div class="card text-center">
+      <div class="card text-center border-primary">
         <h4 class="card-title">Proofread Annotations</h4>
-        <div class="card-body border-primary">
-          <a
-            type="button"
-            class="btn"
-            href="{{ url_for('open_data.open_data_task', task='annotate') }}"
-          >
-            <h2>
-              <i class="fa fa-arrows fa-5x" style="color: rgb(80, 80, 80)"></i>
-            </h2>
+        <div class="card-body">
+          <a class="btn" href="{{ url_for('open_data.open_data_task', task='annotate') }}">
+            <h2><i class="fa fa-arrows fa-5x" style="color: rgb(80, 80, 80)"></i></h2>
           </a>
         </div>
       </div>

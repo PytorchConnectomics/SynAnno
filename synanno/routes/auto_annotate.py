@@ -27,12 +27,15 @@ def load_images_and_masks(data_id: int) -> tuple:
     source_images_dict = dict(
         sorted(current_app.source_image_data[str(data_id)].items(), key=lambda k: k[0])
     )
-    target_images_dict = dict(
-        sorted(
-            current_app.target_image_data[str(data_id)]["curve"].items(),
-            key=lambda k: k[0],
+
+    target_images_dict = {}
+    if "curve" in current_app.target_image_data[str(data_id)]:
+        target_images_dict = dict(
+            sorted(
+                current_app.target_image_data[str(data_id)]["curve"].items(),
+                key=lambda k: k[0],
+            )
         )
-    )
 
     map_slice_to_idx = {}
     image_np_list = []

@@ -221,143 +221,139 @@ def retrieve_instance_metadata(page: int = 1, mode: str = "annotate"):
         page (int): the current page number for which to compute the data.
     """
 
-    # retrieve the order of the coordinates (xyz, xzy, yxz, yzx, zxy, zyx)
+    with current_app.retrieve_instance_metadata_lock:
 
-    with current_app.df_metadata_lock:
-        page_empty = current_app.df_metadata.query("Page == @page").empty
+        # retrieve the order of the coordinates (xyz, xzy, yxz, yzx, zxy, zyx)
 
-    if page_empty and not (
-        mode == "draw" and current_app.df_metadata.query('Label != "Correct"').empty
-    ):
-
-        # retrieve the data for the current page
-        page_metadata = current_app.synapse_data.query("page == @page")
-
-        page_metadata = retrieve_materialization_data(page_metadata)
-
-        coordinate_order = list(current_app.coordinate_order.keys())
-
-        crop_size_x = (
-            current_app.crop_size_z
-            if mode == "annotate"
-            else current_app.crop_size_z_draw
-        )
-
-        instance_list = []
-        for idx in page_metadata.keys():
-
-            item = {
-                "Page": int(page),
-                "Image_Index": int(idx),
-                "materialization_index": (
-                    page_metadata[idx]["materialization_index"]
-                    if "materialization_index" in page_metadata[idx]
-                    else -1
-                ),
-                "section_index": (
-                    page_metadata[idx]["section_index"]
-                    if "section_index" in page_metadata[idx]
-                    else -1
-                ),
-                "tree_traversal_index": (
-                    page_metadata[idx]["tree_traversal_index"]
-                    if "tree_traversal_index" in page_metadata[idx]
-                    else -1
-                ),
-                "Label": "Correct",
-                "Annotated": "No",
-                "neuron_id": (
-                    current_app.selected_neuron_id
-                    if current_app.selected_neuron_id is not None
-                    else "No Neuron Selected..."
-                ),
-                "Error_Description": "None",
-                "X_Index": coordinate_order.index("x"),
-                "Y_Index": coordinate_order.index("y"),
-                "Z_Index": coordinate_order.index("z"),
-                "Middle_Slice": int(page_metadata[idx]["z"]),
-                "cz0": int(page_metadata[idx]["z"]),
-                "cy0": int(page_metadata[idx]["y"]),
-                "cx0": int(page_metadata[idx]["x"]),
-                "pre_pt_x": int(page_metadata[idx]["pre_pt_x"]),
-                "pre_pt_y": int(page_metadata[idx]["pre_pt_y"]),
-                "pre_pt_z": int(page_metadata[idx]["pre_pt_z"]),
-                "post_pt_x": int(page_metadata[idx]["post_pt_x"]),
-                "post_pt_y": int(page_metadata[idx]["post_pt_y"]),
-                "post_pt_z": int(page_metadata[idx]["post_pt_z"]),
-                "crop_size_x": current_app.crop_size_x,
-                "crop_size_y": current_app.crop_size_y,
-                # The auto segmentation view needs a set number of slices per instance
-                # (depth) see process_instances.py::load_missing_slices for more details
-                "crop_size_z": crop_size_x,
-            }
-
-            # Calculate bounding boxes
-            bbox_org = [
-                item["cz0"] - crop_size_x // 2,
-                item["cz0"]
-                + max(1, (crop_size_x + 1) // 2),  # incase the depth was set to one.
-                item["cy0"] - current_app.crop_size_y // 2,
-                item["cy0"] + (current_app.crop_size_y + 1) // 2,
-                item["cx0"] - current_app.crop_size_x // 2,
-                item["cx0"] + (current_app.crop_size_x + 1) // 2,
-            ]
-
-            item["Original_Bbox"] = [
-                bbox_org[coordinate_order.index(coord) * 2 + i]
-                for coord in ["z", "y", "x"]
-                for i in range(2)
-            ]
-
-            item["Adjusted_Bbox"], item["Padding"] = calculate_crop_pad(
-                item["Original_Bbox"], current_app.vol_dim
-            )
-
-            instance_list.append(item)
-
-        # Append to shared DataFrame
-        df_list = pd.DataFrame(instance_list)
         with current_app.df_metadata_lock:
-            current_app.df_metadata = pd.concat(
-                [current_app.df_metadata, df_list], ignore_index=True
+            page_empty = current_app.df_metadata.query("Page == @page").empty
+
+        if page_empty and not (
+            mode == "draw" and current_app.df_metadata.query('Label != "Correct"').empty
+        ):
+            # retrieve the data for the current page
+            page_metadata = current_app.synapse_data.query("page == @page")
+
+            page_metadata = retrieve_materialization_data(page_metadata)
+
+            coordinate_order = list(current_app.coordinate_order.keys())
+
+            crop_size_x = (
+                current_app.crop_size_z
+                if mode == "annotate"
+                else current_app.crop_size_z_draw
             )
 
-    # retrieve the page's metadata from the dataframe
-    with current_app.df_metadata_lock:
-        if mode == "annotate":
-            page_metadata = current_app.df_metadata.query("Page == @page")
-        elif mode == "draw":
-            page_metadata = current_app.df_metadata.query('Label != "Correct"')
+            instance_list = []
+            for idx in page_metadata.keys():
+                item = {
+                    "Page": int(page),
+                    "Image_Index": int(idx),
+                    "materialization_index": (
+                        page_metadata[idx]["materialization_index"]
+                        if "materialization_index" in page_metadata[idx]
+                        else -1
+                    ),
+                    "section_index": (
+                        page_metadata[idx]["section_index"]
+                        if "section_index" in page_metadata[idx]
+                        else -1
+                    ),
+                    "tree_traversal_index": (
+                        page_metadata[idx]["tree_traversal_index"]
+                        if "tree_traversal_index" in page_metadata[idx]
+                        else -1
+                    ),
+                    "Label": "Correct",
+                    "Annotated": "No",
+                    "neuron_id": (
+                        current_app.selected_neuron_id
+                        if current_app.selected_neuron_id is not None
+                        else "No Neuron Selected..."
+                    ),
+                    "Error_Description": "None",
+                    "X_Index": coordinate_order.index("x"),
+                    "Y_Index": coordinate_order.index("y"),
+                    "Z_Index": coordinate_order.index("z"),
+                    "Middle_Slice": int(page_metadata[idx]["z"]),
+                    "cz0": int(page_metadata[idx]["z"]),
+                    "cy0": int(page_metadata[idx]["y"]),
+                    "cx0": int(page_metadata[idx]["x"]),
+                    "pre_pt_x": int(page_metadata[idx]["pre_pt_x"]),
+                    "pre_pt_y": int(page_metadata[idx]["pre_pt_y"]),
+                    "pre_pt_z": int(page_metadata[idx]["pre_pt_z"]),
+                    "post_pt_x": int(page_metadata[idx]["post_pt_x"]),
+                    "post_pt_y": int(page_metadata[idx]["post_pt_y"]),
+                    "post_pt_z": int(page_metadata[idx]["post_pt_z"]),
+                    "crop_size_x": current_app.crop_size_x,
+                    "crop_size_y": current_app.crop_size_y,
+                    "crop_size_z": crop_size_x,
+                }
 
-    # sort the metadata by the image index
-    page_metadata = page_metadata.sort_values(by="Image_Index").to_dict(
-        "records"
-    )  # convert dataframe to list of dicts
+                bbox_org = [
+                    item["cz0"] - crop_size_x // 2,
+                    item["cz0"] + max(1, (crop_size_x + 1) // 2),
+                    item["cy0"] - current_app.crop_size_y // 2,
+                    item["cy0"] + (current_app.crop_size_y + 1) // 2,
+                    item["cx0"] - current_app.crop_size_x // 2,
+                    item["cx0"] + (current_app.crop_size_x + 1) // 2,
+                ]
 
-    with ThreadPoolExecutor(max_workers=8) as executor:  # adjust max_workers as needed
-        futures = [
-            executor.submit(
-                run_with_app_context,
-                current_app._get_current_object(),
-                process_instance,
-                item,
-            )
-            for item in page_metadata
-        ]
+                item["Original_Bbox"] = [
+                    bbox_org[coordinate_order.index(coord) * 2 + i]
+                    for coord in ["z", "y", "x"]
+                    for i in range(2)
+                ]
 
-        for future in as_completed(futures):
-            try:
-                future.result()
-            except Exception as exc:
-                logger.error("Error processing instance: %s", exc)
-                logger.info("Retrying...")
+                item["Adjusted_Bbox"], item["Padding"] = calculate_crop_pad(
+                    item["Original_Bbox"], current_app.vol_dim
+                )
+
+                instance_list.append(item)
+
+            # Append to shared DataFrame
+            df_list = pd.DataFrame(instance_list)
+            with current_app.df_metadata_lock:
+                current_app.df_metadata = pd.concat(
+                    [current_app.df_metadata, df_list], ignore_index=True
+                )
+
+        # retrieve the page's metadata from the dataframe
+        with current_app.df_metadata_lock:
+            if mode == "annotate":
+                page_metadata = current_app.df_metadata.query("Page == @page")
+            elif mode == "draw":
+                page_metadata = current_app.df_metadata.query('Label != "Correct"')
+
+        # sort the metadata by the image index
+        page_metadata = page_metadata.sort_values(by="Image_Index").to_dict(
+            "records"
+        )  # convert dataframe to list of dicts
+
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            futures = [
+                executor.submit(
+                    run_with_app_context,
+                    current_app._get_current_object(),
+                    process_instance,
+                    item,
+                )
+                for item in page_metadata
+            ]
+
+            for future in as_completed(futures):
                 try:
-                    future.result(timeout=15)
-                except Exception as exc_retry:
-                    logger.error("Retry failed: %s", exc_retry)
-                    traceback.print_exc()
+                    future.result()
+                except Exception as exc:
+                    logger.error("Error processing instance: %s", exc)
+                    logger.info("Retrying...")
+                    try:
+                        future.result(timeout=15)
+                    except Exception as exc_retry:
+                        logger.error("Retry failed: %s", exc_retry)
+                        traceback.print_exc()
 
-    logger.info("Completed processing for page %d.", page)
+        logger.info("Completed processing for page %d.", page)
 
 
 def update_slice_number(data: dict) -> None:
@@ -367,7 +363,7 @@ def update_slice_number(data: dict) -> None:
         data (dict): the dictionary containing the metadata of the instances.
     """
     # Adjust the bounding box
-    with current_app.df_metadata_lock:
+    with current_app.retrieve_instance_metadata_lock:
         coord_order = list(current_app.coordinate_order.keys())
 
         for instance in data:

@@ -13,6 +13,8 @@ const handleSaveBboxClick = async () => {
   const currentPage = $("script[src*='annotation.js']").data("current-page");
   $('#loading-bar').css('display', 'flex');
 
+  $(".text-white").text("Saving new instance...");
+
   try {
     await $.post("/ng_bbox_fn_save", {
       currentPage,
@@ -27,9 +29,7 @@ const handleSaveBboxClick = async () => {
   } catch (error) {
     console.error("Error saving bbox:", error);
   }
-
   $('#loading-bar').css('display', 'none');
-  await reloadImages(currentPage);
 };
 
 const reloadImages = async (currentPage) => {

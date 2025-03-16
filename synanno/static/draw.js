@@ -115,6 +115,7 @@ $(document).ready(() => {
   $("#canvasButtonAuto").on("click", async () => {
     try {
       $("#loading-bar").css('display', 'flex');
+      $(".text-white").text("Auto generating...");
       const image = imageData.find(img => img.Page == page && img.Image_Index == data_id);
       const middle_slice = image.Middle_Slice;
       const base = `-${image.Page}-${data_id}`;

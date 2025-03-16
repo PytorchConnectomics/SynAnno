@@ -2,7 +2,7 @@ $(document).ready(function () {
   const neuronID = $("script[src*='annotation_module.js']").data("neuron-id");
   const fnPage = $("script[src*='annotation_module.js']").data("fn-page") === true;
 
-  let ngLink, cz0, cy0, cx0, dataId, page, currentSlice;
+  let ngLink, cz0, cy0, cx0, dataId, page, currentSlice, dataJson; // Define dataJson in the outer scope
 
   // Cache frequently used elements
   const $detailsModal = $('#detailsModal');
@@ -61,7 +61,7 @@ $(document).ready(function () {
       const response = await $.post("/get_instance", {
         mode: "annotate", load: "full", data_id: dataId, page: page
       });
-      const dataJson = JSON.parse(response.data);
+      dataJson = JSON.parse(response.data); // Assign dataJson here
       currentSlice = dataJson.Middle_Slice;
       cz0 = dataJson.cz0;
       cy0 = dataJson.cy0;
@@ -119,14 +119,14 @@ $(document).ready(function () {
 
     const newSlice = currentSlice + (event.originalEvent.deltaY > 0 ? 1 : -1);
     try {
-      const exists = await $.get(fnPage ?
+      const exists = await $.get(fnPage || dataJson.Error_Description === "False Negative" ?
         `/source_img_exists/${dataId}/${newSlice}` :
         `/source_and_target_exist/${dataId}/${newSlice}`);
 
       if (exists) {
         const newSourceImg = new Image();
         newSourceImg.src = `/get_source_image/${dataId}/${newSlice}`;
-        if (fnPage) {
+        if (fnPage || dataJson.Error_Description === "False Negative") {
           await newSourceImg.decode();
         } else {
           const newTargetImg = new Image();

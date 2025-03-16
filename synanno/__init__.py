@@ -1,5 +1,6 @@
 import logging
 import os
+import threading
 from collections import defaultdict
 from threading import Lock
 
@@ -172,6 +173,8 @@ def initialize_global_variables(app):
     app.pre_id_color_sub = (200, 255, 200)
     app.post_id_color_main = (0, 0, 255)
     app.post_id_color_sub = (200, 200, 255)
+
+    app.retrieve_instance_metadata_lock = threading.Lock()
 
 
 def register_routes(app):

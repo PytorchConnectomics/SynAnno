@@ -36,7 +36,6 @@ document.addEventListener("DOMContentLoaded", function () {
     accordionItem.querySelectorAll("[data-required='true']").forEach(field => {
       field.style.backgroundColor = userInteraction && isFieldEmpty(field) ? "#fff3cd" : "";
     });
-    updateSubmitButtonState();
   }
 
   function updateHeaderColor(accordionItem) {
@@ -52,7 +51,6 @@ document.addEventListener("DOMContentLoaded", function () {
       updateFieldColors(item, false);
       updateHeaderColor(item);
     });
-    updateSubmitButtonState();
   }
 
   document.querySelectorAll(".accordion-item").forEach(accordionItem => {
@@ -71,16 +69,12 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  document.querySelectorAll("[data-required='true'], #volume-form input, #neuron-form input").forEach(el => {
-    el.addEventListener("input", updateSubmitButtonState);
-  });
 
   document.getElementById("toggleSynapseSelection")?.addEventListener("change", function () {
     const isNeuronView = this.checked;
     document.getElementById("volume-form").style.display = isNeuronView ? "none" : "block";
     document.getElementById("neuron-form").style.display = isNeuronView ? "block" : "none";
     document.getElementById("view_style").value = isNeuronView ? "neuron" : "volume";
-    updateSubmitButtonState();
   });
 
   neuroglancerModal?.addEventListener("shown.bs.modal", async () => {
@@ -128,12 +122,12 @@ document.addEventListener("DOMContentLoaded", function () {
           if (ngData.ng_url) {
             document.getElementById("neuroglancerIframe").src = ngData.ng_url;
             openNeuronModalBtn.removeAttribute("disabled");
+            updateSubmitButtonState();
           }
         }
       } catch (error) {
         console.error("Error loading materialization or launching Neuroglancer:", error);
       }
-      updateSubmitButtonState();
     }, 500);
   });
 

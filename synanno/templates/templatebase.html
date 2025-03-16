@@ -108,18 +108,26 @@
                     Returning to the landing page results in the loss of any progress and the deletion of the loaded data.
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-danger" onclick="window.location.href='{{ url_for('finish.reset') }}';">
-                        Reset and Go Home
-                    </button>
+                    <a type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</a>
+                    <a
+                    id="resetButton"
+                    type="button"
+                    class="btn btn-danger ml-2 {{disable_snp}}"
+                    href="{{ url_for('finish.reset')}}" >Start New Process
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 
+    {% include "loading_bar.html" %}
+
     <!-- Define staticBaseUrl globally -->
     <script>
         const staticBaseUrl = "{{ url_for('static', filename='') }}";
     </script>
+
+    <script type="module" src="{{ url_for('static', filename='reset.js') }}"></script>
+
 </body>
 </html>

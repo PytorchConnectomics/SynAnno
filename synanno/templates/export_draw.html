@@ -30,7 +30,7 @@
   >
 
   <a
-    id="draw_new_process"
+    id="resetButton"
     type="button"
     class="btn btn-secondary ml-2 {{disable_snp}}"
     href="{{ url_for('finish.reset')}}"
@@ -38,6 +38,9 @@
   >
 </div>
 
+{% include "loading_bar.html" %}
+
 <script src="{{ url_for('static', filename='export.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='reset.js') }}"></script>
 
 {% endblock %}

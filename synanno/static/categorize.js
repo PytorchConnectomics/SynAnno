@@ -1,9 +1,48 @@
+import { fetchImageExistence, updateImages } from "./utils/image_loader.js";
+
 $(document).ready(() => {
   initializeFormControls();
   setupFormControlEvents();
   setupSubmitHandlers();
   updateEmptyStateMessage();
   setupCardClickHandlers();
+
+  let isScrollingLocked = false;
+  let scrollDelta = 0;
+  const SCROLL_THRESHOLD = 50;
+
+  $(".card-body-proof-read").on("wheel", async function (event) {
+    const $this = $(this);
+
+    // Prevent the main page from scrolling
+    event.preventDefault();
+
+    if (isScrollingLocked) return;
+
+    scrollDelta += event.originalEvent.deltaY;
+    if (Math.abs(scrollDelta) < SCROLL_THRESHOLD) return;
+
+    scrollDelta = 0;
+    isScrollingLocked = true;
+
+    const $card = $this.find(".image-card-btn");
+    const page = $card.attr("page");
+    const dataId = $card.attr("data_id");
+    const $imgSource = $(`#imgSource-${dataId}`);
+    const $imgTarget = $(`#imgTarget-${dataId}`);
+    const currentSlice = parseInt($imgSource.attr("data-current-slice"), 10);
+    const newSlice = currentSlice + (event.originalEvent.deltaY > 0 ? 1 : -1);
+
+    try {
+      const customFlagText = $(`#customFlagInput_${page}_${dataId}`).val();
+      const response = await fetchImageExistence(dataId, newSlice, customFlagText==="False Negative");
+      if (response) await updateImages(dataId, newSlice, customFlagText==="False Negative", $imgSource, $imgTarget);
+    } catch (error) {
+      console.error("Error loading images:", error);
+    } finally {
+      isScrollingLocked = false;
+    }
+  });
 });
 
 function initializeFormControls() {
@@ -11,10 +50,15 @@ function initializeFormControls() {
     const id = $(this).attr('id');
     if ($(this).hasClass('checked')) {
       const parts = id.split('_');
-    const page = parts[1];
-    const imgId = parts[2];
+      const page = parts[1];
+      const imgId = parts[2];
+      const customFlagText = $(`#customFlagInput_${page}_${imgId}`).val();
       $(`#customFlagButton_${page}_${imgId}`).prop('checked', true);
       $(`#customFlagInput_${page}_${imgId}`).prop('disabled', false);
+
+      if (customFlagText === "False Negative") {
+        lockInstanceFields(page, imgId);
+      }
     }
   });
 
@@ -24,6 +68,14 @@ function initializeFormControls() {
         $(this).prop('checked', true);
       }
     });
+  });
+}
+
+function lockInstanceFields(page, imgId) {
+  $(`#customFlagButton_${page}_${imgId}`).prop('disabled', true);
+  $(`#customFlagInput_${page}_${imgId}`).prop('disabled', true);
+  ['falsePositive', 'badFit', 'polaritySwitch'].forEach(flag => {
+    $(`#${flag}_${page}_${imgId}`).prop('disabled', true).closest('.form-check').addClass('text-muted');
   });
 }
 

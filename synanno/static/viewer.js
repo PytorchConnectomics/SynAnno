@@ -575,16 +575,27 @@ function createMetadataElement(metadata, colors, activeNeuronSection) {
         entry.addEventListener("click", function () {
             const sectionIndex = this.getAttribute("data-section-index");
 
-            fetch(`/retrieve_first_page_of_section/${sectionIndex}`)
+            // 🔹 First, check if retrieve_instance_metadata is locked
+            fetch("/is_metadata_locked")
                 .then(response => response.json())
                 .then(data => {
-                    if (data.page) {
-                        window.location.href = `/annotation/${data.page}`;
+                    if (data.locked) {
+                        alert("Data update is currently in progress. Please wait before navigating.");
                     } else {
-                        alert("Failed to retrieve section page.");
+                        // Proceed only if the lock is free
+                        fetch(`/retrieve_first_page_of_section/${sectionIndex}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.page) {
+                                    window.location.href = `/annotation/${data.page}`;
+                                } else {
+                                    alert("Failed to retrieve section page.");
+                                }
+                            })
+                            .catch(error => console.error("Error fetching first page:", error));
                     }
                 })
-                .catch(error => console.error("Error fetching first page:", error));
+                .catch(error => console.error("Error checking metadata lock:", error));
         });
     });
 

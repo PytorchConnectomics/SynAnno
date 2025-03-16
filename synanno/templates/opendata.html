@@ -286,8 +286,9 @@
       <input
         id="processData"
         type="submit"
-        class="btn btn-secondary {{ modecurrent }}" disabled
+        class="btn btn-secondary {{ modecurrent }}"
         value="Submit"
+        disabled
       />
       <a
         type="button"
@@ -338,5 +339,6 @@
 
 <script type="module" src="{{ url_for('static', filename='minimap.js') }}" data-neuron-ready="{{ neuronReady }}"></script>
 
+<script type="module" src="{{ url_for('static', filename='reset.js') }}"></script>
 
 {% endblock %}

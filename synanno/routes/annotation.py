@@ -4,6 +4,7 @@ import datetime
 
 # ajax json response
 import json
+import logging
 
 # retrieve list of all files with in a directory
 from typing import Dict
@@ -18,6 +19,8 @@ from flask_cors import cross_origin
 from jinja2 import Template
 
 from synanno.backend.processing import free_page, retrieve_instance_metadata
+
+logger = logging.getLogger(__name__)
 
 # define a Blueprint for annotation routes
 blueprint = Blueprint("annotation", __name__)
@@ -74,23 +77,35 @@ def loading_bar_image_tiles() -> Template:
     return render_template("loading_bar_image_tiles.html")
 
 
+@blueprint.route("/is_metadata_locked", methods=["GET"])
+@cross_origin()
+def is_metadata_locked():
+    """Check if retrieve_instance_metadata is currently running."""
+    is_locked = current_app.retrieve_instance_metadata_lock.locked()
+    return {"locked": is_locked}, 200
+
+
 @blueprint.route("/update_image_tiles/<int:page>", endpoint="update_image_tiles_page")
 @blueprint.route("/update_image_tiles", methods=["POST"])
 @cross_origin()
-def update_images(page: int = 1) -> Template:
-    # Fetch updated image data
-    # load the data for the current page
+def update_images(page: int = 1):
+    """Fetch updated image data and load the data for the current page."""
+
+    # Check if retrieve_instance_metadata is already running
+    if current_app.retrieve_instance_metadata_lock.locked():
+        logger.warning("retrieve_instance_metadata is already running.")
+        return "", 204  # Return an empty response with 204 No Content status
+
     retrieve_instance_metadata(page=page)
 
-    # retrieve the data for the current page
+    # Retrieve the data for the current page
     data = (
         current_app.df_metadata.query("Page == @page")
         .sort_values(by=["Image_Index"])
         .to_dict("records")
     )
 
-    # retrieve image index for the first page
-
+    # Retrieve image index for the first page
     fn_page = (
         current_app.page_section_mapping[page][1]
         if page in current_app.page_section_mapping

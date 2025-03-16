@@ -69,11 +69,12 @@
 }
 
 .card-body-proof-read {
-  min-height: 30%;
-  max-height: 30%;
-  min-width: 30%;
-  max-width: 30%;
-  margin-right: 5px;
+  max-height: 23%;
+  max-width: 23%;
+  margin-left: 1%;
+  margin-right: 1%;
+  margin-top: 0.5%;
+  margin-bottom: 0.5%;
 }
 
 .card-block>.main-image-categorize>.img_categorize {

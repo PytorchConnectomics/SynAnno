@@ -41,9 +41,9 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid content-row mt-5">
+<div class="container-fluid">
   <div class="container-fluid py-2">
-    <div class="d-flex flex-row flex-nowrap overflow-auto">
+    <div class="d-flex flex-wrap justify-content-center">
       <div class="card border rounded card-body card-body-proof-read text-center" style="border-width: 4px !important">
         <h5 class="card-header border-bottom-0 mb-2">False Negative</h5>
         <div class="card-block border-0 p-1 image-card-btn unsure mt-auto" label="Unsure">
@@ -107,7 +107,7 @@
     No instances were marked as faulty!
   </div>
 
-  <div class="m-4 p-1">
+  <div class="position-fixed bottom-0 end-0 m-4" style="z-index: 1050;">
     <a type="button" id="submit_button" class="btn btn-secondary {{ modenext }}" href="{{ url_for('finish.export_draw') }}">Submit and Finish</a>
   </div>
 </div>

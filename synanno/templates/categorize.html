@@ -45,9 +45,9 @@
 </p>
 {% endblock %} {% block content %}
 
-<div class="container-fluid content-row mt-5">
+<div class="container-fluid">
   <div class="container-fluid py-2">
-    <div class="d-flex flex-row flex-nowrap overflow-auto">
+    <div class="d-flex flex-wrap justify-content-left">
       {% for image in images %}
 
       <div
@@ -70,6 +70,7 @@
               width="64px"
               height="64px"
               style="opacity: 0.5"
+              data-current-slice="{{image.Middle_Slice}}"
             />
             {% endif %}
             <img
@@ -78,6 +79,7 @@
               src="{{ url_for('file_access.get_source_image', image_index=image.Image_Index, slice_id=image.Middle_Slice)}}"
               width="64px"
               height="64px"
+              data-current-slice="{{image.Middle_Slice}}"
             />
           </div>
         </div>
@@ -174,7 +176,7 @@
     No instances were marked as faulty!
   </div>
 
-  <div class="m-4 p-1">
+  <div class="position-fixed bottom-0 end-0 m-4" style="z-index: 1050;">
     <a
       type="button"
       id="submit_button"
@@ -186,12 +188,19 @@
 </div>
 
 
+<!-- Modal for synapse slice-->
+{% include "annotation_single.html" %}
+
+<!-- Modal for neuroglancer slice-->
+{% include "annotation_neuro.html" %}
+
 <!-- Modal for FP deletion-->
 {% include "categorize_modal_dl_fn.html" %}
 
 <!-- Modal to indicating active loading -->
 {% include "loading_bar.html" %}
 
-<script src="{{ url_for('static', filename='categorize.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='categorize.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='annotation_module.js') }}" data-fn-page="{{ fn_page }}" data-neuron-id="{{ neuron_id }}" data-fn-page="{{ fn_page }}"></script>
 
 {% endblock %}

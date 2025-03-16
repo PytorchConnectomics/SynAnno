@@ -80,7 +80,6 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("volume-form").style.display = isNeuronView ? "none" : "block";
     document.getElementById("neuron-form").style.display = isNeuronView ? "block" : "none";
     document.getElementById("view_style").value = isNeuronView ? "neuron" : "volume";
-    if (isNeuronView && materializationUrlInput.value.trim()) openNeuronModalBtn.removeAttribute("disabled");
     updateSubmitButtonState();
   });
 

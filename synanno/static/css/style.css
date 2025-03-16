@@ -185,7 +185,7 @@
   /* Always take 33% of the screen width */
   height: 90vh;
   /* Always take 80% of the screen height */
-  margin-top: 10px;
+  margin-top: 5px;
   background: #fff;
   border: 1px solid #ccc;
   box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);

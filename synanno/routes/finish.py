@@ -109,7 +109,16 @@ def create_zip_with_masks() -> io.BytesIO:
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
         for img_index, mask_data in current_app.target_image_data.items():
+
             meta_data = get_metadata_for_image_index(img_index)
+
+            if meta_data is None:
+                logger.error(
+                    f"Metadata not found for image index {img_index} "
+                    f"and mask data {mask_data}"
+                )
+                continue
+
             coordinates = "_".join(map(str, meta_data["Adjusted_Bbox"]))
 
             for canvas_type in ["circlePre", "circlePost", "curve", "auto_curve"]:
@@ -122,12 +131,17 @@ def create_zip_with_masks() -> io.BytesIO:
     return zip_buffer
 
 
-def get_metadata_for_image_index(img_index: str) -> dict:
+def get_metadata_for_image_index(img_index: str) -> dict | None:
     """Retrieve metadata for a given image index."""
     img_index_int = int(img_index)  # noqa: F841
-    return current_app.df_metadata.query("Image_Index == @img_index_int").to_dict(
+    if current_app.df_metadata.query("Image_Index == @img_index_int").to_dict(
         "records"
-    )[0]
+    ):
+        return current_app.df_metadata.query("Image_Index == @img_index_int").to_dict(
+            "records"
+        )[0]
+    else:
+        return None
 
 
 @blueprint.route("/reset")

@@ -64,14 +64,14 @@ def open_data(task: str):
             modenext="d-none",
             modereset="inline",
             mode=current_app.draw_or_annotate,
-            view_style="volume",  # Changed from "synapse" to "volume"
+            view_style="neuron",
             neuronReady="false",
         )
     return render_template(
         "opendata.html",
         modenext="disabled",
         mode=current_app.draw_or_annotate,
-        view_style="volume",  # Changed from "synapse" to "volume"
+        view_style="neuron",
         neuronReady="false",
     )
 
@@ -82,25 +82,40 @@ def save_coordinate_order_and_crop_size(form: MultiDict):
     Args:
         form: The form data from the request.
     """
-    current_app.coordinate_order = {
-        c: (
-            form.get("res-source-" + str(i + 1)),
-            form.get("res-target-" + str(i + 1)),
-        )
-        for i, c in enumerate(list(form.get("coordinates")))
-    }
+    if form.get("coordinates"):
+        current_app.coordinate_order = {
+            c: (
+                form.get("res-source-" + str(i + 1)),
+                form.get("res-target-" + str(i + 1)),
+            )
+            for i, c in enumerate(list(form.get("coordinates")))
+        }
+    else:
+        logger.warning("No coordinate order provided, using default order: ", "xyz")
 
     coordinate_order = list(current_app.coordinate_order.keys())
 
-    current_app.crop_size_x = int(
-        form.get("crop_size_c" + str(coordinate_order.index("x")))
-    )
-    current_app.crop_size_y = int(
-        form.get("crop_size_c" + str(coordinate_order.index("y")))
-    )
-    current_app.crop_size_z = int(
-        form.get("crop_size_c" + str(coordinate_order.index("z")))
-    )
+    if (
+        form.get("crop_size_c1") is None
+        or form.get("crop_size_c2") is None
+        or form.get("crop_size_c3") is None
+    ):
+        logger.warning(
+            "No crop size provided for x, using default values: "
+            f"{current_app.crop_size_x}, {current_app.crop_size_y}, "
+            f"{current_app.crop_size_z}"
+        )
+    else:
+        current_app.crop_size_x = int(
+            form.get("crop_size_c" + str(coordinate_order.index("x")))
+        )
+        current_app.crop_size_y = int(
+            form.get("crop_size_c" + str(coordinate_order.index("y")))
+        )
+
+        current_app.crop_size_z = int(
+            form.get("crop_size_c" + str(coordinate_order.index("z")))
+        )
 
     if (
         current_app.crop_size_x == 0

@@ -961,7 +961,7 @@ import {
 
     getCameraDistance() {
       if (!this.camera || !this.trackControls) {
-          return 1.0; // Fallback in case of missing camera or controls
+          return 1.0;
       }
       return this.camera.position.distanceTo(this.trackControls.target);
     }
@@ -974,7 +974,7 @@ import {
       this.scene.traverse((node) => {
           if (node.material?.uniforms?.cameraDistance) {
               node.material.uniforms.cameraDistance.value = cameraDistance;
-              node.material.uniforms.cameraDistance.needsUpdate = true; // 🔥 Ensure shader update
+              node.material.uniforms.cameraDistance.needsUpdate = true;
           }
       });
 

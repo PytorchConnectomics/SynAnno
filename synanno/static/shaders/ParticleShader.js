@@ -1,7 +1,7 @@
 const ParticleShader = {
     uniforms: {
-        cameraDistance: { value: 1.0 }, // Unified distance scaling
-        particleScale: { value: 1.0 }, // Uniform scaling factor
+        cameraDistance: { value: 1.0 },
+        particleScale: { value: 1.0 },
         sphereTexture: { value: null },
         abstraction_threshold: { value: 0.0 },
     },

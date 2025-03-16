@@ -225,8 +225,12 @@ def setup_ng(
                 hideSegmentZero=True,
             )
 
+        # FOR USER STUDY: select the first row featuring neuron 2325998949
+        random_row = app.synapse_data.iloc[155]
+
+        # traditional logic for random starting point selection
         # choose a random row, skipping the first row
-        random_row = app.synapse_data.iloc[1:].sample(n=1).iloc[0]
+        # random_row = app.synapse_data.iloc[1:].sample(n=1).iloc[0]
 
         # extract xyz coordinates and set them as the starting position
         new_position = [

@@ -226,7 +226,7 @@ def setup_ng(
             )
 
         # FOR USER STUDY: select the first row featuring neuron 2325998949
-        random_row = app.synapse_data.iloc[155]
+        random_row = app.synapse_data.iloc[153]
 
         # traditional logic for random starting point selection
         # choose a random row, skipping the first row

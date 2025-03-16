@@ -138,5 +138,11 @@ document.addEventListener("DOMContentLoaded", function () {
     }, 500);
   });
 
+  // FOR USER STUDY: initial check for materialization URL on page load
+  if (materializationUrlInput?.value.trim()) {
+    const event = new Event('input');
+    materializationUrlInput.dispatchEvent(event);
+  }
+
   validateFormOnLoad();
 });

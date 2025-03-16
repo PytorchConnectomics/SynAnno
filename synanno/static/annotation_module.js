@@ -1,6 +1,5 @@
 $(document).ready(function () {
   const neuronID = $("script[src*='annotation_module.js']").data("neuron-id");
-  const fnPage = $("script[src*='annotation_module.js']").data("fn-page") === true;
 
   let ngLink, cz0, cy0, cx0, dataId, page, currentSlice, dataJson; // Define dataJson in the outer scope
 
@@ -68,7 +67,10 @@ $(document).ready(function () {
       cx0 = dataJson.cx0;
 
       $imgSource.attr("src", `/get_source_image/${dataId}/${currentSlice}`);
-      if (!fnPage) {
+      if (dataJson.Error_Description === "False Negative") {
+        $imgTarget.hide();
+      }else{
+        $imgTarget.show();
         $imgTarget.attr("src", `/get_target_image/${dataId}/${currentSlice}`);
       }
 
@@ -119,14 +121,14 @@ $(document).ready(function () {
 
     const newSlice = currentSlice + (event.originalEvent.deltaY > 0 ? 1 : -1);
     try {
-      const exists = await $.get(fnPage || dataJson.Error_Description === "False Negative" ?
+      const exists = await $.get(dataJson.Error_Description === "False Negative" ?
         `/source_img_exists/${dataId}/${newSlice}` :
         `/source_and_target_exist/${dataId}/${newSlice}`);
 
       if (exists) {
         const newSourceImg = new Image();
         newSourceImg.src = `/get_source_image/${dataId}/${newSlice}`;
-        if (fnPage || dataJson.Error_Description === "False Negative") {
+        if (dataJson.Error_Description === "False Negative") {
           await newSourceImg.decode();
         } else {
           const newTargetImg = new Image();

@@ -40,5 +40,5 @@
 
 <!-- Add js file to change the card colors -->
 <script type="module" src="{{ url_for('static', filename='annotation_image_tiles.js') }}" data-neuron-ready="{{ neuronReady }}" data-fn-page="{{ fn_page }}" data-active-synapse-ids="{{ activeSynapseIDs }}"></script>
-<script type="module" src="{{ url_for('static', filename='annotation_module.js') }}" data-fn-page="{{ fn_page }}" data-neuron-id="{{ neuron_id }}" data-fn-page="{{ fn_page }}"></script>
+<script type="module" src="{{ url_for('static', filename='annotation_module.js') }}" data-neuron-id="{{ neuron_id }}"></script>
 <script type="module" src="{{ url_for('static', filename='draw_module.js') }}" data-current-page="{{ page }}" data-current-view="{{ "annotate-image-tiles" }}"></script>

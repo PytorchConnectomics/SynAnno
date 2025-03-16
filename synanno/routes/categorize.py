@@ -23,7 +23,9 @@ def categorize():
         current_app.df_metadata["Label"].isin(["Incorrect", "Unsure"])
     ].to_dict("records")
 
-    return render_template("categorize.html", images=output_dict)
+    return render_template(
+        "categorize.html", images=output_dict, neuron_id=current_app.selected_neuron_id
+    )
 
 
 def stop_annotation_timer():

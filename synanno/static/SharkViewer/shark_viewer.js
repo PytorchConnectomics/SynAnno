@@ -879,6 +879,8 @@ import {
         }
       });
 
+      this.trackControls.addEventListener("change", this.updateCameraDistance.bind(this));
+
       this.raycaster.params.Points.threshold = DEFAULT_POINT_THRESHOLD;
       this.raycaster.params.Line.threshold = DEFAULT_LINE_THRESHOLD;
 
@@ -955,6 +957,28 @@ import {
     animate(timestamp = null) {
       requestAnimationFrame(this.animate.bind(this));
       this.render();
+    }
+
+    getCameraDistance() {
+      if (!this.camera || !this.trackControls) {
+          return 1.0;
+      }
+      return this.camera.position.distanceTo(this.trackControls.target);
+    }
+
+    updateCameraDistance() {
+      if (!this.camera || !this.scene) return;
+
+      const cameraDistance = this.getCameraDistance();
+
+      this.scene.traverse((node) => {
+          if (node.material?.uniforms?.cameraDistance) {
+              node.material.uniforms.cameraDistance.value = cameraDistance;
+              node.material.uniforms.cameraDistance.needsUpdate = true;
+          }
+      });
+
+      console.log("Updated cameraDistance in shader:", cameraDistance);
     }
 
     // render the scene

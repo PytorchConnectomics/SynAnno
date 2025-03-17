@@ -712,9 +712,13 @@ def load_materialization():
     try:
         logger.info("Loading the materialization table...")
         path = materialization_path.replace("file://", "")
-        current_app.synapse_data = pd.read_csv(path)
+        # check if current_app.synapse_data is empty dictionary
+        if not hasattr(current_app, "synapse_data") or not current_app.synapse_data:
+            current_app.synapse_data = pd.read_csv(path)
+            logger.info("Materialization table loaded successfully!")
+        else:
+            logger.info("Materialization table already loaded!")
 
-        logger.info("Materialization table loaded successfully!")
         return jsonify({"status": "success"}), 200
 
     except Exception as e:

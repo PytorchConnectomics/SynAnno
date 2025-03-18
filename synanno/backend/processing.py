@@ -421,7 +421,7 @@ def update_slice_number(data: dict) -> None:
 def adjust_synapse_points(
     item: dict, crop_box_dict: dict, img_padding: list, coord_order: list
 ) -> tuple[int, int, int, int, int, int]:
-    """Adjust the pre and post synapse points to the cropped out section.
+    """Adjust the pre and post synapse points to match the transformed image.
 
     Args:
         item: Dictionary containing the metadata of the current instance.
@@ -432,6 +432,7 @@ def adjust_synapse_points(
     Returns:
         tuple containing the adjusted pre and post synapse points.
     """
+    # Step 1: Adjust for cropping and padding
     pre_pt_x = (
         item["pre_pt_x"] - crop_box_dict["x1"] + img_padding[coord_order.index("x")][0]
     )
@@ -451,6 +452,25 @@ def adjust_synapse_points(
     post_pt_z = (
         item["post_pt_z"] - crop_box_dict["z1"] + img_padding[coord_order.index("z")][0]
     )
+
+    # TODO: Remove this hardcoded transformation
+    # and figure out why the NG as a different orientation
+
+    # Get full volume dimensions
+    full_volume_x, _, _ = current_app.vol_dim()
+
+    # Step 2: Flip along the x-axis (W - x - 1)
+    pre_pt_x = full_volume_x - pre_pt_x - 1
+    post_pt_x = full_volume_x - post_pt_x - 1
+
+    # Step 3: Rotate 90° Counterclockwise (Corrected)
+    pre_pt_x_new = pre_pt_y
+    pre_pt_y_new = full_volume_x - pre_pt_x - 1
+    pre_pt_x, pre_pt_y = pre_pt_x_new, pre_pt_y_new
+
+    post_pt_x_new = post_pt_y
+    post_pt_y_new = full_volume_x - post_pt_x - 1
+    post_pt_x, post_pt_y = post_pt_x_new, post_pt_y_new
 
     return pre_pt_x, pre_pt_y, pre_pt_z, post_pt_x, post_pt_y, post_pt_z
 
@@ -557,16 +577,24 @@ def process_instance(item: dict) -> None:
         coord_resolution=current_app.coord_resolution_source,
         mip=0,
         parallel=True,
-    )
+    ).squeeze(axis=3)
     cropped_gt = current_app.target_cv.download(
         bound_target,
         coord_resolution=current_app.coord_resolution_target,
         mip=0,
         parallel=True,
-    )
+    ).squeeze(axis=3)
 
-    cropped_img = cropped_img.squeeze(axis=3)
-    cropped_gt = cropped_gt.squeeze(axis=3)
+    # TODO: Remove this hardcoded transformation
+    # and figure out why the NG as a different orientation
+
+    # Rotate the images 90 degrees clockwise and flip along the x-axis
+    cropped_img = np.flip(cropped_img, axis=0)
+    cropped_gt = np.flip(cropped_gt, axis=0)
+
+    # Rotate the images 90 degrees counterclockwise
+    cropped_img = np.rot90(cropped_img, k=-1, axes=(0, 1))
+    cropped_gt = np.rot90(cropped_gt, k=-1, axes=(0, 1))
 
     if sum(cropped_img.shape) > sum(cropped_gt.shape):
         cropped_gt = resize(

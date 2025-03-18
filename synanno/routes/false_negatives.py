@@ -235,8 +235,14 @@ def download_cropped_image(bound: Bbox, coordinate_order: list) -> np.ndarray:
     coord_resolution = [int(res[0]) for res in current_app.coordinate_order.values()]
     cropped_img = current_app.source_cv.download(
         bound, coord_resolution=coord_resolution, mip=0
-    )
-    return cropped_img.squeeze(axis=3)
+    ).squeeze(axis=3)
+
+    # Rotate the images 90 degrees clockwise and flip along the x-axis
+    cropped_img = np.flip(cropped_img, axis=1)
+
+    # Rotate the images 90 degrees counterclockwise
+    cropped_img = np.rot90(cropped_img, k=1, axes=(0, 1))
+    return cropped_img
 
 
 def scale_padding(img_padding: list, coordinate_order: list) -> list:

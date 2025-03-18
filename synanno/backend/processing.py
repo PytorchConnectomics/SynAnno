@@ -457,7 +457,7 @@ def adjust_synapse_points(
     # and figure out why the NG as a different orientation
 
     # Get full volume dimensions
-    full_volume_x, _, _ = current_app.vol_dim()
+    full_volume_x, _, _ = current_app.vol_dim
 
     # Step 2: Flip along the x-axis (W - x - 1)
     pre_pt_x = full_volume_x - pre_pt_x - 1

@@ -49,9 +49,27 @@ $(document).ready(function () {
                 });
               $("#imgDetails-EM-GT-curve").removeClass("d-none");
             }
-            else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
+            else if (xhr.status === 204) {  // Only execute if image does not exist)
               console.log("Curve image does not exist");
-              $("#imgDetails-EM-GT-curve").addClass("d-none");
+
+              $.ajax({
+                url: "/get_auto_curve_image/" + data_id + "/" + data_json.Middle_Slice,
+                type: "HEAD",
+                success: function (data, textStatus, xhr) {
+                  if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
+                    $(new Image())
+                      .attr("src", "/get_auto_curve_image/" + data_id + "/" + data_json.Middle_Slice)
+                      .load(function () {
+                        $("#imgDetails-EM-GT-curve").attr("src", this.src);
+                      });
+                    $("#imgDetails-EM-GT-curve").removeClass("d-none");
+                  }
+                  else if (xhr.status === 204) {  // Only execute if image does not exist)
+                    console.log("Curve image does not exist");
+                    $("#imgDetails-EM-GT-curve").addClass("d-none");
+                  }
+                },
+              });
             }
           },
         });

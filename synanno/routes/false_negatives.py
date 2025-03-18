@@ -135,7 +135,7 @@ def create_new_item(request) -> dict:
         current_app.page_section_mapping[current_page][0] if current_page > -1 else -1
     )
     item["tree_traversal_index"] = -1
-    item["Label"] = "Incorrect"
+    item["Label"] = "incorrect"
     item["Annotated"] = "No"
     item["neuron_id"] = -1
     item["Error_Description"] = "False Negative"

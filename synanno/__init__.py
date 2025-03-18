@@ -133,7 +133,7 @@ def initialize_global_variables(app):
         "section_index": int,  # Example: 0
         "tree_traversal_index": int,  # Example
         "Label": str,  # Example: 'Images/Img/1'
-        "Annotated": str,  # Example: 'Incorrect'
+        "Annotated": str,  # Example: 'incorrect'
         "neuron_id": int,  # Example: 1
         "Error_Description": str,  # Example: 'No'
         "Y_Index": int,  # Example: None (can be float if numeric)

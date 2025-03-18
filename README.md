@@ -167,7 +167,7 @@ Why Use `uv`?
       curl -LsSf https://astral.sh/uv/install.sh | sh
       ```
 
-2. **Ensure the Correct Python Version is Installed:**
+2. **Ensure the correct Python Version is Installed:**
 
    1. If you already use `pyenv`, this is probably not the time to switch your Python version management tool.
 

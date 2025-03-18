@@ -149,7 +149,7 @@ def set_grid_opacity() -> tuple[str, int, Dict[str, str]]:
 @blueprint.route("/update-card", methods=["POST"])
 @cross_origin()
 def update_card() -> Dict[str, object]:
-    """Updates the label of an instance - switch between Correct, Incorrect to Unsure
+    """Updates the label of an instance - switch between correct, incorrect to unsure
 
     Return:
         Passes the updated label to the frontend
@@ -161,23 +161,23 @@ def update_card() -> Dict[str, object]:
     label = request.form["label"]
 
     # update the session data with the new label
-    if label == "Incorrect":
+    if label == "incorrect":
         current_app.df_metadata.loc[
             (current_app.df_metadata["Page"] == page)
             & (current_app.df_metadata["Image_Index"] == index),
             "Label",
-        ] = "Unsure"
-    elif label == "Unsure":
+        ] = "unsure"
+    elif label == "unsure":
         current_app.df_metadata.loc[
             (current_app.df_metadata["Page"] == page)
             & (current_app.df_metadata["Image_Index"] == index),
             "Label",
-        ] = "Correct"
-    elif label == "Correct":
+        ] = "correct"
+    elif label == "correct":
         current_app.df_metadata.loc[
             (current_app.df_metadata["Page"] == page)
             & (current_app.df_metadata["Image_Index"] == index),
             "Label",
-        ] = "Incorrect"
+        ] = "incorrect"
 
     return jsonify({"result": "success", "label": label})

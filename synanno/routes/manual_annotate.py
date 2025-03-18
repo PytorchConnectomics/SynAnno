@@ -25,7 +25,7 @@ def draw() -> str:
         Renders the draw view.
     """
     data = current_app.df_metadata[
-        current_app.df_metadata["Label"].isin(["Incorrect", "Unsure"])
+        current_app.df_metadata["Label"].isin(["incorrect", "unsure"])
     ].to_dict("records")
     return render_template("draw.html", images=data)
 
@@ -113,13 +113,13 @@ def load_missing_slices() -> dict:
         JSON response indicating success.
     """
     data = current_app.df_metadata.query(
-        "Label == 'Incorrect' or Label == 'Unsure'"
+        "Label == 'incorrect' or Label == 'unsure'"
     ).to_dict("records")
 
     update_slice_number(data)
 
     data = current_app.df_metadata.query(
-        "Label == 'Incorrect' or Label == 'Unsure'"
+        "Label == 'incorrect' or Label == 'unsure'"
     ).to_dict("records")
 
     for instance in data:

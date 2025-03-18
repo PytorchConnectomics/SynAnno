@@ -1,17 +1,49 @@
 import { fetchImageExistence, updateImages } from "./utils/image_loader.js";
+import { updateLabelClasses } from "./utils/label_utils.js";
 
 $(document).ready(() => {
+  const neuronReady = $("script[src*='categorize.js']").data("neuron-ready") === true;
+
   initializeFormControls();
   setupFormControlEvents();
   setupSubmitHandlers();
   updateEmptyStateMessage();
-  setupCardClickHandlers();
+
+  // Delegated event binding for image card updates
+  $(document).on("click", ".image-card-btn", async function () {
+
+    const dataId = $(this).attr("data_id");
+    const page = $(this).attr("page");
+    const label = $(this).attr("label");
+
+
+    const customFLagVal = $(`#customFlagInput_${page}_${dataId}`).val()
+
+    if (customFLagVal !== "False Negative") {
+
+      try {
+        const data = await $.post("/update-card", { data_id: dataId, page, label});
+        updateLabelClasses(dataId, label);
+
+        const newLabel = $(this).attr("label");
+
+        if (newLabel === "correct") {
+          lockInstanceFields(page, dataId);
+        } else {
+          enableInstanceFields(page, dataId);
+        }
+      } catch (error) {
+        console.error("Error updating label:", error);
+      }
+  }
+  });
 
   let isScrollingLocked = false;
   let scrollDelta = 0;
   const SCROLL_THRESHOLD = 50;
 
   $(".card-body-proof-read").on("wheel", async function (event) {
+
     const $this = $(this);
 
     // Prevent the main page from scrolling
@@ -45,6 +77,24 @@ $(document).ready(() => {
   });
 });
 
+
+// deselect and disable all instance fields for a given instance
+function lockInstanceFields(page, imgId) {
+  $(`#customFlagButton_${page}_${imgId}`).prop('disabled', true);
+  $(`#customFlagInput_${page}_${imgId}`).prop('disabled', true);
+  ['falsePositive', 'badFit', 'polaritySwitch'].forEach(flag => {
+    $(`#${flag}_${page}_${imgId}`).prop('disabled', true).closest('.form-check').addClass('text-muted');
+  });
+}
+
+// enable all instance fields for a given instance
+function enableInstanceFields(page, imgId) {
+  $(`#customFlagButton_${page}_${imgId}`).prop('disabled', false);
+  ['falsePositive', 'badFit', 'polaritySwitch'].forEach(flag => {
+    $(`#${flag}_${page}_${imgId}`).prop('disabled', false).closest('.form-check').removeClass('text-muted');
+  });
+}
+
 function initializeFormControls() {
   $('[id^="customFlag_"]').each(function () {
     const id = $(this).attr('id');
@@ -71,14 +121,6 @@ function initializeFormControls() {
   });
 }
 
-function lockInstanceFields(page, imgId) {
-  $(`#customFlagButton_${page}_${imgId}`).prop('disabled', true);
-  $(`#customFlagInput_${page}_${imgId}`).prop('disabled', true);
-  ['falsePositive', 'badFit', 'polaritySwitch'].forEach(flag => {
-    $(`#${flag}_${page}_${imgId}`).prop('disabled', true).closest('.form-check').addClass('text-muted');
-  });
-}
-
 function setupFormControlEvents() {
   $('[id^="customFlagButton_"]').change(function () {
     const idParts = $(this).attr('id').split('_');
@@ -93,57 +135,6 @@ function setupFormControlEvents() {
       $(`#customFlagInput_${page}_${imgId}`).prop('disabled', true);
     });
   });
-}
-
-function setupCardClickHandlers() {
-  $('.card-block.image-card-btn').on('click', async function () {
-    try {
-      const card = $(this).closest('.card');
-      const cardId = card.attr('id');
-    if (!cardId) return;
-    const parts = cardId.split('_');
-const page = parts[2];
-const dataId = parts[3];
-      const currentLabel = $(this).hasClass('correct') ? 'Correct' : $(this).hasClass('incorrect') ? 'Incorrect' : 'Unsure';
-
-      const response = await $.post('/update-status', { page, data_id: dataId, label: currentLabel });
-
-      if (response.result === 'success') {
-        $(this).removeClass('correct incorrect unsure').addClass(response.label.toLowerCase());
-        card.toggleClass('compact', response.label === 'Correct');
-
-        const formContainer = card.find('.card-block.form-container');
-        if (response.label === 'Correct') {
-          formContainer.html('<div class="text-success text-center py-2"><i class="fas fa-check-circle"></i> Instance Marked as Correct!</div>');
-        } else {
-          formContainer.html(generateFormHtml(page, dataId));
-          setupFormControlEvents();
-        }
-      }
-    } catch (error) {
-      console.error('Error updating status:', error);
-    }
-  });
-
-  $('.card .card-block.form-container').on('click', e => e.stopPropagation());
-}
-
-function generateFormHtml(page, imgId) {
-  return `
-    <div class="form">
-      ${['falsePositive', 'badFit', 'polaritySwitch'].map(flag => `
-        <div class="form-check m-2">
-          <input class="form-check-input" type="radio" name="select_${page}_${imgId}" id="${flag}_${page}_${imgId}" />
-          <label class="form-check-label" for="${flag}_${page}_${imgId}">${flag.replace(/([A-Z])/g, ' $1')}</label>
-        </div>
-      `).join('')}
-      <div class="input-group" id="customFlag_${page}_${imgId}">
-        <div class="input-group-text">
-          <input type="radio" name="select_${page}_${imgId}" id="customFlagButton_${page}_${imgId}" />
-        </div>
-        <input type="text" class="form-control" id="customFlagInput_${page}_${imgId}" placeholder="Custom Flag" disabled />
-      </div>
-    </div>`;
 }
 
 function setupSubmitHandlers() {

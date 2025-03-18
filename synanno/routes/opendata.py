@@ -440,6 +440,7 @@ def upload_file():
         )
     elif current_app.view_style == "volume":
         handle_volume_view()
+        current_app.neuron_ready = "false"
 
         if nr_instances == 0:
             nr_instances = len(current_app.synapse_data.index)
@@ -483,7 +484,7 @@ def set_data(task: str = "annotate"):
 
     page = 1
     if task == "draw":
-        data = current_app.df_metadata.query('Label != "Correct"').sort_values(
+        data = current_app.df_metadata.query('Label != "correct"').sort_values(
             by="Image_Index"
         )
         data = data.to_dict("records")

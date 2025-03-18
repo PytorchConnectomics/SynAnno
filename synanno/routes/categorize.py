@@ -1,7 +1,7 @@
 import datetime
 import json
 
-from flask import Blueprint, current_app, jsonify, render_template, request
+from flask import Blueprint, current_app, render_template, request
 from flask_cors import cross_origin
 
 # Define a Blueprint for categorize routes
@@ -14,17 +14,20 @@ def categorize():
 
     Returns:
         Categorization view that enables the user to specify the fault
-        of instance masks marked as "Incorrect" or "Unsure".
+        of instance masks marked as "incorrect" or "unsure".
     """
     stop_annotation_timer()
     start_categorization_timer()
 
     output_dict = current_app.df_metadata[
-        current_app.df_metadata["Label"].isin(["Incorrect", "Unsure"])
+        current_app.df_metadata["Label"].isin(["incorrect", "unsure"])
     ].to_dict("records")
 
     return render_template(
-        "categorize.html", images=output_dict, neuron_id=current_app.selected_neuron_id
+        "categorize.html",
+        images=output_dict,
+        neuron_id=current_app.selected_neuron_id,
+        neuronReady=current_app.neuron_ready,
     )
 
 
@@ -110,39 +113,3 @@ def stop_categorization_timer():
             current_app.proofread_time["finish_categorize"]
             - current_app.proofread_time["start_categorize"]
         )
-
-
-@blueprint.route("/update-status", methods=["POST"])
-@cross_origin()
-def update_status():
-    """Toggles the status of an instance between 'Correct' and its original state.
-
-    Returns:
-        JSON response with the updated label.
-    """
-    page = int(request.form["page"])
-    index = int(request.form["data_id"])
-    current_label = request.form["label"]
-
-    # Get the current row
-    mask = (current_app.df_metadata["Page"] == page) & (
-        current_app.df_metadata["Image_Index"] == index
-    )
-
-    # Toggle between states
-    if current_label == "Correct":
-        # Return to original state (Incorrect or Unsure)
-        original_label = current_app.df_metadata.loc[mask, "Original_Label"].iloc[0]
-        new_label = original_label
-    else:
-        # Store original label if not already stored
-        if "Original_Label" not in current_app.df_metadata.columns:
-            current_app.df_metadata["Original_Label"] = current_app.df_metadata["Label"]
-
-        # Set to Correct
-        new_label = "Correct"
-
-    # Update the label
-    current_app.df_metadata.loc[mask, "Label"] = new_label
-
-    return jsonify({"result": "success", "label": new_label})

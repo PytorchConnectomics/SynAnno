@@ -1,4 +1,6 @@
 import { fetchImageExistence, updateImages } from "./utils/image_loader.js";
+import { updateSynapseColors, updateSynapseColor } from "./utils/viewer_utils.js";
+import { updateLabelClasses } from "./utils/label_utils.js";
 
 $(document).ready(() => {
   const neuronReady = $("script[src*='annotation_image_tiles.js']").data("neuron-ready") === true;
@@ -80,40 +82,3 @@ $(document).ready(() => {
   window.dec_opacity_grid = () => gridOpacityController.adjust(-0.1);
   window.add_opacity_grid = () => gridOpacityController.adjust(0.1);
 });
-
-function updateSynapseColors() {
-  if ($("script[src*='viewer.js']").attr("data-neuron-ready") === "true") {
-    $(".image-card-btn").each(function () {
-      updateSynapseColor($(this).attr("data_id"), $(this).attr("label"));
-    });
-    sessionStorage.setItem("synapseColors", JSON.stringify(window.synapseColors));
-  }
-}
-
-function updateLabelClasses(dataId, label) {
-  const labelMappings = {
-    Unsure: { remove: "unsure", add: "correct", newLabel: "Correct" },
-    Incorrect: { remove: "incorrect", add: "unsure", newLabel: "Unsure" },
-    Correct: { remove: "correct", add: "incorrect", newLabel: "Incorrect" },
-  };
-
-  if (labelMappings[label]) {
-    const { remove, add, newLabel } = labelMappings[label];
-    $(`#id${dataId}`).removeClass(remove).addClass(add);
-    $(`#id-a-${dataId}`).attr("label", newLabel);
-  }
-}
-
-function updateSynapseColor(dataId, label) {
-  const labelColors = {
-    Correct: { color: 0x00ff00, name: "green" },
-    Unsure: { color: 0xffff00, name: "yellow" },
-    Incorrect: { color: 0xff0000, name: "red" },
-  };
-
-  if (labelColors[label]) {
-    const { color, name } = labelColors[label];
-    window.updateSynapse(dataId, null, new THREE.Color(color), null, true);
-    window.synapseColors[dataId] = name;
-  }
-}

@@ -152,9 +152,9 @@ def syn2rgb(label: np.ndarray) -> np.ndarray:
 def free_page() -> None:
     """Remove the current and next page segmentation/images from the dict."""
 
-    # retrieve the image index for all instances that are not labeled as "Correct"
+    # retrieve the image index for all instances that are not labeled as "correct"
     with current_app.df_metadata_lock:
-        key_list = current_app.df_metadata.query('Label == "Correct"')[
+        key_list = current_app.df_metadata.query('Label == "correct"')[
             "Image_Index"
         ].values.tolist()
 
@@ -229,7 +229,7 @@ def retrieve_instance_metadata(page: int = 1, mode: str = "annotate"):
             page_empty = current_app.df_metadata.query("Page == @page").empty
 
         if page_empty and not (
-            mode == "draw" and current_app.df_metadata.query('Label != "Correct"').empty
+            mode == "draw" and current_app.df_metadata.query('Label != "correct"').empty
         ):
             # retrieve the data for the current page
             page_metadata = current_app.synapse_data.query("page == @page")
@@ -264,7 +264,7 @@ def retrieve_instance_metadata(page: int = 1, mode: str = "annotate"):
                         if "tree_traversal_index" in page_metadata[idx]
                         else -1
                     ),
-                    "Label": "Correct",
+                    "Label": "correct",
                     "Annotated": "No",
                     "neuron_id": (
                         current_app.selected_neuron_id
@@ -323,7 +323,7 @@ def retrieve_instance_metadata(page: int = 1, mode: str = "annotate"):
             if mode == "annotate":
                 page_metadata = current_app.df_metadata.query("Page == @page")
             elif mode == "draw":
-                page_metadata = current_app.df_metadata.query('Label != "Correct"')
+                page_metadata = current_app.df_metadata.query('Label != "correct"')
 
         # sort the metadata by the image index
         page_metadata = page_metadata.sort_values(by="Image_Index").to_dict(

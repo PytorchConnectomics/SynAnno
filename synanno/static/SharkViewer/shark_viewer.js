@@ -719,7 +719,6 @@ import {
         coneMesh.name = "skeleton-edge";
 
         coneMaterial.onBeforeCompile = (shader) => {
-          // console.log( shader )
           shader.uniforms.alpha = { value: 0 };
           shader.vertexShader = `uniform float alpha;\n${shader.vertexShader}`;
           shader.vertexShader = shader.vertexShader.replace(

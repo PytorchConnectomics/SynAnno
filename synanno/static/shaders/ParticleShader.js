@@ -19,7 +19,9 @@ const ParticleShader = {
         void main()
         {
             mvPosition = modelViewMatrix * vec4(position, 1.0);
-            gl_PointSize = radius * ((particleScale * 2.5) / length(mvPosition.z));
+
+            // Keep particle size constant in screen space
+            gl_PointSize = (radius * 600.0) / -mvPosition.z;
 
             vColor = color;
             vRadius = radius;

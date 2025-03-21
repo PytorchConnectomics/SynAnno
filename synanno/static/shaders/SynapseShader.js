@@ -3,7 +3,7 @@ const SynapseShader = {
         sphereTexture: { value: null },
         particleScale: { value: 1.0 },
     },
-    vertexShader: `
+    vertexShader: /* glsl */ `
         uniform float particleScale;
         attribute float radius;
         attribute float alpha;
@@ -12,8 +12,9 @@ const SynapseShader = {
 
         void main() {
             vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-            float depthScale = -mvPosition.z / 1000.0; // Normalize depth scale
-            gl_PointSize = clamp(radius * (particleScale / depthScale), 10.0, 20.0);
+
+            // Adjust point size based on perspective projection
+            gl_PointSize = clamp(radius * 2.5 / -mvPosition.z, 10.0, 20.0);
 
             gl_Position = projectionMatrix * mvPosition;
 
@@ -21,7 +22,7 @@ const SynapseShader = {
             vAlpha = alpha;
         }
     `,
-    fragmentShader: `
+    fragmentShader: /* glsl */ `
         uniform sampler2D sphereTexture;
         varying vec3 vColor;
         varying float vAlpha;

@@ -21,7 +21,7 @@ const ConeShader = {
             mvPosition = modelViewMatrix * vec4(position, 1.0);
             vec3 cylAxis = (modelViewMatrix * vec4(normal, 0.0)).xyz;
             vec3 sideDir = normalize(cross(vec3(0.0,0.0,-1.0), cylAxis));
-            mvPosition += vec4(radius * sideDir, 0.0);
+            mvPosition += vec4(radius * 0.30 * sideDir, 0.0);
             gl_Position = projectionMatrix * mvPosition;
 
             sphereUv = uv - vec2(0.5, 0.5);
@@ -34,9 +34,8 @@ const ConeShader = {
             sphereUv = rotMat * sphereUv;
             sphereUv += vec2(0.5, 0.5);
 
-            float foreshortening = length(cylAxis) / length(cylAxis.xy);
-            if (foreshortening > 4.0) foreshortening = 0.9;
-            depthScale = radius * foreshortening;
+            // Maintain constant scale
+            depthScale = radius;
         }
     `,
 

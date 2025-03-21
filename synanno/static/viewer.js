@@ -178,14 +178,14 @@ function processSynapseCloudData(data, maxVolumeSize, activeSynapseIDs, initialL
         if (activeSynapseIDs.length > 0) {
             sizes[i] = activeSynapseIDs.includes(i) ? maxVolumeSize : 10;
 
-            window.synapseColors[i] === "green" || window.synapseColors[i] === "red" ? 0.7 : 0.3;
-            alphas[i] = activeSynapseIDs.includes(i) ? 0.8 : 0.3;
+            window.synapseColors[i] === "green" || window.synapseColors[i] === "red" ? 1.0 : 0.4;
+            alphas[i] = activeSynapseIDs.includes(i) ? 1.0 : 0.4;
         } else if (initialLoad) {
             sizes[i] = 10;
-            alphas[i] = 0.8;
+            alphas[i] = 1.0;
         } else {
             sizes[i] = 10;
-            alphas[i] = 0.1;
+            alphas[i] = 0.4;
         }
     }
 
@@ -210,8 +210,11 @@ function processSynapseCloudData(data, maxVolumeSize, activeSynapseIDs, initialL
         uniforms: SynapseShader.uniforms,
         vertexShader: SynapseShader.vertexShader,
         fragmentShader: SynapseShader.fragmentShader,
-        transparent: true,
         vertexColors: true,
+        transparent: true,
+        depthTest: true,     // Objects still get depth-culled
+        depthWrite: false,   // Prevents particles from overwriting depth buffer
+        renderOrder: 2
     });
 
     const pointsMesh = new THREE.Points(geometry, material);
@@ -584,15 +587,15 @@ function createMetadataElement(metadata, colors, activeNeuronSection) {
                     } else {
                         // Proceed only if the lock is free
                         fetch(`/retrieve_first_page_of_section/${sectionIndex}`)
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.page) {
-                                    window.location.href = `/annotation/${data.page}`;
-                                } else {
-                                    alert("Failed to retrieve section page.");
-                                }
-                            })
-                            .catch(error => console.error("Error fetching first page:", error));
+                .then(response => response.json())
+                .then(data => {
+                    if (data.page) {
+                        window.location.href = `/annotation/${data.page}`;
+                    } else {
+                        alert("Failed to retrieve section page.");
+                    }
+                })
+                .catch(error => console.error("Error fetching first page:", error));
                     }
                 })
                 .catch(error => console.error("Error checking metadata lock:", error));

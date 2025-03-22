@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 
 import numpy as np
 import pandas as pd
@@ -15,7 +16,6 @@ from synanno.backend.neuron_processing.load_neuron import (
 from synanno.backend.neuron_processing.load_synapse_point_cloud import (
     convert_to_point_cloud,
     create_neuron_tree,
-    filter_synapse_data,
     get_neuron_coordinates,
     neuron_section_lookup,
     snap_points_to_neuron,
@@ -267,16 +267,139 @@ def handle_neuron_view(neuropil_url: str):
     current_app.synapse_data["materialization_index"] = (
         current_app.synapse_data.index.to_series()
     )
-    current_app.synapse_data = filter_synapse_data(
-        current_app.selected_neuron_id, current_app.synapse_data
-    )
-    current_app.synapse_data.reset_index(drop=True, inplace=True)
+    # current_app.synapse_data = filter_synapse_data(
+    #    current_app.selected_neuron_id, current_app.synapse_data
+    # )
+    # current_app.synapse_data.reset_index(drop=True, inplace=True)
 
-    pruned_neuron = load_neuron_skeleton(neuropil_url, current_app.selected_neuron_id)
+    # for each distinct neuron, load the neuron skeleton and compute the sections
+    distinct_neurons = current_app.synapse_data["pre_neuron_id"].unique()
+    print(f"Length of distinct neurons: {len(distinct_neurons)}")
 
-    # pruned_neuron = navis_neuron(neuron_skeleton_swc_path)
+    for neuron_id in [
+        546925828,
+        547114083,
+        620880207,
+        678539249,
+        751294744,
+        810151953,
+        810970127,
+        883843993,
+        955432427,
+        1072605926,
+        1304599410,
+        1465400601,
+        1669770671,
+        1684504313,
+        1787105373,
+        1830470325,
+        1874244336,
+        1900905433,
+        1930502394,
+        2001418787,
+        2047644309,
+        2074305737,
+        2103991145,
+        2104047922,
+        2195261734,
+        2252715458,
+        2306214824,
+        2325998949,
+        2451406889,
+        2530864375,
+        2820958695,
+        2848552900,
+        2888180252,
+        2889815798,
+        2903686765,
+        3093748739,
+        3111823553,
+        3139317430,
+        3178243558,
+        3329117097,
+        3383650350,
+        3432315514,
+        3470629528,
+        3503540481,
+        3519995546,
+        3571083397,
+        3680152874,
+        3751392341,
+        3761379470,
+        3812058320,
+        3836078296,
+        3954491075,
+        3955003482,
+        4010150634,
+        4039221194,
+        4125702786,
+        4138580687,
+        4157825456,
+        4188575291,
+        4197933517,
+        4260528559,
+        4365276903,
+        4420044370,
+        4437316933,
+        4467761196,
+        4476359994,
+        4522237537,
+        4535129012,
+        4554213569,
+        4582188328,
+        4607885827,
+        4641147055,
+        4668874666,
+        4711567524,
+        4711641825,
+        4830551047,
+        4853956860,
+        4873639924,
+        4932057570,
+        5013648003,
+        5015035926,
+        5060444657,
+        5061320552,
+        5136107765,
+        5173982155,
+        5175880292,
+        5215113731,
+        5216806368,
+        5319188363,
+        5352961465,
+        5355296383,
+        5439194879,
+        5536146025,
+        5584343344,
+        5654281423,
+        5687162964,
+        5805562981,
+        5832764277,
+        5965472721,
+        6126390733,
+        6833911543,
+        7052969349,
+        7196644737,
+        7893125555,
+    ]:
+        # if the file does not exist, skip
+        neuron_skeleton_swc_path = (
+            "/Users/lando/Code/SynAnno/tmp/neuron_" + str(neuron_id) + ".swc"
+        )
+        if not os.path.exists(neuron_skeleton_swc_path):
+            try:
+                # load the neuron skeleton
+                pruned_neuron = load_neuron_skeleton(neuropil_url, neuron_id)
+                logger.info(f"Loaded neuron {neuron_id}")
+            except Exception:
+                continue
+            # pruned_neuron = navis_neuron(neuron_skeleton_swc_path)
 
-    current_app.neuron_skeleton = neuron_to_bytes(pruned_neuron)
+            current_app.neuron_skeleton = neuron_to_bytes(pruned_neuron)
+
+            pruned_neuron.to_swc(neuron_skeleton_swc_path)
+        else:
+            logger.info(f"Neuron {neuron_id} already exists")
 
     sections, pruned_neuron, node_traversal_lookup = compute_sections(
         pruned_neuron, merge=True

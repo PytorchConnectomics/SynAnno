@@ -35,10 +35,9 @@ $(document).ready(function () {
 
         $minimap.addClass("expanded").css({
             position: "fixed",
-            width: "70vw",
-            height: "70vh",
-            top: "15vh",
-            left: "15vw",
+            width: "100vw",
+            height: "90vh",
+            top: "10vh",
             zIndex: 1001
         });
 

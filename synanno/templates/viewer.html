@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+	<head>
+    <style>
+      *:focus {
+        outline:none;
+      }
+      html, body {
+        height: 100%;
+      }
+      .content {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      #container {
+        flex: 1;
+      }
+      .navigation {
+        display: flex;
+        flex-direction: row;
+        align-content: flex-end;
+        justify-content: space-between;
+        align-items: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="content">
+      <div class="navigation">
+        <h1>SharkViewer</h1>
+      </div>
+      <form>
+        <label for='swc_input'>Upload SWC files to view them in the SharkViewer:</label>
+        <input type='file' name='swc_input' id='swc_input' multiple />
+        <input type="file" id="json_input" accept=".json">
+
+      </form>
+
+      <!-- Minimap Section -->
+      <div id="minimapContainer" class="minimap" data-minimap-state="collapsed">
+        <div id="minimapHeader" class="minimap-header">
+            Neuron Minimap
+            <button id="toggleButton" class="btn btn-sm btn-secondary toggle-btn">Toggle</button>
+        </div>
+        <div id="shark_container_minimap" class="minimap-content"></div>
+        <div id="minimapFooter" class="minimap-footer">
+            <div id="loading_container" class="minimap-loading-bar">
+                <div id="loading_progress" class="minimap-progress-bar"></div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <script type="module" src="{{ url_for('static', filename='minimap.js') }}" data-neuron-ready="{{ neuronReady }}"></script>
+
+    <!-- info on screen display -->
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='SharkViewer/three.min.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='viewer_test.js') }}"></script>
+</body>
+</html>

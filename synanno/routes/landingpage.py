@@ -7,6 +7,11 @@ from flask import Blueprint, render_template
 blueprint = Blueprint("landingpage", __name__)
 
 
+@blueprint.route("/viewer")
+def viewer():
+    return render_template("viewer.html")
+
+
 @blueprint.route("/")
 def landing():
     return render_template("landingpage.html")

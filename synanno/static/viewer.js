@@ -158,9 +158,9 @@ function processSynapseCloudData(data, maxVolumeSize, activeSynapseIDs, initialL
     const sizes = new Float32Array(points.length);
 
     for (let i = 0; i < points.length; i++) {
-        positions[i * 3] = points[i].x + Math.random() * 50;
-        positions[i * 3 + 1] = points[i].y + Math.random() * 50;
-        positions[i * 3 + 2] = points[i].z + Math.random() * 50;
+        positions[i * 3] = points[i].x + Math.random() * 800;
+        positions[i * 3 + 1] = points[i].y + Math.random() * 800;
+        positions[i * 3 + 2] = points[i].z + Math.random() * 800;
 
         if (!window.synapseColors[i]) {
             window.synapseColors[i] = "yellow";
@@ -176,10 +176,11 @@ function processSynapseCloudData(data, maxVolumeSize, activeSynapseIDs, initialL
         colors[i * 4 + 3] = 1.0;
 
         if (activeSynapseIDs.length > 0) {
-            sizes[i] = activeSynapseIDs.includes(i) ? maxVolumeSize : 10;
+            sizes[i] = activeSynapseIDs.includes(i) ? maxVolumeSize : 5;
+            alphas[i] = window.synapseColors[i] === "green" || window.synapseColors[i] === "red" || activeSynapseIDs.includes(i) ? 1.0 : 0.2;
 
-            window.synapseColors[i] === "green" || window.synapseColors[i] === "red" ? 1.0 : 0.4;
-            alphas[i] = activeSynapseIDs.includes(i) ? 1.0 : 0.4;
+            window.synapseColors[i] === "green" || window.synapseColors[i] === "red" ? 1.0 : 0.2;
+
         } else if (initialLoad) {
             sizes[i] = 10;
             alphas[i] = 1.0;

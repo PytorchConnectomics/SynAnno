@@ -85,7 +85,7 @@ def initialize_global_variables(app):
     app.source = None
     app.cz1, app.cz2, app.cz, app.cy, app.cx = 0, 0, 0, 0, 0
     app.n_pages = 0
-    app.per_page = 24  # Number of images per page
+    app.per_page = 12  # Number of images per page
     # Neuron skeleton info/data
     app.sections = None
     app.neuron_ready = None

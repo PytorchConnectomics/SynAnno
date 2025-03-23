@@ -14,7 +14,7 @@ const SynapseShader = {
             vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
 
             // Adjust point size based on perspective projection
-            gl_PointSize = clamp(radius * 2.5 / -mvPosition.z, 10.0, 20.0);
+            gl_PointSize = clamp(radius * 2.5 / -mvPosition.z, 5.0, 15.0);
 
             gl_Position = projectionMatrix * mvPosition;
 

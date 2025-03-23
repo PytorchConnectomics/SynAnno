@@ -12,7 +12,7 @@ $(document).ready(() => {
   let rect_curve, rect_circle;
   let draw_mask = false, split_mask = false;
   let points = [], pointsQBez = [];
-  const thickness = 15;
+  const thickness = 10;
   const pink = "rgba(255, 0, 255, 0.7)";
   let page, data_id, label;
   let pre_CRD = false, post_CRD = false;
@@ -572,7 +572,7 @@ $(document).ready(() => {
 
   function draw_quad_line(points, lineWidth = 3, draw_points = true) {
     ctx_curve.beginPath();
-    ctx_curve.strokeStyle = 'black';
+    ctx_curve.strokeStyle = pink; // Changed to pink
     ctx_curve.lineWidth = lineWidth;
     ctx_curve.moveTo(points[0].x, points[0].y);
     if (draw_points) {

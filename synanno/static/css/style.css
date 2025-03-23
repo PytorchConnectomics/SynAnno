@@ -4,8 +4,8 @@
 }
 
 #image-tile-container {
-  max-height: 70vh;
-  max-width: 70vw;
+  max-height: 65vh;
+  max-width: 65vw;
 }
 
 .correct {
@@ -13,7 +13,7 @@
 }
 
 .annotate-item {
-  width: 16.5%;
+  width: 25%;
   text-align: center;
 }
 
@@ -182,7 +182,7 @@
   /* Initially hidden */
   position: relative;
   /* Default inside flex container */
-  width: 33vw;
+  width: 50vw;
   /* Always take 33% of the screen width */
   height: 90vh;
   /* Always take 80% of the screen height */

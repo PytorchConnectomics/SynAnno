@@ -267,9 +267,11 @@ def handle_neuron_view(neuropil_url: str):
     current_app.synapse_data["materialization_index"] = (
         current_app.synapse_data.index.to_series()
     )
+    print("Synapse data: ", current_app.synapse_data)
     current_app.synapse_data = filter_synapse_data(
         current_app.selected_neuron_id, current_app.synapse_data
     )
+    print("Indices of near neuron: ", current_app.synapse_data)
     current_app.synapse_data.reset_index(drop=True, inplace=True)
 
     pruned_neuron = load_neuron_skeleton(neuropil_url, current_app.selected_neuron_id)
@@ -291,6 +293,7 @@ def handle_neuron_view(neuropil_url: str):
     point_cloud = convert_to_point_cloud(current_app.synapse_data)
     indices_of_near_neuron = snap_points_to_neuron(point_cloud, neuron_tree)
 
+    print("Indices of near neuron: ", current_app.synapse_data)
     for index in current_app.synapse_data.index:
         node_id = indices_of_near_neuron[index] + 1
         section_idx, traversal_index = neuron_sec_lookup[node_id]
@@ -306,6 +309,7 @@ def handle_neuron_view(neuropil_url: str):
     current_app.synapse_data["section_index"] = current_app.synapse_data[
         "section_index"
     ].astype(int)
+
     current_app.synapse_data["tree_traversal_index"] = current_app.synapse_data[
         "tree_traversal_index"
     ].astype(int)

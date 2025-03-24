@@ -122,10 +122,12 @@ def create_new_item(request) -> dict:
     if current_page > -1:
         item["Page"] = current_page
     else:
-        if not (len(current_app.df_metadata) % current_app.per_page == 0):
-            item["Page"] = len(current_app.df_metadata) // current_app.per_page + 1
+        if not (len(current_app.df_metadata) % current_app.tiles_per_page == 0):
+            item["Page"] = (
+                len(current_app.df_metadata) // current_app.tiles_per_page + 1
+            )
         else:
-            item["Page"] = len(current_app.df_metadata) // current_app.per_page
+            item["Page"] = len(current_app.df_metadata) // current_app.tiles_per_page
 
     coordinate_order = list(current_app.coordinate_order.keys())
 

@@ -1,5 +1,20 @@
-    {% for image in images %}
-      <div class="annotate-item mb-3">
+{% set total_images = images|length %}
+{% if total_images > 12 %}
+  {% set height = '16.5%'%}
+  {% set width = '16.5%' %}
+{% elif total_images > 6 %}
+  {% set height = '25%' %}
+  {% set width = '23%' %}
+{% elif total_images > 2 %}
+  {% set height = '33%' %}
+  {% set width = '33%' %}
+{% else %}
+  {% set height = '35%' %}
+  {% set width = '35%' %}
+{% endif %}
+
+{% for image in images %}
+      <div class="annotate-item mb-3" style="max-height: {{ height }}; max-width: {{width}};">
         <div id="id{{image.Image_Index}}" class="card border-0 p-2 {{ image.Label }}">
           <div id="main-image" style="position: relative">
             <!-- In case of a FN we depict we use the source image also as the target to act as placholder -->
@@ -13,7 +28,7 @@
       </div>
     {% endfor %}
     {% if fn_page == "true" %}
-    <div class="annotate-item mb-3">
+    <div class="annotate-item mb-3" style="max-height: {{ height }}; max-width: {{width}};">
       <div id="add_new_instance" class="card border-0 p-2 incorrect">
         <div id="main-image" style="position: relative">
           <img

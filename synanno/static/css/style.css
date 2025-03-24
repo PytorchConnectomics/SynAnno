@@ -96,6 +96,9 @@
   margin: auto;
   width: 384px;
   height: 384px;
+  background-color: #fff;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .insideWrapper {
@@ -108,8 +111,8 @@
   width: 100%;
   height: 100%;
   position: absolute;
-  top: 0px;
-  left: 0px;
+  top: 0;
+  left: 0;
   pointer-events: none;
   z-index: 0;
 }
@@ -122,6 +125,43 @@
   left: 0;
 }
 
+/* Clean, modern visual style */
+.modal-content {
+  background: #ffffff;
+  border-radius: 1rem;
+  padding: 1rem;
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.modal-dialog {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.modal-header,
+.card-header {
+  background: linear-gradient(to right, #f8f9fa, #ffffff);
+  border-bottom: none !important;
+  border-top-left-radius: 1rem;
+  border-top-right-radius: 1rem;
+  box-shadow: none;
+}
+
+.btn {
+  transition: all 0.2s ease-in-out;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.modal-footer {
+  padding: 0rem 1rem;
+  max-height: 40px;
+  border-top: none;
+}
 /* css for the open data form */
 .syn-id-container {
   display: flex;

@@ -3,26 +3,25 @@
     located at the bottom of the newly opened window, which scrolls through all the slices
     of the selected instance and their associated segmentation masks.
     Both views load the requested images as png files from a corresponding folder structure. -->
-<div class="modal fade" id="drawModal" tabindex="-1" aria-labelledby="drawModal" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="card-header text-center d-flex justify-content-center align-items-center">
-        <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
+
+<!-- Modernized Modal -->
+<div class="modal fade" id="drawModal" tabindex="-1" aria-labelledby="drawModalLabel" aria-hidden="true" data-viewed-instance-slice="0">
+  <div class="modal-dialog modal-dialog-centered modal">
+    <div class="modal-content shadow rounded-4 border-0">
+
+      <!-- Header with Title -->
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title mx-auto" id="drawModalLabel">Instance Viewer</h5>
+        <button type="button" class="btn-close position-absolute end-0 me-3" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body mx-auto">
-        <div class="center">
-          <div class="row justify-content-center">
-            <div class="col-md-12 text-center">
-              <form>
-                <button type="button" class="btn btn-secondary" id="canvasButtonPreCRD">Pre-Synaptic CRD</button>
-                <button type="button" class="btn btn-secondary" id="canvasButtonPostCRD">Post-Synaptic CRD</button>
-              </form>
-            </div>
-          </div>
-        </div>
-        <div class="d-flex justify-content-center">
-          <div id="cardDetails" class="card border-0 p-1">
-            <div class="outsideWrapper border rounded" style="border-width: 4px !important">
+
+      <!-- Body -->
+      <div class="modal-body p-4">
+
+        <!-- Canvas Display -->
+        <div class="d-flex justify-content-center mb-4">
+          <div id="cardDetails" class="card border-0 bg-light rounded-3 shadow-sm">
+            <div class="outsideWrapper border rounded-4 overflow-hidden">
               <div class="insideWrapper">
                 <img id="imgDetails-EM" class="coveredImage" src="" />
                 <img id="imgDetails-EM-GT-curve" class="coveredImage d-none" style="opacity: 0.5" src="" />
@@ -35,35 +34,33 @@
             </div>
           </div>
         </div>
-        <div class="center">
-          <div class="row justify-content-center">
-            <div class="col-md-12 text-center">
-              <form>
-                <button type="button" class="btn btn-secondary" id="canvasButtonDrawMask">Draw Mask</button>
-                <button type="button" class="btn btn-secondary" id="canvasButtonFill">Fill</button>
-                <button type="button" class="btn btn-secondary" id="canvasButtonRevise">Revise</button>
-                <button type="button" class="btn btn-secondary" id="canvasButtonSave">Save</button>
-                <button type="button" class="btn btn-secondary" id="canvasButtonAuto">Auto</button>
-              </form>
-            </div>
-          </div>
-          <div class="center">
-            <input id="rangeSlices" type="range" class="form-range" value="0" min="0" max="30" data_id="" page="" data-viewed_instance_slice="" />
-            <div class="container">
-              <div class="row">
-                <div class="col justify-content-center">
-                  <button id="minSlice" type="button" class="btn btn-outline-secondary btn-sm disabled float-start">-15</button>
-                </div>
-                <div class="col justify-content-center">
-                  <button class="btn btn-secondary" id="ng-link-draw" type="button" data-bs-target="#drawModalFN" data-bs-toggle="modal" data-bs-dismiss="modal">View in NG</button>
-                </div>
-                <div class="col justify-content-center">
-                  <button id="maxSlice" type="button" class="btn btn-outline-secondary btn-sm disabled float-end">+15</button>
-                </div>
-              </div>
-            </div>
+
+        <!-- Action Buttons -->
+        <div class="text-center">
+          <div class="btn-group flex-wrap gap-1" role="group" aria-label="Canvas Actions">
+            <button type="button" class="btn btn-secondary" id="canvasButtonPreCRD" title="Pre-Synaptic Marker">🟢</button>
+            <button type="button" class="btn btn-secondary" id="canvasButtonPostCRD" title="Post-Synaptic Marker">🔵</button>
+            <button type="button" class="btn btn-secondary" id="canvasButtonDrawMask" title="Draw Mask">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button type="button" class="btn btn-secondary" id="canvasButtonFill" title="Fill">
+              <i class="bi bi-paint-bucket"></i>
+            </button>
+            <button type="button" class="btn btn-secondary" id="canvasButtonRevise" title="Revise">
+              <i class="bi bi-eraser"></i>
+            </button>
+            <button type="button" class="btn btn-success" id="canvasButtonSave" title="Save">
+              <i class="bi bi-save"></i>
+            </button>
+            <button type="button" class="btn btn-warning" id="canvasButtonAuto" title="Auto Fill">
+              <i class="bi bi-magic"></i>
+            </button>
+            <button class="btn btn-secondary" id="ng-link-draw" type="button" data-bs-target="#drawModalFN" data-bs-toggle="modal" data-bs-dismiss="modal" title="View in Neuroglancer">
+              <i class="bi bi-diagram-3"></i>
+            </button>
           </div>
         </div>
+
       </div>
     </div>
   </div>

@@ -1,345 +1,223 @@
-$(document).ready(function () {
-
+$(document).ready(() => {
   const currentPage = parseInt($("script[src*='draw_module.js']").data("current-page")) || -1;
-  const current_view = $("script[src*='draw_module.js']").data("current-view") || "draw";
+  const currentView = $("script[src*='draw_module.js']").data("current-view") || "draw";
+
+  // active mouse tip title depictions
+  const tooltipTriggerList = $('[title]').toArray();
+  tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el));
+
+  let page = 0;
+  let dataId = 0;
+  let label = "";
+  let currentSlice = 0;
+  let dataJson = null;
+
+  const $drawModal = $("#drawModal");
+  const $imgSource = $("#imgDetails-EM");
+  const $imgTarget = $("#imgDetails-EM-GT-curve");
+  const $imgPreCircle = $("#imgDetails-EM-GT-circlePre");
+  const $imgPostCircle = $("#imgDetails-EM-GT-circlePost");
+
+
+  const loadImage = (url, $element) => {
+    $.ajax({
+      url: url,
+      type: "HEAD",
+      success: function (data, textStatus, xhr) {
+        if (xhr.status === 200) {
+          // Image exists
+          $(new Image())
+            .attr("src", url)
+            .on("load", function () {
+              $element.attr("src", this.src).removeClass("d-none");
+            });
+        } else if (xhr.status === 204) {
+          // No content
+          console.info("Status 204: No content found for image:", url);
+          $element.addClass("d-none");
+        }
+      },
+      error: function (xhr) {
+        console.error("Error loading image:", url, "Status:", xhr.status);
+        $element.addClass("d-none");
+      }
+    });
+  };
+
+
+  const updateImages = async (dataId, slice) => {
+    try {
+      // Update curve image
+      await loadImage(`/get_curve_image/${dataId}/${slice}`, $imgTarget);
+
+      // Update auto curve image if curve image does not exist
+      if ($imgTarget.hasClass("d-none")) {
+        await loadImage(`/get_auto_curve_image/${dataId}/${slice}`, $imgTarget);
+      }
+
+      // Update pre-synaptic marker
+      await loadImage(`/get_circle_pre_image/${dataId}/${slice}`, $imgPreCircle);
+
+      // Update post-synaptic marker
+      await loadImage(`/get_circle_post_image/${dataId}/${slice}`, $imgPostCircle);
+    } catch (error) {
+      console.error("Error updating images:", error);
+    }
+  };
 
   $('[id^="drawButton-"]').click(async function () {
-    var [page, data_id, label] = $(this)
-      .attr("id")
-      .replace(/drawButton-/, "")
-      .split("-");
+    [page, dataId, label] = $(this).attr("id").replace(/drawButton-/, "").split("-");
 
-    // we are currently in drawing mode
-    var mode = "draw";
+    const mode = "draw";
+    const load = "full"; // Load full instance data
 
-    // we require the information about the whole instance
-    var load = "full";
+    try {
+      const reqData = await $.ajax({
+        url: "/get_instance",
+        type: "POST",
+        data: { mode, load, data_id: dataId, page },
+      });
 
-    let req_data = $.ajax({
-      url: "/get_instance",
-      type: "POST",
-      data: {
-        mode: mode,
-        load: load,
-        data_id: data_id,
-        page: page,
-      },
-    });
+      dataJson = JSON.parse(reqData.data);
+      currentSlice = dataJson.Middle_Slice;
 
-    let cz0 = 0;
-    let cy0 = 0;
-    let cx0 = 0;
+      // Set viewed instance slice
+      $drawModal.data("viewed-instance-slice", currentSlice);
 
-    // set the base image to the center slice
-    await req_data.done(function (data) {
-      let data_json = JSON.parse(data.data);
-      $("#imgDetails-EM").addClass(label.toLowerCase());
-      $("#imgDetails-EM").attr("src", "/get_source_image/" + data_id + "/" + data_json.Middle_Slice);
+      $imgSource.addClass(label.toLowerCase()).attr(
+        "src",
+        `/get_source_image/${dataId}/${dataJson.Middle_Slice}`
+      );
 
       if (mode === "draw") {
-        $.ajax({
-          url: "/get_curve_image/" + data_id + "/" + data_json.Middle_Slice,
-          type: "HEAD",
-          success: function (data, textStatus, xhr) {
-            if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
-              $(new Image())
-                .attr("src", "/get_curve_image/" + data_id + "/" + data_json.Middle_Slice)
-                .load(function () {
-                  $("#imgDetails-EM-GT-curve").attr("src", this.src);
-                });
-              $("#imgDetails-EM-GT-curve").removeClass("d-none");
-            }
-            else if (xhr.status === 204) {  // Only execute if image does not exist)
-              console.log("Curve image does not exist");
-
-              $.ajax({
-                url: "/get_auto_curve_image/" + data_id + "/" + data_json.Middle_Slice,
-                type: "HEAD",
-                success: function (data, textStatus, xhr) {
-                  if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
-                    $(new Image())
-                      .attr("src", "/get_auto_curve_image/" + data_id + "/" + data_json.Middle_Slice)
-                      .load(function () {
-                        $("#imgDetails-EM-GT-curve").attr("src", this.src);
-                      });
-                    $("#imgDetails-EM-GT-curve").removeClass("d-none");
-                  }
-                  else if (xhr.status === 204) {  // Only execute if image does not exist)
-                    console.log("Curve image does not exist");
-                    $("#imgDetails-EM-GT-curve").addClass("d-none");
-                  }
-                },
-              });
-            }
-          },
-        });
-
-        $.ajax({
-          url: "/get_circle_pre_image/" + data_id + "/" + data_json.Middle_Slice,
-          type: "HEAD",
-          success: function (data, textStatus, xhr) {
-            if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
-                $(new Image())
-                    .attr("src", "/get_circle_pre_image/" + data_id + "/" + data_json.Middle_Slice)
-                    .on("load", function () {
-                        $("#imgDetails-EM-GT-circlePre").attr("src", this.src);
-                    });
-                $("#imgDetails-EM-GT-circlePre").removeClass("d-none");
-            }
-            else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
-              console.log("Circle Pre image does not exist");
-              $("#imgDetails-EM-GT-circlePre").addClass("d-none");
-            }
-          },
-          error: function () {
-            $("#imgDetails-EM-GT-circlePre").addClass("d-none");
-          },
-        });
-
-        $.ajax({
-          url: "/get_circle_post_image/" + data_id + "/" + data_json.Middle_Slice,
-          type: "HEAD",
-          success: function (data, textStatus, xhr) {
-            if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
-              $(new Image())
-                .attr("src", "/get_circle_post_image/" + data_id + "/" + data_json.Middle_Slice)
-                .load(function () {
-                  $("#imgDetails-EM-GT-circlePost").attr("src", this.src);
-                });
-              $("#imgDetails-EM-GT-circlePost").removeClass("d-none");
-              }
-              else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
-                console.log("Circle Post image does not exist");
-                $("#imgDetails-EM-GT-circlePost").addClass("d-none");
-              }
-            }
-        });
+        await updateImages(dataId, dataJson.Middle_Slice);
       }
 
-      // update the range slider
-      $("#rangeSlices").attr("min", data.range_min);
-      $("#rangeSlices").attr("max", data.range_min + data.number_of_slices - 1);
-      $("#rangeSlices").val(data.halflen);
-      $("#rangeSlices").attr("data_id", data_id);
-      $("#rangeSlices").attr("page", page);
+      const { cz0, cy0, cx0 } = dataJson;
+      const reqNg = await $.ajax({
+        url: "/neuro",
+        type: "POST",
+        data: { cz0, cy0, cx0, mode: "annotate" },
+      });
 
-      $("#minSlice").html(0);
-      $("#maxSlice").html(data.number_of_slices - 1);
-
-      cz0 = data_json.cz0;
-      cy0 = data_json.cy0;
-      cx0 = data_json.cx0;
-
-      $("#rangeSlices").data("viewed_instance_slice", data_json.Middle_Slice);
-    });
-
-    // retrieve the updated NG link
-    let req_ng = $.ajax({
-      url: "/neuro",
-      type: "POST",
-      // we set mode to 'annotate' as we would like to set the focus on the particular instance
-      data: { cz0: cz0, cy0: cy0, cx0: cx0, mode: "annotate" },
-    });
-
-    req_ng.done(function (data) {
-      let ng_link = data.ng_link;
-      $("#ng-iframe-draw").attr("src", ng_link);
-    });
+      $("#ng-iframe-draw").attr("src", reqNg.ng_link);
+    } catch (error) {
+      console.error("Error loading instance:", error);
+    }
   });
 
-  // with in the modal view retrieve the instance specific data
-  // to switch between the slices
-  $("#rangeSlices").on("input", function () {
-    // set the visibility of the canvases to hidden
-    // this will trigger the deletion of the canvas
-    $("canvas.curveCanvas").addClass("d-none");
-    $("canvas.circleCanvasPre").addClass("d-none");
-    $("canvas.circleCanvasPost").addClass("d-none");
+  let isModalScrollingLocked = false;
+  let modalScrollDelta = 0;
+  const MODAL_SCROLL_THRESHOLD = 65;
 
-    // reset all buttons
-    $("#canvasButtonPreCRD").text("Pre-Synaptic CRD");
-    $("#canvasButtonPostCRD").text("Post-Synaptic CRD");
-    $("#canvasButtonPreCRD").prop("disabled", false);
-    $("#canvasButtonPostCRD").prop("disabled", false);
+  $drawModal.on("wheel", async (event) => {
+    event.preventDefault();
+    if (isModalScrollingLocked) return;
 
-    // reset the draw mask button
-    $("#canvasButtonDrawMask").text("Draw Mask");
+    modalScrollDelta += event.originalEvent.deltaY;
+
+    if (Math.abs(modalScrollDelta) < MODAL_SCROLL_THRESHOLD) return;
+
+    modalScrollDelta = 0;
+    isModalScrollingLocked = true;
+
+    $("canvas.curveCanvas, canvas.circleCanvasPre, canvas.circleCanvasPost").addClass("d-none");
+    $("#canvasButtonPreCRD, #canvasButtonPostCRD").prop("disabled", false);
+    $("#canvasButtonFill, #canvasButtonRevise, #canvasButtonSave").prop("disabled", true);
+    // return the draw mask button to the pencil icon
     $("#canvasButtonDrawMask").prop("disabled", false);
+    $("#canvasButtonDrawMask")
+    .html('<i class="bi bi-pencil"></i>')
+    .attr("title", "Draw Mask");
+    const newSlice = currentSlice + (event.originalEvent.deltaY > 0 ? 1 : -1);
 
-    // disable all options except the activate canvas button
-    $("#canvasButtonFill").prop("disabled", true);
-    $("#canvasButtonRevise").prop("disabled", true);
-    $("#canvasButtonSave").prop("disabled", true);
+    // Restrict scrolling beyond available slices
+    if (newSlice < dataJson.Min_Slice || newSlice > dataJson.Max_Slice) {
+      isModalScrollingLocked = false;
+      return;
+    }
 
-    // get the current slice slice index
-    let viewed_instance_slice = $(this).val();
-    // update the appropriate attribute to be used by the draw.js script
-    $(this).data("viewed_instance_slice", viewed_instance_slice);
+    try {
+      const req = await $.ajax({
+        url: "/get_instance",
+        type: "POST",
+        data: {
+          mode: "draw",
+          load: "single",
+          data_id: dataId,
+          page,
+          viewedInstanceSlice: newSlice,
+        },
+      });
 
-    // the instance identifiers
-    var data_id = $(this).attr("data_id");
-    var page = $(this).attr("page");
-
-    // we are currently in drawing mode
-    var mode = "draw";
-
-    // we only require the path to load a single slice and the corresponding GT
-    var load = "single";
-
-    // retrieve the information from the backend
-    let req = $.ajax({
-      url: "/get_instance",
-      type: "POST",
-      data: {
-        mode: mode,
-        load: load,
-        data_id: data_id,
-        page: page,
-        viewed_instance_slice: viewed_instance_slice,
-      },
-    });
-
-    // update the slice and GT that is depicted
-    req.done(function (data) {
-      $("#imgDetails-EM").attr("src", "/get_source_image/" + data_id + "/" + viewed_instance_slice);
-
-      if (mode === "draw") {
-        $.ajax({
-          url: "/get_auto_curve_image/" + data_id + "/" + viewed_instance_slice,
-          type: 'HEAD',
-          success: function (data, textStatus, xhr) {
-            if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
-              $(new Image())
-              .attr("src", "/get_auto_curve_image/" + data_id + "/" + viewed_instance_slice)
-              .load(function () {
-                $("#imgDetails-EM-GT-curve").attr("src", this.src);
-              });
-              $("#imgDetails-EM-GT-curve").removeClass('d-none');
-            }
-            else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
-              $.ajax({
-                url: "/get_curve_image/" + data_id + "/" + viewed_instance_slice,
-                type: 'HEAD',
-                success: function (data, textStatus, xhr) {
-                  if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
-                    $(new Image())
-                    .attr("src", "/get_curve_image/" + data_id + "/" + viewed_instance_slice)
-                    .load(function () {
-                      $("#imgDetails-EM-GT-curve").attr("src", this.src);
-                    });
-                    $("#imgDetails-EM-GT-curve").removeClass('d-none');
-                  }
-                  else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
-                    console.log("Curve image does not exist");
-                    $("#imgDetails-EM-GT-curve").addClass('d-none');
-                  }
-                }
-              });
-            }
-          }
-        });
-
-        $.ajax({
-          url: "/get_circle_pre_image/" + data_id + "/" + viewed_instance_slice,
-          type: "HEAD",
-          success: function (data, textStatus, xhr) {
-            if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
-              $(new Image())
-              .attr("src", "/get_circle_pre_image/" + data_id + "/" + viewed_instance_slice)
-              .load(function () {
-                $("#imgDetails-EM-GT-circlePre").attr("src", this.src);
-              });
-            $("#imgDetails-EM-GT-circlePre").removeClass("d-none");
-            }
-            else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
-              console.log("Circle Pre image does not exist");
-              $("#imgDetails-EM-GT-circlePre").addClass("d-none");
-            }
-          },
-        });
-
-        $.ajax({
-          url: "/get_circle_post_image/" + data_id + "/" + viewed_instance_slice,
-          type: "HEAD",
-          success: function (data, textStatus, xhr) {
-            if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
-              $(new Image())
-              .attr("src", "/get_circle_post_image/" + data_id + "/" + viewed_instance_slice)
-              .load(function () {
-                $("#imgDetails-EM-GT-circlePost").attr("src", this.src);
-              });
-            $("#imgDetails-EM-GT-circlePost").removeClass("d-none");
-            }
-            else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
-              console.log("Circle Post image does not exist");
-              $("#imgDetails-EM-GT-circlePost").addClass("d-none");
-            }
-          },
-        });
+      const exists = await $.get(`/source_img_exists/${dataId}/${newSlice}`);
+      if (exists) {
+        $imgSource.attr("src", `/get_source_image/${dataId}/${newSlice}`);
+        await updateImages(dataId, newSlice);
+        currentSlice = newSlice;
+        // Ensure viewedInstanceSlice is always set correctly
+        $drawModal.data("viewed-instance-slice", newSlice);
       }
-    });
+
+    } catch (error) {
+      console.error("Error loading slice:", error);
+    } finally {
+      isModalScrollingLocked = false;
+    }
   });
 
-  $("#add_new_instance").click(async function () {
-    // open a new Neuroglancer view
-    let req_ng = $.ajax({
-      url: "/neuro",
-      type: "POST",
-      data: { cz0: 0, cy0: 0, cx0: 0, mode: "draw" },
-    });
+  $("#add_new_instance").click(async () => {
+    try {
+      const reqNg = await $.ajax({
+        url: "/neuro",
+        type: "POST",
+        data: { cz0: 0, cy0: 0, cx0: 0, mode: "draw" },
+      });
 
-    req_ng.done(function (data) {
-      let ng_link = data.ng_link;
-      $("#ng-iframe-draw").attr("src", ng_link);
-    });
-
-    $("#review_bbox").show();
-    $("#back_to_2d").hide();
+      $("#ng-iframe-draw").attr("src", reqNg.ng_link);
+      $("#review_bbox").show();
+      $("#back_to_2d").hide();
+    } catch (error) {
+      console.error("Error adding new instance:", error);
+    }
   });
 
-  // toggle the functionality of the NG module based on the current use-case: select slice for drawing
-  $("#ng-link-draw").on("click", function () {
+  $("#ng-link-draw").click(() => {
     $("#review_bbox").hide();
     $("#back_to_2d").show();
   });
 
-  // ensure that the canvas is depicted when returning to the 2D view
-  $("#back_to_2d").on("click", function () {
-    $("canvas.curveCanvas").removeClass("d-none"); // change the visibility of the canvas
-    // TODO if I check the ng before drawing any thing we will see the picture logo instead of the canvas
-    // Have to also check this logic for the circle canvas
+  $("#back_to_2d").click(() => {
+    $("canvas.curveCanvas").removeClass("d-none");
   });
 
-  $("#review_bbox").click(async function (e) {
-    // retrieve the bb information from the backend
-    $.ajax({
-      url: "/ng_bbox_fn",
-      type: "POST",
-      data: { z1: 0, z2: 0, my: 0, mx: 0 },
-    }).done(function (data) {
+  $("#review_bbox").click(async () => {
+    try {
+      const data = await $.ajax({
+        url: "/ng_bbox_fn",
+        type: "POST",
+        data: { z1: 0, z2: 0, my: 0, mx: 0 },
+      });
+
       $("#m_x").val(data.mx);
       $("#m_y").val(data.my);
-
       $("#d_z1").val(data.z1);
       $("#d_z2").val(data.z2);
-    });
+    } catch (error) {
+      console.error("Error reviewing bbox:", error);
+    }
   });
 
-  // add event listener if current view is draw
-  if (current_view === "draw") {
-    $("#save_bbox").click(async function () {
-
-      // show loading-bar
-      $('#loading-bar').css('display', 'flex');
+  if (currentView === "draw") {
+    $("#save_bbox").click(async () => {
+      $("#loading-bar").css("display", "flex");
 
       try {
-        // update the bb information with the manual corrections and pass them to the backend
-        // trigger the processing/save to the pandas df in the backend
         await $.ajax({
           url: "/ng_bbox_fn_save",
           type: "POST",
           data: {
-            currentPage: currentPage,
+            currentPage,
             z1: $("#d_z1").val(),
             z2: $("#d_z2").val(),
             my: $("#m_y").val(),
@@ -347,18 +225,13 @@ $(document).ready(function () {
           },
         });
 
-        // hide modules
         $("#drawModalFNSave, #drawModalFN").modal("hide");
-
-        // refresh page
         location.reload();
       } catch (error) {
-        console.error('Error saving bbox:', error);
+        console.error("Error saving bbox:", error);
       } finally {
-        // Hide the loading bar after the operation completes
-        $('#loading-bar').css('display', 'none');
+        $("#loading-bar").css("display", "none");
       }
     });
   }
-
 });

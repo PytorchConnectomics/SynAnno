@@ -79,7 +79,7 @@ def save_canvas() -> dict:
     image = decode_image(request.form["imageBase64"])
     page = int(request.form["page"])
     index = int(request.form["data_id"])
-    viewed_instance_slice = int(request.form["viewed_instance_slice"])
+    viewed_instance_slice = int(request.form["viewedInstanceSlice"])
     canvas_type = str(request.form["canvas_type"])
 
     crop_axes = (

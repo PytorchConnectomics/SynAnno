@@ -10,20 +10,21 @@
     <div class="modal-content shadow rounded-4 border-0">
 
       <!-- Header with Title -->
-      <div class="modal-header border-0 pb-0">
-        <h5 class="modal-title mx-auto" id="drawModalLabel">Instance Viewer</h5>
-        <button type="button" class="btn-close position-absolute end-0 me-3" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-header">
+          <span class="ps-2 text-muted small" id="neuron-id-draw-module"></span>
+          <button type="button" class="btn-close me-2" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
 
       <!-- Body -->
-      <div class="modal-body p-4">
+      <div class="modal-body p-2">
 
         <!-- Canvas Display -->
-        <div class="d-flex justify-content-center mb-4">
+        <div class="d-flex justify-content-center mb-2">
           <div id="cardDetails" class="card border-0 bg-light rounded-3 shadow-sm">
-            <div class="outsideWrapper border rounded-4 overflow-hidden">
+            <span id="centralBadge" class="position-absolute top-0 end-0 m-2 badge bg-primary">Center</span>
+            <div class="outsideWrapper border rounded-2 overflow-hidden">
               <div class="insideWrapper">
-                <img id="imgDetails-EM" class="coveredImage" src="" />
+                <img id="imgDetails-EM" class="coveredImage" src=""  width="512px" height="512px"/>
                 <img id="imgDetails-EM-GT-curve" class="coveredImage d-none" style="opacity: 0.5" src="" />
                 <img id="imgDetails-EM-GT-circlePre" class="coveredImage d-none" style="opacity: 0.5" src="" />
                 <img id="imgDetails-EM-GT-circlePost" class="coveredImage d-none" style="opacity: 0.5" src="" />

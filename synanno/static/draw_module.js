@@ -2,7 +2,6 @@ $(document).ready(() => {
   const currentPage = parseInt($("script[src*='draw_module.js']").data("current-page")) || -1;
   const currentView = $("script[src*='draw_module.js']").data("current-view") || "draw";
 
-  // active mouse tip title depictions
   const tooltipTriggerList = $('[title]').toArray();
   tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el));
 
@@ -11,6 +10,7 @@ $(document).ready(() => {
   let label = "";
   let currentSlice = 0;
   let dataJson = null;
+  let initialCoordinates = { cz: null, cy: null, cx: null };
 
   const $drawModal = $("#drawModal");
   const $imgSource = $("#imgDetails-EM");
@@ -18,6 +18,21 @@ $(document).ready(() => {
   const $imgPreCircle = $("#imgDetails-EM-GT-circlePre");
   const $imgPostCircle = $("#imgDetails-EM-GT-circlePost");
 
+  const updateModalHeader = () => {
+    const viewedSlice = $drawModal.data("viewed-instance-slice");
+    const middle = dataJson.Middle_Slice;
+
+    // Center badge visibility
+    if (viewedSlice === middle) {
+      $("#centralBadge").removeClass("d-none");
+    } else {
+      $("#centralBadge").addClass("d-none");
+    }
+
+    // Coordinate display from loaded data
+    const { cx0, cy0, _ } = dataJson;
+    $("#neuron-id-draw-module").text(`cx: ${parseInt(cx0)} - cy: ${parseInt(cy0)} - cz: ${parseInt(viewedSlice)}`);
+  };
 
   const loadImage = (url, $element) => {
     $.ajax({
@@ -25,14 +40,12 @@ $(document).ready(() => {
       type: "HEAD",
       success: function (data, textStatus, xhr) {
         if (xhr.status === 200) {
-          // Image exists
           $(new Image())
             .attr("src", url)
             .on("load", function () {
               $element.attr("src", this.src).removeClass("d-none");
             });
         } else if (xhr.status === 204) {
-          // No content
           console.info("Status 204: No content found for image:", url);
           $element.addClass("d-none");
         }
@@ -44,21 +57,14 @@ $(document).ready(() => {
     });
   };
 
-
   const updateImages = async (dataId, slice) => {
     try {
-      // Update curve image
       await loadImage(`/get_curve_image/${dataId}/${slice}`, $imgTarget);
-
-      // Update auto curve image if curve image does not exist
       if ($imgTarget.hasClass("d-none")) {
         await loadImage(`/get_auto_curve_image/${dataId}/${slice}`, $imgTarget);
       }
 
-      // Update pre-synaptic marker
       await loadImage(`/get_circle_pre_image/${dataId}/${slice}`, $imgPreCircle);
-
-      // Update post-synaptic marker
       await loadImage(`/get_circle_post_image/${dataId}/${slice}`, $imgPostCircle);
     } catch (error) {
       console.error("Error updating images:", error);
@@ -69,7 +75,7 @@ $(document).ready(() => {
     [page, dataId, label] = $(this).attr("id").replace(/drawButton-/, "").split("-");
 
     const mode = "draw";
-    const load = "full"; // Load full instance data
+    const load = "full";
 
     try {
       const reqData = await $.ajax({
@@ -81,7 +87,6 @@ $(document).ready(() => {
       dataJson = JSON.parse(reqData.data);
       currentSlice = dataJson.Middle_Slice;
 
-      // Set viewed instance slice
       $drawModal.data("viewed-instance-slice", currentSlice);
 
       $imgSource.addClass(label.toLowerCase()).attr(
@@ -101,6 +106,8 @@ $(document).ready(() => {
       });
 
       $("#ng-iframe-draw").attr("src", reqNg.ng_link);
+
+      updateModalHeader();
     } catch (error) {
       console.error("Error loading instance:", error);
     }
@@ -124,14 +131,13 @@ $(document).ready(() => {
     $("canvas.curveCanvas, canvas.circleCanvasPre, canvas.circleCanvasPost").addClass("d-none");
     $("#canvasButtonPreCRD, #canvasButtonPostCRD").prop("disabled", false);
     $("#canvasButtonFill, #canvasButtonRevise, #canvasButtonSave").prop("disabled", true);
-    // return the draw mask button to the pencil icon
     $("#canvasButtonDrawMask").prop("disabled", false);
     $("#canvasButtonDrawMask")
-    .html('<i class="bi bi-pencil"></i>')
-    .attr("title", "Draw Mask");
+      .html('<i class="bi bi-pencil"></i>')
+      .attr("title", "Draw Mask");
+
     const newSlice = currentSlice + (event.originalEvent.deltaY > 0 ? 1 : -1);
 
-    // Restrict scrolling beyond available slices
     if (newSlice < dataJson.Min_Slice || newSlice > dataJson.Max_Slice) {
       isModalScrollingLocked = false;
       return;
@@ -155,10 +161,9 @@ $(document).ready(() => {
         $imgSource.attr("src", `/get_source_image/${dataId}/${newSlice}`);
         await updateImages(dataId, newSlice);
         currentSlice = newSlice;
-        // Ensure viewedInstanceSlice is always set correctly
         $drawModal.data("viewed-instance-slice", newSlice);
+        updateModalHeader();
       }
-
     } catch (error) {
       console.error("Error loading slice:", error);
     } finally {

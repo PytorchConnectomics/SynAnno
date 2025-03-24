@@ -94,8 +94,8 @@
 
 .outsideWrapper {
   margin: auto;
-  width: 384px;
-  height: 384px;
+  width: 452px;
+  height: 452px;
   background-color: #fff;
   border-radius: 12px;
   overflow: hidden;
@@ -141,10 +141,12 @@
 
 .modal-header,
 .card-header {
-  background: linear-gradient(to right, #f8f9fa, #ffffff);
+  background: #f8f9fa;
   border-bottom: none !important;
   border-top-left-radius: 1rem;
   border-top-right-radius: 1rem;
+  border-bottom-left-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
   box-shadow: none;
 }
 
@@ -162,6 +164,21 @@
   max-height: 40px;
   border-top: none;
 }
+
+#centralBadge {
+  z-index: 1; /* Ensure it's above the image, but below the modal header */
+  pointer-events: none; /* Prevent interaction issues */
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+#neuron-id-draw .badge.disabled {
+  opacity: 0.8;
+  cursor: default;
+  pointer-events: none;
+  padding: 10px;
+}
+
 /* css for the open data form */
 .syn-id-container {
   display: flex;

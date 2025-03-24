@@ -603,10 +603,8 @@ $(document).ready(() => {
     const i = points.length - 2;
     ctx_curve.quadraticCurveTo(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
 
-    // 🔥 Draw the line first
     ctx_curve.stroke();
 
-    // 🎯 Now draw the point markers *after* the line
     if (draw_points) {
       ctx_curve.fillStyle = turquoise;
       for (let p of points) {

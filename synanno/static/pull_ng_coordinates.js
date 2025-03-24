@@ -28,7 +28,10 @@ function checkCoordinates() {
         .done(response => {
             const { cz, cy, cx } = response;
             if (cz !== initialCoordinates.cz || cy !== initialCoordinates.cy || cx !== initialCoordinates.cx) {
-                $('#neuron-id-draw').text(`cx: ${parseInt(cx)}, cy: ${parseInt(cy)}, cz: ${parseInt(cz)}`);
+                console.log("Old:", initialCoordinates, "New:", { cz, cy, cx });
+                console.log($("#neuron-id-draw").length); // Should be 1
+
+                $('#neuron-id-draw').text(`cx: ${parseInt(cx)} - cy: ${parseInt(cy)} - cz: ${parseInt(cz)}`);
                 initialCoordinates = { cz, cy, cx };
             }
         })

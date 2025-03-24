@@ -46,6 +46,7 @@ $(document).ready(function () {
   });
 
   $('[data-bs-target="#neuroModel"]').on('click', function () {
+    $('#synapse-id-annotation').text(dataId);
     toggleInert($detailsModal, true);
     $neuroModel.modal('show');
   });

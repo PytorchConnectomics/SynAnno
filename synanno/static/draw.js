@@ -195,41 +195,38 @@ $(document).ready(() => {
       ctx_circle_pre.arc(x_syn_crd, y_syn_crd, 10, 0, 2 * Math.PI);
       ctx_circle_pre.fill();
 
-      // Add a text label with improved readability
+      // Add a text label with modern styling
       const text = "Pre";
       const textX = x_syn_crd;
-      const textY = y_syn_crd - 20;
+      const textY = y_syn_crd - 24;
 
-      // Draw background with stronger opacity for better contrast
-      ctx_circle_pre.fillStyle = "rgba(0, 0, 0, 0.9)";
-      ctx_circle_pre.fillRect(
-        textX - 24,  // Fixed width for consistency
-        textY - 16,
-        48,          // Fixed width for consistency
-        22           // Slightly taller
-      );
+      // Draw rounded background with semi-transparent dark tone
+      ctx_circle_pre.fillStyle = "rgba(33, 37, 41, 0.85)"; // Bootstrap dark (same as Post)
+      ctx_circle_pre.beginPath();
+      ctx_circle_pre.roundRect(textX - 30, textY - 16, 60, 28, 6);
+      ctx_circle_pre.fill();
 
-      // Draw text with brighter green for better visibility
-      ctx_circle_pre.fillStyle = "rgb(150, 255, 150)"; // Lighter green for better contrast
-      ctx_circle_pre.font = "bold 16px Arial";
+      // Optional: soft shadow for modern depth
+      ctx_circle_pre.shadowColor = "rgba(0, 0, 0, 0.3)";
+      ctx_circle_pre.shadowBlur = 4;
+
+      // Draw text with modern font and light green color
+      ctx_circle_pre.fillStyle = "#b8fcb8"; // Light green, soft tone
+      ctx_circle_pre.font = "600 14px 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif";
       ctx_circle_pre.textAlign = "center";
-      ctx_circle_pre.fillText(text, textX, textY);
+      ctx_circle_pre.textBaseline = "middle";
+      ctx_circle_pre.fillText(text, textX, textY - 1); // 1px up
 
-      // Draw border around text background for additional contrast
-      ctx_circle_pre.strokeStyle = "white";
-      ctx_circle_pre.lineWidth = 1;
-      ctx_circle_pre.strokeRect(
-        textX - 24,
-        textY - 16,
-        48,
-        22
-      );
+      // Reset shadow after use
+      ctx_circle_pre.shadowColor = "transparent";
+      ctx_circle_pre.shadowBlur = 0;
 
       save_canvas(canvas_circle_pre, "circlePre");
       $("#canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonDrawMask, #canvasButtonAuto").prop("disabled", false);
       pre_CRD = false;
     }
   });
+
 
   $("#canvasButtonPostCRD").on("click", () => {
     ctx_circle_post.restore();
@@ -274,41 +271,38 @@ $(document).ready(() => {
       ctx_circle_post.arc(x_syn_crd, y_syn_crd, 10, 0, 2 * Math.PI);
       ctx_circle_post.fill();
 
-      // Add a text label with improved readability
+      // Add a text label with modern styling
       const text = "Post";
       const textX = x_syn_crd;
-      const textY = y_syn_crd - 20;
+      const textY = y_syn_crd - 24;
 
-      // Draw background with stronger opacity for better contrast
-      ctx_circle_post.fillStyle = "rgba(0, 0, 0, 0.9)";
-      ctx_circle_post.fillRect(
-        textX - 24,  // Wider background
-        textY - 16,
-        48,          // Fixed width for consistency
-        22           // Slightly taller
-      );
+      // Draw rounded background with semi-transparent dark tone
+      ctx_circle_post.fillStyle = "rgba(33, 37, 41, 0.85)";
+      ctx_circle_post.beginPath();
+      ctx_circle_post.roundRect(textX - 30, textY - 16, 60, 28, 6);
+      ctx_circle_post.fill();
 
-      // Draw text with brighter blue for better visibility
-      ctx_circle_post.fillStyle = "rgb(100, 200, 255)"; // Lighter blue for better contrast
-      ctx_circle_post.font = "bold 16px Arial";
+      // Optional: subtle shadow for depth
+      ctx_circle_post.shadowColor = "rgba(0, 0, 0, 0.3)";
+      ctx_circle_post.shadowBlur = 4;
+
+      // Draw text with clean modern font and slightly lighter blue
+      ctx_circle_post.fillStyle = "#d0ebff"; // Light Bootstrap blue-ish
+      ctx_circle_post.font = "600 14px 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif";
       ctx_circle_post.textAlign = "center";
-      ctx_circle_post.fillText(text, textX, textY);
+      ctx_circle_post.textBaseline = "middle";
+      ctx_circle_post.fillText(text, textX, textY - 1); // nudged up by 1px
 
-      // Draw border around text background for additional contrast
-      ctx_circle_post.strokeStyle = "white";
-      ctx_circle_post.lineWidth = 1;
-      ctx_circle_post.strokeRect(
-        textX - 24,
-        textY - 16,
-        48,
-        22
-      );
+      // Reset shadow after use
+      ctx_circle_post.shadowColor = "transparent";
+      ctx_circle_post.shadowBlur = 0;
 
       save_canvas(canvas_circle_post, "circlePost");
       $("#canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonDrawMask, #canvasButtonAuto").prop("disabled", false);
       post_CRD = false;
     }
   });
+
 
   $("#canvasButtonDrawMask").on("click", () => {
     clear_canvas(ctx_curve, canvas_curve);

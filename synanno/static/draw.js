@@ -12,7 +12,7 @@ $(document).ready(() => {
   let rect_curve, rect_circle;
   let draw_mask = false, split_mask = false;
   let points = [], pointsQBez = [];
-  const thickness = 15;
+  const thickness = 10;
   const pink = "rgba(255, 0, 255, 0.7)";
   const turquoise = "rgba(21, 229, 239, 0.92)";
   let page, data_id, label;

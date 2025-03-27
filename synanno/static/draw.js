@@ -40,16 +40,17 @@ $(document).ready(() => {
       type: 'HEAD',
       success: function (data, textStatus, xhr) {
         if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
+          console.log("Auto curve image exists");
           $(canvas_target_image_curve).attr("src", "/get_auto_curve_image/" + data_id + "/" + middle_slice);
           $(canvas_target_image_curve).removeClass('d-none');
         }
         else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
           $.ajax({
-            url: "/get_auto_curve_image/" + data_id + "/" + middle_slice,
+            url: "/get_curve_image/" + data_id + "/" + middle_slice,
             type: 'HEAD',
             success: function (data, textStatus, xhr) {
               if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
-                $(canvas_target_image_curve).attr("src", "/get_auto_curve_image/" + data_id + "/" + middle_slice);
+                $(canvas_target_image_curve).attr("src", "/get_curve_image/" + data_id + "/" + middle_slice);
                 $(canvas_target_image_curve).removeClass('d-none');
               }
             }

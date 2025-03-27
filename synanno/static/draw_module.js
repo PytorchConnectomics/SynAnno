@@ -59,9 +59,9 @@ $(document).ready(() => {
 
   const updateImages = async (dataId, slice) => {
     try {
-      await loadImage(`/get_curve_image/${dataId}/${slice}`, $imgTarget);
+      await loadImage(`/get_auto_curve_image/${dataId}/${slice}`, $imgTarget);
       if ($imgTarget.hasClass("d-none")) {
-        await loadImage(`/get_auto_curve_image/${dataId}/${slice}`, $imgTarget);
+        await loadImage(`/get_curve_image/${dataId}/${slice}`, $imgTarget);
       }
 
       await loadImage(`/get_circle_pre_image/${dataId}/${slice}`, $imgPreCircle);

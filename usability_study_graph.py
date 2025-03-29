@@ -10,11 +10,11 @@ plt.rcParams["font.size"] = 16
 
 # Define colors for response categories
 colors = {
-    "Strongly Disagree": "#5e2b74",
-    "Disagree": "#c39bc6",
-    "Neutral": "#6f6f6f",
-    "Agree": "#8acb97",
-    "Strongly Agree": "#0ca14b",
+    "Strongly Disagree": "#5B2A86",
+    "Disagree": "#7268A6",
+    "Neutral": "#86A3C3",
+    "Agree": "#9AC6C5",
+    "Strongly Agree": "#A5E6BA",
 }
 
 plt.rcParams["text.usetex"] = False

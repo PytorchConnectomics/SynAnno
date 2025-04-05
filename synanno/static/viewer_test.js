@@ -45,6 +45,11 @@ window.onload = async () => {
                     window.shark.render();
                 }
 
+                // waite 5 seconds
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                fadeNeuronColors(window.shark, distinct_neuron); // Start fading colors
+
             } catch (error) {
                 console.error("Error reading SWC files:", error);
             }
@@ -220,8 +225,12 @@ function adjustCameraForNeuron(viewer, neuronName) {
 
     let targetPosition = center;
 
-    // Set camera position
-    viewer.camera.position.set(targetPosition.x, targetPosition.y, targetPosition.z + distance * 0.5);
+    // Set camera position with a tilt
+    viewer.camera.position.set(
+        targetPosition.x + distance * 0.7, // Slight horizontal offset
+        targetPosition.y + distance * 0.2, // Slight vertical offset
+        targetPosition.z + distance * 2.5 // Further back
+    );
     viewer.camera.lookAt(targetPosition);
 
     // Ensure trackControls (OrbitUnlimitedControls) is used correctly
@@ -247,16 +256,25 @@ function adjustCameraForNeuron(viewer, neuronName) {
 }
 
 function addLights(scene) {
-    if (!scene.getObjectByName("ambient-light")) {
-        const ambientLight = new THREE.AmbientLight(Color.white, 1.0);
-        ambientLight.name = "ambient-light";
-        scene.add(ambientLight);
-    }
-    if (!scene.getObjectByName("directional-light")) {
-        const directionalLight = new THREE.DirectionalLight(Color.grey, 0.4);
-        directionalLight.name = "directional-light";
-        scene.add(directionalLight);
-    }
+    // Remove existing lights to avoid conflicts
+    const existingAmbientLight = scene.getObjectByName("ambient-light");
+    const existingDirectionalLight = scene.getObjectByName("directional-light");
+    if (existingAmbientLight) scene.remove(existingAmbientLight);
+    if (existingDirectionalLight) scene.remove(existingDirectionalLight);
+
+    // Add a dark background
+    //scene.background = new THREE.Color(0x000000); // Black background
+
+    // Add brighter ambient light
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.5); // Bright white light
+    ambientLight.name = "ambient-light";
+    scene.add(ambientLight);
+
+    // Add a stronger directional light
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0); // Bright white light
+    directionalLight.position.set(10, 10, 10); // Position the light
+    directionalLight.name = "directional-light";
+    scene.add(directionalLight);
 }
 
 window.onWindowResize = function(sharkContainerMinimap) {
@@ -282,4 +300,147 @@ window.onWindowResize = function(sharkContainerMinimap) {
     }
 
     window.window.shark.render();
+}
+
+function fadeNeuronColors(viewer, distinctNeuronName, duration = 6000) {
+    const startTime = performance.now();
+
+    // Cubic easing function for smoother transitions
+    const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+
+    const fadeStep = () => {
+        const currentTime = performance.now();
+        const elapsedTime = currentTime - startTime;
+        const rawProgress = Math.min(elapsedTime / duration, 1);
+        const progress = easeOutCubic(rawProgress) * 0.9; // Scale progress to reduce initial intensity
+
+        viewer.scene.children.forEach((object) => {
+            if (object.isObject3D && object.name !== distinctNeuronName) {
+                const skeletonVertex = object.children.find(
+                    (child) => child.name === "skeleton-vertex"
+                );
+                const skeletonEdge = object.children.find(
+                    (child) => child.name === "skeleton-edge"
+                );
+
+                if (
+                    skeletonVertex &&
+                    skeletonVertex.geometry &&
+                    skeletonEdge &&
+                    skeletonEdge.geometry
+                ) {
+                    const vertexColors = skeletonVertex.geometry.attributes.color.array;
+                    const edgeColors = skeletonEdge.geometry.attributes.color.array;
+
+                    for (let i = 0; i < vertexColors.length; i += 3) {
+                        const color = new THREE.Color(
+                            vertexColors[i],
+                            vertexColors[i + 1],
+                            vertexColors[i + 2]
+                        );
+                        color.lerp(new THREE.Color(1, 1, 1), progress); // Blend towards white
+                        vertexColors[i] = color.r;
+                        vertexColors[i + 1] = color.g;
+                        vertexColors[i + 2] = color.b;
+                    }
+
+                    for (let i = 0; i < edgeColors.length; i += 3) {
+                        const color = new THREE.Color(
+                            edgeColors[i],
+                            edgeColors[i + 1],
+                            edgeColors[i + 2]
+                        );
+                        color.lerp(new THREE.Color(1, 1, 1), progress); // Blend towards white
+                        edgeColors[i] = color.r;
+                        edgeColors[i + 1] = color.g;
+                        edgeColors[i + 2] = color.b;
+                    }
+
+                    skeletonVertex.geometry.attributes.color.needsUpdate = true;
+                    skeletonEdge.geometry.attributes.color.needsUpdate = true;
+                }
+            }
+        });
+
+        viewer.render();
+
+        if (rawProgress < 1) {
+            requestAnimationFrame(fadeStep);
+        } else {
+            console.log("Fade-out complete. Adjusting camera...");
+            zoomAndTiltCamera(viewer, distinctNeuronName); // Trigger camera adjustment
+        }
+    };
+
+    fadeStep();
+}
+
+function zoomAndTiltCamera(viewer, neuronName, duration = 8000) {
+    if (!viewer || !viewer.camera || !viewer.scene) {
+        console.error("Viewer or camera not initialized yet.");
+        return;
+    }
+
+    const neuron = viewer.scene.getObjectByName(neuronName);
+    if (!neuron) {
+        console.error(`Neuron object '${neuronName}' not found.`);
+        return;
+    }
+
+    const boundingBox = new THREE.Box3().setFromObject(neuron);
+    const center = boundingBox.getCenter(new THREE.Vector3());
+    const size = boundingBox.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+
+    const fov = viewer.camera.fov * (Math.PI / 180);
+    const targetDistance = (maxDim / 2) / Math.tan(fov / 2) * 0.5; // Zoom in closer
+
+    const startPosition = viewer.camera.position.clone();
+    const startTarget = viewer.trackControls ? viewer.trackControls.target.clone() : center.clone();
+
+    // Calculate target position in spherical coordinates for rotation
+    const spherical = new THREE.Spherical();
+    spherical.setFromVector3(startPosition.clone().sub(center));
+    const targetSpherical = new THREE.Spherical(
+        targetDistance * 1.2, // Closer zoom
+        spherical.phi + Math.PI / 4, // Tilt up
+        spherical.theta - Math.PI / 4 // Rotate around
+    );
+    const targetPosition = new THREE.Vector3().setFromSpherical(targetSpherical).add(center);
+
+    const startTime = performance.now();
+
+    const animate = () => {
+        const currentTime = performance.now();
+        const elapsedTime = currentTime - startTime;
+        const progress = Math.min(elapsedTime / duration, 1);
+
+        // Interpolate camera position
+        viewer.camera.position.lerpVectors(startPosition, targetPosition, progress);
+
+        // Interpolate camera target
+        if (viewer.trackControls) {
+            const interpolatedTarget = new THREE.Vector3().lerpVectors(
+                startTarget,
+                center,
+                progress
+            );
+            viewer.trackControls.target.copy(interpolatedTarget);
+            viewer.trackControls.update();
+        }
+
+        // Update camera properties
+        viewer.camera.lookAt(center);
+        viewer.camera.updateProjectionMatrix();
+
+        viewer.render();
+
+        if (progress < 1) {
+            requestAnimationFrame(animate);
+        } else {
+            console.log("Smooth zoom and tilt complete.");
+        }
+    };
+
+    animate();
 }

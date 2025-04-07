@@ -3,6 +3,7 @@ import io
 import json
 import logging
 import zipfile
+from typing import Optional
 
 from flask import (
     Blueprint,
@@ -131,7 +132,7 @@ def create_zip_with_masks() -> io.BytesIO:
     return zip_buffer
 
 
-def get_metadata_for_image_index(img_index: str) -> dict | None:
+def get_metadata_for_image_index(img_index: str) -> Optional[dict]:
     """Retrieve metadata for a given image index."""
     img_index_int = int(img_index)  # noqa: F841
     if current_app.df_metadata.query("Image_Index == @img_index_int").to_dict(

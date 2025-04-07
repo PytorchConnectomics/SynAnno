@@ -41,8 +41,8 @@ window.onload = async () => {
             processSwcFile(swcTxt, sectionArrays, activeNeuronSection, activeSynapseIDs);
 
             if (synapsePointCloud) {
-                updateLoadingBar(parseInt(synapsePointCloud.length / 3), activeSynapseIDs);
                 processSynapseCloudData(synapsePointCloud, maxVolumeSize, activeSynapseIDs, initialLoad);
+                updateLoadingBar(parseInt(synapsePointCloud.length / 3), activeSynapseIDs);
             } else {
                 console.error("No synapse cloud path provided.");
             }
@@ -176,7 +176,7 @@ function processSynapseCloudData(data, maxVolumeSize, activeSynapseIDs, initialL
         colors[i * 4 + 3] = 1.0;
 
         if (activeSynapseIDs.length > 0) {
-            sizes[i] = activeSynapseIDs.includes(i) ? maxVolumeSize : 10;
+            sizes[i] = activeSynapseIDs.includes(i) ? maxVolumeSize*maxVolumeSize : 10;
 
             alphas[i]  = window.synapseColors[i] === "green" || window.synapseColors[i] === "red" ? 0.8 : 0.4;
             alphas[i] = activeSynapseIDs.includes(i) ? 1.0 : 0.4;
@@ -613,16 +613,17 @@ function createMetadataElement(metadata, colors, activeNeuronSection) {
 }
 
 
-function updateLoadingBar(synapse_count, activeSynapseIDs) {
-    if (!Array.isArray(activeSynapseIDs)) {
-        console.error("activeSynapseIDs is not an array!", activeSynapseIDs);
-        activeSynapseIDs = [];
+function updateLoadingBar(synapse_count) {
+    if (!window.synapseColors || typeof window.synapseColors !== "object") {
+        console.error("synapseColors is not defined or invalid!", window.synapseColors);
+        return;
     }
 
-    if (activeSynapseIDs.length === 0) return;
+    const highlightedSynapseCount = Object.values(window.synapseColors).filter(
+        (color) => color === "green" || color === "red"
+    ).length;
 
-    const lowestDisplayedSectionIdx = Math.min(...activeSynapseIDs);
-    const progressPercent = (lowestDisplayedSectionIdx / synapse_count) * 100;
+    const progressPercent = (highlightedSynapseCount / synapse_count) * 100;
 
     document.getElementById("loading_progress").style.width = `${progressPercent}%`;
 }

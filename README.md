@@ -1,15 +1,15 @@
 # SynAnno
 
 ## Live Demo
-A demo is available [here](http://16.170.214.77/)
+A demo is available [here](http://16.170.214.77/reset)
 
 ## Table of Contents
 
-SynAnno is a tool designed for proofreading and correcting synaptic polarity annotation from electron microscopy (EM) volumes - specifically the [H01](https://h01-release.storage.googleapis.com/landing.html) dataset. SynAnno is aimed for integration with CAVE (Connectome Annotation Versioning Engine).
+SynAnno is a tool designed for proofreading and correcting synaptic annotations from electron microscopy (EM) volumes - specifically the [H01](https://h01-release.storage.googleapis.com/landing.html) dataset. SynAnno is aimed for integration with CAVE (Connectome Annotation Versioning Engine).
 
 - [Key Components and Subjects](#key-components-and-subjects)
   - [H01](#h01)
-  - [Synaptic Polarity Annotation](#synaptic-polarity-annotation)
+  - [Direction of information flow](#direction-of-information-flow)
   - [CAVE (Connectome Annotation Versioning Engine)](#cave-connectome-annotation-versioning-engine)
   - [Neuroglancer Integration](#neuroglancer-integration)
   - [Cloud Volume](#cloud-volume)
@@ -24,10 +24,10 @@ SynAnno is a tool designed for proofreading and correcting synaptic polarity ann
 - [Navigating SynAnno](#navigating-synanno)
   - [Landing Page](#landing-page)
   - [Open Data](#open-data)
-  - [Annotate](#annotate)
-  - [Categorize](#categorize)
+  - [Error Detection](#error-detection)
+  - [Error Categorization](#error-categorization)
   - [Export Annotations](#export-annotations)
-  - [Draw](#draw)
+  - [Error Correction](#error-correction)
   - [Export Masks](#export-masks)
 - [Contributing](#contributing)
 
@@ -37,9 +37,9 @@ SynAnno is a tool designed for proofreading and correcting synaptic polarity ann
 
 Harvard's Lichtman laboratory and Google's Connectomics team released the [H01](https://h01-release.storage.googleapis.com/landing.html) dataset, a 1.4 petabyte view of human brain tissue via nanoscale EM. It covers a volume of ~1mm³, featuring tens of thousands of neurons, millions of neuron fragments, 183 million annotated synapses, and 100 proofread cells.
 
-### Synaptic Polarity Annotation
+### Direction of information flow
 
-Synaptic polarity refers to the directionality of information flow between two neurons at a synapse, the junction where they communicate. In this context, we classify synapses as pre-synaptic (information senders) or post-synaptic (information receivers). A pre-synaptic neuron sends neurotransmitter signals across the synaptic cleft to the post-synaptic neuron, which receives these signals and processes the information. While the segmentation masks highlight the synaptic clefts between neurons, the pre-/post-synaptic IDs are coordinates placed into the associated neurons, identifying the specific sender and receiver. Identifying these key elements is crucial for creating accurate structural and functional neural maps. SynAnno assists in proofreading, correcting, and identifying these segmentation masks and synaptic IDs.
+We classify synapses as pre-synaptic (information senders) or post-synaptic (information receivers). A pre-synaptic neuron sends neurotransmitter signals across the synaptic cleft to the post-synaptic neuron, which receives these signals and processes the information. While the segmentation masks highlight the synaptic clefts between neurons, the pre-/post-synaptic IDs are coordinates placed into the associated neurons, identifying the specific sender and receiver. Identifying these key elements is crucial for creating accurate structural and functional neural maps. SynAnno assists in proofreading, correcting, and identifying these segmentation masks and synaptic IDs.
 
 ### CAVE (Connectome Annotation Versioning Engine)
 [CAVE](https://www.biorxiv.org/content/10.1101/2023.07.26.550598v1) is a computational infrastructure to host petabyte connectomes for distributed proofreading and dynamic spatial annotation. Soon, we will provide support to use SynAnno together with CAVE-hosted datasets.
@@ -118,13 +118,13 @@ Repository includes a Dockerfile that enables you to build and run the applicati
 3. **Build the Docker image**: Build the Docker image using the provided Dockerfile.
 
    ```bash
-   docker build -t synanno .
+   docker build  -t synanno/uwsgi -f Dockerfile_uwsgi .
    ```
 
 4. **Run the Docker container**: Run the Docker container using the image you just built.
 
    ```bash
-   docker run -d --name synanno -p 80:80 -p 9015:9015 synanno
+   docker run -d --name synanno -p 80:80 -p 9015:9015 synanno/uwsgi
    ```
 
 5. **Access the application**: Open a web browser and go to `http://localhost` to access the application running in the Docker container.
@@ -230,7 +230,7 @@ python run.py
 
 - URL: http://127.0.0.1:5000/
 
-On the landing page you can choose between two workflows: "Revise Dataset" and "Proofread Annotation". The former allows you to redraw segmentation masks, assign pre-/post-synaptic IDs, and add missed false negatives. The latter allows you to review existing segmentations and pre-/post-synaptic IDs, mark incorrect instances, and assign error descriptions to those instances. After categorizing all erroneous instances in the "Proofread Annotation" workflow, you can automatically proceed with the "Revise Dataset" workflow.
+On the landing page you can choose between two workflows: "Error Correction" and "Error Detection". The former allows you to redraw segmentation masks, assign pre-/post-synaptic IDs, and add missed false negatives. The latter allows you to review existing segmentations and pre-/post-synaptic IDs, mark incorrect instances, and assign error descriptions to those instances. After categorizing all erroneous instances in the "Error Detection" workflow, you can automatically proceed with the "Error Correction" workflow.
 
 Each page has three buttons: "Home", "Question Mark", and "Menu". The first returns you to the landing page. The second provides an explanation of the current view and its functionality. The third provides general information and contact details.
 
@@ -240,7 +240,7 @@ Each page has three buttons: "Home", "Question Mark", and "Menu". The first retu
 
 - URL: http://127.0.0.1:5000/open_data
 
-This view is identical for both workflows. You'll be prompted to provide a source bucket and target bucket (both in Neuroglancer's precomputed format), a URL to a materialization table, bucket secrets (defaults to ~/.cloudvolume/secrets), and optionally a JSON file containing instance metadata. The JSON file can be used to save and restore sessions or start a "Revise Dataset" workflow with information from a "Proofread Annotation" workflow. If you wish to use "View-Centric" neuron selection in a "Proofread Annotation" workflow, you must also provide a neuropil segmentation bucket in Neuroglancer's precomputed format as well.
+This view is identical for both workflows. You'll be prompted to provide a source bucket and target bucket (both in Neuroglancer's precomputed format), a URL to a materialization table, bucket secrets (defaults to ~/.cloudvolume/secrets), and optionally a JSON file containing instance metadata. The JSON file can be used to save and restore sessions or start a "Error Correction" workflow with information from a "Error Detection" workflow. If you wish to use "View-Centric" neuron selection in a "Error Detection" workflow, you must also provide a neuropil segmentation bucket in Neuroglancer's precomputed format as well.
 
 Opening the "Volume Parameters" tab, you will have two different options for the manner in which to select your instances, "View Centric" and "Neuron Centric".
 
@@ -258,12 +258,12 @@ If you choose the 'Neuron Centric' approach. You'll need to specify the coordina
 
 After providing the required information, click 'Submit' to prepare the data for the first page or revision. Then, click "Start Data Proofread"/"Start Drawing" to begin proofreading or revision.
 
-### Annotate
+### Error Detection
 
 - Workflow: Proofreading
 - URL: http://127.0.0.1:5000/annotation
 
-Clicking `Start Data Proofread` directs you to a grid view of instances. Instance status is indicated by color: correct (green), incorrect (red), unsure (gray). Clicking on an instance changes its status: once for incorrect, twice for unsure, three times for correct.
+Clicking `Start Data Proofread` directs you to a grid view of instances. Instance status is indicated by color: correct (green), incorrect (red), unsure (yellow). Clicking on an instance changes its status: once for incorrect, twice for unsure, three times for correct.
 
 [![Grid View][3]][3]
 
@@ -277,7 +277,7 @@ Click `View in NG` to view the instance in Neuroglancer.
 
 After evaluating the segmentation masks, click `->` to load and evaluate the page. When done, click `Error Processing` on the last proofreading page.
 
-### Categorize
+### Error Categorization
 
 - Workflow: Proofreading
 - URL: http://127.0.0.1:5000/categorize
@@ -295,11 +295,11 @@ If you marked instances as false positives, you'll be asked if they should be di
 - Workflow: Proofreading
 - URL: http://127.0.0.1:5000/export_annotate
 
-After clicking `Submit and finish`, you can download the JSON file containing instance metadata by clicking `Download JSON`, redraw masks with the `Revise Dataset` workflow by clicking `Redraw Masks`, or start a new process by clicking `Start New Process`.
+After clicking `Submit and finish`, you can download the JSON file containing instance metadata by clicking `Download JSON`, redraw masks with the `Error Correction` workflow by clicking `Redraw Masks`, or start a new process by clicking `Start New Process`.
 
 [![Export Annotations][8]][8]
 
-### Draw
+### Error Correction
 
 - Revision Workflow
 - http://127.0.0.1:5000/draw

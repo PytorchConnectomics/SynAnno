@@ -374,6 +374,8 @@ def upload_file():
     """
     current_app.view_style = request.form.get("view_style")
 
+    current_app.tiles_per_page = int(request.form.get("tiles_per_page"))
+
     save_coordinate_order_and_crop_size(request.form)
 
     source_url = request.form.get("source_url")

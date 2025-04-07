@@ -46,6 +46,7 @@ $(document).ready(function () {
   });
 
   $('[data-bs-target="#neuroModel"]').on('click', function () {
+    $('#synapse-id-annotation').text(dataId);
     toggleInert($detailsModal, true);
     $neuroModel.modal('show');
   });
@@ -120,6 +121,13 @@ $(document).ready(function () {
     isModalScrollingLocked = true;
 
     const newSlice = currentSlice + (event.originalEvent.deltaY > 0 ? 1 : -1);
+
+    // Restrict scrolling beyond available slices
+    if (newSlice < dataJson.Min_Slice || newSlice > dataJson.Max_Slice) {
+      isModalScrollingLocked = false;
+      return;
+    }
+
     try {
       const exists = await $.get(dataJson.Error_Description === "False Negative" ?
         `/source_img_exists/${dataId}/${newSlice}` :

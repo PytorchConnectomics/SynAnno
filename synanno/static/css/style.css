@@ -1,40 +1,32 @@
 #base-content-container {
-  max-height: 80vh;
+  max-height: 100vh;
   max-width: 100vw;
 }
 
 #image-tile-container {
-  max-height: 70vh;
-  max-width: 70vw;
-}
-
-.correct {
-  background: #abebc6;
+  min-width: 60vw;
+  width: fit-content;
+  margin: 0 auto;
 }
 
 .annotate-item {
-  width: 16.5%;
   text-align: center;
 }
 
-.card>.correct {
+.correct,
+.card > .correct {
   background: #abebc6;
 }
 
-.incorrect {
-  background: #f08080;
-}
 
+.incorrect,
 .card>.incorrect {
   background: #f08080;
 }
 
-.unsure {
-  background: #d7dbdd;
-}
-
+.unsure,
 .card>.unsure {
-  background: #d7dbdd;
+  background: #f6f699;
 }
 
 .card {
@@ -47,13 +39,13 @@
 }
 
 .legend {
-  position: sticky;
-  top: 0;
-  z-index: 900;
+  width: 100%;
+  flex-wrap: wrap;
   display: flex;
   gap: 1rem;
   background-color: white;
-  padding: 1rem;
+  padding: 0.5rem;
+  box-sizing: border-box;
 }
 
 .legend-item {
@@ -71,10 +63,7 @@
 .card-body-proof-read {
   max-height: 23%;
   max-width: 23%;
-  margin-left: 1%;
-  margin-right: 1%;
-  margin-top: 0.5%;
-  margin-bottom: 0.5%;
+  margin: 0.5% 1%;
 }
 
 .card-block>.main-image-categorize>.img_categorize {
@@ -94,8 +83,11 @@
 
 .outsideWrapper {
   margin: auto;
-  width: 384px;
-  height: 384px;
+  width: 452px;
+  height: 452px;
+  background-color: #fff;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .insideWrapper {
@@ -108,8 +100,8 @@
   width: 100%;
   height: 100%;
   position: absolute;
-  top: 0px;
-  left: 0px;
+  top: 0;
+  left: 0;
   pointer-events: none;
   z-index: 0;
 }
@@ -120,6 +112,60 @@
   position: absolute;
   top: 0;
   left: 0;
+}
+
+/* drawing modal content */
+.modal-content {
+  background: #ffffff;
+  border-radius: 1rem;
+  padding: 0.5rem;
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.modal-dialog {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.modal-header,
+.card-header {
+  background: #f8f9fa;
+  border-bottom: none !important;
+  border-top-left-radius: 1rem;
+  border-top-right-radius: 1rem;
+  border-bottom-left-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+  box-shadow: none;
+}
+
+.btn {
+  transition: all 0.2s ease-in-out;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.modal-footer {
+  padding: 0rem 1rem;
+  max-height: 40px;
+  border-top: none;
+}
+
+#centralBadge {
+  z-index: 1; /* Ensure it's above the image, but below the modal header */
+  pointer-events: none; /* Prevent interaction issues */
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+#neuron-id-draw .badge.disabled {
+  opacity: 0.8;
+  cursor: default;
+  pointer-events: none;
+  padding: 10px;
 }
 
 /* css for the open data form */
@@ -182,11 +228,11 @@
   /* Initially hidden */
   position: relative;
   /* Default inside flex container */
-  width: 33vw;
+  width: 40vw;
   /* Always take 33% of the screen width */
-  height: 90vh;
+  height: 91vh;
   /* Always take 80% of the screen height */
-  margin-top: 5px;
+  margin-top: 4px;
   background: #fff;
   border: 1px solid #ccc;
   box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
@@ -277,4 +323,18 @@
 
 .toggle-btn:hover {
   background: #888;
+}
+
+.metadata-overlay {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: rgba(0, 0, 0, 0.55);
+  color: white;
+  font-size: 0.65rem;
+  padding: 2px 4px;
+  border-radius: 3px;
+  z-index: 2;
+  font-family: monospace;
+  pointer-events: none;
 }

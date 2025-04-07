@@ -6,8 +6,12 @@
   tabindex="-1"
   inert
 >
-  <div class="modal-dialog modal-dialog-centered modal-xl">
-    <div class="modal-content">
+<div class="modal-dialog modal-xl modal-dialog-centered">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="ps-1">Synapse ID: <span id="synapse-id-annotation" style="color:rgb(149, 152, 157); font-weight: bold;"></span></span>
+      <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
       <div class="modal-body">
         <div class="row justify-content-center">
           <iframe
@@ -17,7 +21,7 @@
             title="Neuroglancer"
           ></iframe>
         </div>
-        <div class="modal-footer">
+        <div class="modal-footer mt-2">
           <button
             class="btn btn-secondary"
             data-bs-target="#detailsModal"

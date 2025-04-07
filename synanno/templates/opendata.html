@@ -216,6 +216,15 @@
 
                 <div class="mb-1"></div>
 
+                <label for="tiles_per_page" class="form-label" style="margin-right: 132px; display: inline-block;">Number of Tiles</label>
+                <select id="tiles_per_page" name="tiles_per_page" class="form-select" style="width: auto; display: inline-block;">
+                  <option value="6">6</option>
+                  <option value="12" selected>12</option>
+                  <option value="24">24</option>
+                </select>
+
+                <div class="mb-1"></div>
+
                 <label for="formGroupExampleInput" class="form-label" style="margin-right: 50px; display: inline-block;">Instance crop size (in pixel)</label>
                 <input class="form-control" type="number" id="cropsize_x" placeholder="256" name="crop_size_c0" value="256" style="width: auto; display: inline-block;" />
                 <input class="form-control" type="number" id="cropsize_y" placeholder="256" name="crop_size_c1" value="256" style="width: auto; display: inline-block;"/>
@@ -247,10 +256,10 @@
             id="neuroglancerModal"
             tabindex="-1"
           >
-            <div class="modal-dialog modal-xl">
+            <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content">
-              <div class="card-header text-center d-flex justify-content-center align-items-center">
-                <span class="ps-1">Neuron ID: <span id="neuron-id-open"></span></span>
+              <div class="modal-header">
+                <span class="ps-1">Neuron ID: <span id="neuron-id-open" style="color:rgb(149, 152, 157); font-weight: bold;">No Neuron Selected</span></span>
                 <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
             <div class="modal-body">

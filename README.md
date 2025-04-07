@@ -1,5 +1,10 @@
 # SynAnno
 
+## Live Demo
+A demo is available [here](http://16.170.214.77/)
+
+## Table of Contents
+
 SynAnno is a tool designed for proofreading and correcting synaptic polarity annotation from electron microscopy (EM) volumes - specifically the [H01](https://h01-release.storage.googleapis.com/landing.html) dataset. SynAnno is aimed for integration with CAVE (Connectome Annotation Versioning Engine).
 
 - [Key Components and Subjects](#key-components-and-subjects)

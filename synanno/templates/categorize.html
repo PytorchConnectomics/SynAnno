@@ -51,6 +51,10 @@
               data-current-slice="{{image.Middle_Slice}}"
               alt="Source Image"
             />
+                <!-- Metadata overlay -->
+                <div class="metadata-overlay" style="color: #FF5733;">
+                  ID: {{ image.Image_Index }}<br>
+                </div>
           </div>
         </div>
         <form>
@@ -96,7 +100,7 @@
               class="form-check-label"
               for="polaritySwitch_{{image.Page}}_{{image.Image_Index}}"
             >
-              Polarity Switch
+              Imaging Artifact
             </label>
           </div>
           <div

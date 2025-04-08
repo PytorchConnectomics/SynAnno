@@ -53,5 +53,6 @@ datasets/
 flask_session
 synAnno.json
 secrets/
+tmp/
 
 .vscode/

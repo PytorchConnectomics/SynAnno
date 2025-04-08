@@ -12,8 +12,9 @@ $(document).ready(() => {
   let rect_curve, rect_circle;
   let draw_mask = false, split_mask = false;
   let points = [], pointsQBez = [];
-  const thickness = 15;
+  const thickness = 10;
   const pink = "rgba(255, 0, 255, 0.7)";
+  const turquoise = "rgba(21, 229, 239, 0.92)";
   let page, data_id, label;
   let pre_CRD = false, post_CRD = false;
   let x_syn_crd = null, y_syn_crd = null;
@@ -39,16 +40,17 @@ $(document).ready(() => {
       type: 'HEAD',
       success: function (data, textStatus, xhr) {
         if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
+          console.log("Auto curve image exists");
           $(canvas_target_image_curve).attr("src", "/get_auto_curve_image/" + data_id + "/" + middle_slice);
           $(canvas_target_image_curve).removeClass('d-none');
         }
         else if (xhr.status === 204) {  // Only execute if status is 404 (image does not exist)
           $.ajax({
-            url: "/get_auto_curve_image/" + data_id + "/" + middle_slice,
+            url: "/get_curve_image/" + data_id + "/" + middle_slice,
             type: 'HEAD',
             success: function (data, textStatus, xhr) {
               if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
-                $(canvas_target_image_curve).attr("src", "/get_auto_curve_image/" + data_id + "/" + middle_slice);
+                $(canvas_target_image_curve).attr("src", "/get_curve_image/" + data_id + "/" + middle_slice);
                 $(canvas_target_image_curve).removeClass('d-none');
               }
             }
@@ -96,10 +98,10 @@ $(document).ready(() => {
 
   $('[id^="drawButton-"]').click(async function () {
     [page, data_id, label] = $(this).attr("id").replace(/drawButton-/, "").split("-");
-    $("#canvasButtonDrawMask").text("Draw Mask").prop("disabled", false);
-    $("#canvasButtonPreCRD").text("Pre-Synaptic CRD").prop("disabled", false);
-    $("#canvasButtonPostCRD").text("Post-Synaptic CRD").prop("disabled", false);
-    $("#canvasButtonAuto, #rangeSlices").prop("disabled", false);
+    $("#canvasButtonDrawMask").html('<i class="bi bi-pencil"></i>')
+    .attr("title", "Draw Mask").prop("disabled", false);
+    $("#canvasButtonPreCRD").prop("disabled", false);
+    $("#canvasButtonPostCRD").prop("disabled", false);
     $("#canvasButtonFill, #canvasButtonRevise, #canvasButtonSave").prop("disabled", true);
     ctx_curve.restore();
     clear_canvas(ctx_curve, canvas_curve);
@@ -194,41 +196,38 @@ $(document).ready(() => {
       ctx_circle_pre.arc(x_syn_crd, y_syn_crd, 10, 0, 2 * Math.PI);
       ctx_circle_pre.fill();
 
-      // Add a text label with improved readability
+      // Add a text label with modern styling
       const text = "Pre";
       const textX = x_syn_crd;
-      const textY = y_syn_crd - 20;
+      const textY = y_syn_crd - 24;
 
-      // Draw background with stronger opacity for better contrast
-      ctx_circle_pre.fillStyle = "rgba(0, 0, 0, 0.9)";
-      ctx_circle_pre.fillRect(
-        textX - 24,  // Fixed width for consistency
-        textY - 16,
-        48,          // Fixed width for consistency
-        22           // Slightly taller
-      );
+      // Draw rounded background with semi-transparent dark tone
+      ctx_circle_pre.fillStyle = "rgba(33, 37, 41, 0.85)"; // Bootstrap dark (same as Post)
+      ctx_circle_pre.beginPath();
+      ctx_circle_pre.roundRect(textX - 30, textY - 16, 60, 28, 6);
+      ctx_circle_pre.fill();
 
-      // Draw text with brighter green for better visibility
-      ctx_circle_pre.fillStyle = "rgb(150, 255, 150)"; // Lighter green for better contrast
-      ctx_circle_pre.font = "bold 16px Arial";
+      // Optional: soft shadow for modern depth
+      ctx_circle_pre.shadowColor = "rgba(0, 0, 0, 0.3)";
+      ctx_circle_pre.shadowBlur = 4;
+
+      // Draw text with modern font and light green color
+      ctx_circle_pre.fillStyle = "#b8fcb8"; // Light green, soft tone
+      ctx_circle_pre.font = "600 14px 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif";
       ctx_circle_pre.textAlign = "center";
-      ctx_circle_pre.fillText(text, textX, textY);
+      ctx_circle_pre.textBaseline = "middle";
+      ctx_circle_pre.fillText(text, textX, textY - 1); // 1px up
 
-      // Draw border around text background for additional contrast
-      ctx_circle_pre.strokeStyle = "white";
-      ctx_circle_pre.lineWidth = 1;
-      ctx_circle_pre.strokeRect(
-        textX - 24,
-        textY - 16,
-        48,
-        22
-      );
+      // Reset shadow after use
+      ctx_circle_pre.shadowColor = "transparent";
+      ctx_circle_pre.shadowBlur = 0;
 
       save_canvas(canvas_circle_pre, "circlePre");
       $("#canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonDrawMask, #canvasButtonAuto").prop("disabled", false);
       pre_CRD = false;
     }
   });
+
 
   $("#canvasButtonPostCRD").on("click", () => {
     ctx_circle_post.restore();
@@ -273,41 +272,38 @@ $(document).ready(() => {
       ctx_circle_post.arc(x_syn_crd, y_syn_crd, 10, 0, 2 * Math.PI);
       ctx_circle_post.fill();
 
-      // Add a text label with improved readability
+      // Add a text label with modern styling
       const text = "Post";
       const textX = x_syn_crd;
-      const textY = y_syn_crd - 20;
+      const textY = y_syn_crd - 24;
 
-      // Draw background with stronger opacity for better contrast
-      ctx_circle_post.fillStyle = "rgba(0, 0, 0, 0.9)";
-      ctx_circle_post.fillRect(
-        textX - 24,  // Wider background
-        textY - 16,
-        48,          // Fixed width for consistency
-        22           // Slightly taller
-      );
+      // Draw rounded background with semi-transparent dark tone
+      ctx_circle_post.fillStyle = "rgba(33, 37, 41, 0.85)";
+      ctx_circle_post.beginPath();
+      ctx_circle_post.roundRect(textX - 30, textY - 16, 60, 28, 6);
+      ctx_circle_post.fill();
 
-      // Draw text with brighter blue for better visibility
-      ctx_circle_post.fillStyle = "rgb(100, 200, 255)"; // Lighter blue for better contrast
-      ctx_circle_post.font = "bold 16px Arial";
+      // Optional: subtle shadow for depth
+      ctx_circle_post.shadowColor = "rgba(0, 0, 0, 0.3)";
+      ctx_circle_post.shadowBlur = 4;
+
+      // Draw text with clean modern font and slightly lighter blue
+      ctx_circle_post.fillStyle = "#d0ebff"; // Light Bootstrap blue-ish
+      ctx_circle_post.font = "600 14px 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif";
       ctx_circle_post.textAlign = "center";
-      ctx_circle_post.fillText(text, textX, textY);
+      ctx_circle_post.textBaseline = "middle";
+      ctx_circle_post.fillText(text, textX, textY - 1); // nudged up by 1px
 
-      // Draw border around text background for additional contrast
-      ctx_circle_post.strokeStyle = "white";
-      ctx_circle_post.lineWidth = 1;
-      ctx_circle_post.strokeRect(
-        textX - 24,
-        textY - 16,
-        48,
-        22
-      );
+      // Reset shadow after use
+      ctx_circle_post.shadowColor = "transparent";
+      ctx_circle_post.shadowBlur = 0;
 
       save_canvas(canvas_circle_post, "circlePost");
       $("#canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonDrawMask, #canvasButtonAuto").prop("disabled", false);
       post_CRD = false;
     }
   });
+
 
   $("#canvasButtonDrawMask").on("click", () => {
     clear_canvas(ctx_curve, canvas_curve);
@@ -316,7 +312,9 @@ $(document).ready(() => {
     ctx_curve.restore();
     if ($("canvas.curveCanvas").hasClass("d-none")) {
       $("#imgDetails-EM-GT-curve").addClass("d-none");
-      $("#canvasButtonDrawMask").text("Reset");
+      $("#canvasButtonDrawMask")
+  .html('<i class="bi bi-arrow-counterclockwise"></i>')
+  .attr("title", "Reset");
       $("canvas.curveCanvas").removeClass("d-none");
       rect_curve = $("#imgDetails-EM")[0].getBoundingClientRect();
       $("canvas.curveCanvas")[0].width = rect_curve.width;
@@ -326,11 +324,13 @@ $(document).ready(() => {
       $("canvas.circleCanvasPre").css("z-index", 1);
       split_mask = false;
       draw_mask = true;
-      $("#canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonAuto, #rangeSlices").prop("disabled", true);
+      $("#canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonAuto").prop("disabled", true);
     } else {
       $("canvas.curveCanvas").addClass("d-none");
-      $("#canvasButtonDrawMask").text("Draw Mask");
-      $("#canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonAuto, #rangeSlices").prop("disabled", false);
+      $("#canvasButtonDrawMask")
+  .html('<i class="bi bi-pencil"></i>')
+  .attr("title", "Draw Mask");
+      $("#canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonAuto").prop("disabled", false);
       $("#canvasButtonFill, #canvasButtonRevise, #canvasButtonSave").prop("disabled", true);
       points = [];
       pointsQBez = [];
@@ -366,7 +366,7 @@ $(document).ready(() => {
 
   async function save_canvas(canvas, canvas_type) {
     const dataURL = canvas.toDataURL();
-    const viewed_instance_slice = parseInt($("#rangeSlices").data("viewed_instance_slice"));
+    const viewedInstanceSlice = parseInt($("#drawModal").data("viewed-instance-slice"));
 
     try {
       const response = await $.ajax({
@@ -376,7 +376,7 @@ $(document).ready(() => {
           imageBase64: dataURL,
           data_id: data_id,
           page: page,
-          viewed_instance_slice: viewed_instance_slice,
+          viewedInstanceSlice: viewedInstanceSlice,
           canvas_type: canvas_type,
         },
       });
@@ -386,17 +386,17 @@ $(document).ready(() => {
 
       if (canvas_type === 'curve') {
         $.ajax({
-          url: "/get_curve_image/" + data_id + "/" + viewed_instance_slice,
+          url: "/get_curve_image/" + data_id + "/" + viewedInstanceSlice,
           type: 'HEAD',
           success: function (data, textStatus, xhr) {
             if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
-              if (viewed_instance_slice === parseInt(data_json.Middle_Slice, 10)) {
-                $(new Image()).attr("src", "/get_curve_image/" + data_id + "/" + viewed_instance_slice).on("load", function () {
+              if (viewedInstanceSlice === parseInt(data_json.Middle_Slice, 10)) {
+                $(new Image()).attr("src", "/get_curve_image/" + data_id + "/" + viewedInstanceSlice).on("load", function () {
                   $(canvas_target_image).attr("src", this.src);
                 });
                 $(canvas_target_image).removeClass('d-none');
               }
-              $("#canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonAuto, #rangeSlices").prop("disabled", false);
+              $("#canvasButtonPreCRD, #canvasButtonPostCRD, #canvasButtonAuto").prop("disabled", false);
               $("#canvasButtonSave, #canvasButtonFill, #canvasButtonRevise").prop("disabled", true);
             }
             else if (xhr.status === 204) {
@@ -414,7 +414,7 @@ $(document).ready(() => {
           data: {
             x: x_syn_crd,
             y: y_syn_crd,
-            z: viewed_instance_slice,
+            z: viewedInstanceSlice,
             data_id: data_id,
             page: page,
             id: id,
@@ -423,14 +423,14 @@ $(document).ready(() => {
 
         if (canvas_type === 'circlePre') {
           $.ajax({
-            url: "/get_circle_pre_image/" + data_id + "/" + viewed_instance_slice,
+            url: "/get_circle_pre_image/" + data_id + "/" + viewedInstanceSlice,
             type: "HEAD",
             success: function (data, textStatus, xhr) {
               if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
-                $(new Image()).attr("src", "/get_circle_pre_image/" + data_id + "/" + viewed_instance_slice).on("load", function () {
+                $(new Image()).attr("src", "/get_circle_pre_image/" + data_id + "/" + viewedInstanceSlice).on("load", function () {
                   $(canvas_target_image).attr("src", this.src);
                 });
-                if (viewed_instance_slice === parseInt(data_json.Middle_Slice, 10)) {
+                if (viewedInstanceSlice === parseInt(data_json.Middle_Slice, 10)) {
                   $(canvas_target_image).removeClass('d-none');
                 } else {
                   $(canvas_target_image).addClass('d-none');
@@ -444,14 +444,14 @@ $(document).ready(() => {
 
         if (canvas_type === 'circlePost') {
           $.ajax({
-            url: "/get_circle_post_image/" + data_id + "/" + viewed_instance_slice,
+            url: "/get_circle_post_image/" + data_id + "/" + viewedInstanceSlice,
             type: "HEAD",
             success: function (data, textStatus, xhr) {
               if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
-                $(new Image()).attr("src", "/get_circle_post_image/" + data_id + "/" + viewed_instance_slice).on("load", function () {
+                $(new Image()).attr("src", "/get_circle_post_image/" + data_id + "/" + viewedInstanceSlice).on("load", function () {
                   $(canvas_target_image).attr("src", this.src);
                 });
-                if (viewed_instance_slice === parseInt(data_json.Middle_Slice, 10)) {
+                if (viewedInstanceSlice === parseInt(data_json.Middle_Slice, 10)) {
                   $(canvas_target_image).removeClass('d-none');
                 } else {
                   $(canvas_target_image).addClass('d-none');
@@ -466,7 +466,7 @@ $(document).ready(() => {
 
       const curve_src = $(`#img-target-curve${base}`).attr('src');
       const custom_mask = curve_src.includes("curve_image");
-      if (!custom_mask && viewed_instance_slice === parseInt(data_json.Middle_Slice, 10)) {
+      if (!custom_mask && viewedInstanceSlice === parseInt(data_json.Middle_Slice, 10)) {
         $(`#img-target-curve${base}`).addClass('d-none');
       }
 
@@ -482,7 +482,7 @@ $(document).ready(() => {
         const pos = getXY(canvas_curve, event, rect_curve);
         const x = pos.x;
         const y = pos.y;
-        ctx_curve.strokeStyle = "#000";
+        ctx_curve.strokeStyle = pink;
         ctx_curve.beginPath();
         ctx_curve.ellipse(x, y, thickness, Math.floor(thickness / 2), 0, 0, Math.PI * 2);
         ctx_curve.stroke();
@@ -494,27 +494,36 @@ $(document).ready(() => {
   $("canvas.curveCanvas").on("click", (e) => {
     if (draw_mask) {
       clear_canvas(ctx_curve, canvas_curve);
-      ctx_curve.beginPath();
       const pos = getXY(canvas_curve, e, rect_curve);
       const x = pos.x;
       const y = pos.y;
       points.push({ x, y });
+
       if (points.length > 2) {
         draw_quad_line(points, 3);
         $("#canvasButtonFill").prop("disabled", false);
       } else if (points.length > 1) {
         ctx_curve.lineWidth = 3;
+        ctx_curve.strokeStyle = pink;
+
+        // Draw line
+        ctx_curve.beginPath();
         ctx_curve.moveTo(points[0].x, points[0].y);
-        ctx_curve.fillStyle = 'red';
-        ctx_curve.fillRect(points[0].x, points[0].y, 4, 4);
-        ctx_curve.fillRect(points[1].x, points[1].y, 4, 4);
-        ctx_curve.fillStyle = 'black';
-        ctx_curve.lineTo(points[0].x, points[0].y);
         ctx_curve.lineTo(points[1].x, points[1].y);
         ctx_curve.stroke();
+
+        // Draw turquoise points as squares (or change to circles if you prefer)
+        ctx_curve.fillStyle = turquoise;
+        ctx_curve.beginPath();
+        ctx_curve.arc(points[0].x, points[0].y, 4, 0, Math.PI * 2);
+        ctx_curve.fill();
+        ctx_curve.beginPath();
+        ctx_curve.arc(points[1].x, points[1].y, 4, 0, Math.PI * 2);
+        ctx_curve.fill();
       }
     }
   });
+
 
   function clear_canvas(ctx, canvas) {
     ctx.beginPath();
@@ -565,40 +574,40 @@ $(document).ready(() => {
       ctx_curve.rect(0, 0, canvas_curve.width, canvas_curve.height);
       ctx_curve.fill();
       ctx_curve.restore();
+
+      // Deactivate buttons after spline is filled
+      $("#canvasButtonFill, #canvasButtonRevise").prop("disabled", true);
     } else {
       console.log("A mask needs at least 3 points");
     }
   }
 
   function draw_quad_line(points, lineWidth = 3, draw_points = true) {
-    ctx_curve.beginPath();
-    ctx_curve.strokeStyle = 'black';
+    ctx_curve.strokeStyle = pink;
     ctx_curve.lineWidth = lineWidth;
+
+    ctx_curve.beginPath();
     ctx_curve.moveTo(points[0].x, points[0].y);
-    if (draw_points) {
-      ctx_curve.fillStyle = 'red';
-      ctx_curve.fillRect(points[0].x, points[0].y, 4, 4);
-      if (points.length < 4) {
-        ctx_curve.fillRect(points[0].x, points[0].y, 4, 4);
-        ctx_curve.fillRect(points[1].x, points[1].y, 4, 4);
-      } else {
-        ctx_curve.fillRect(points[0].x, points[0].y, 4, 4);
-      }
-    }
-    for (i = 1; i < points.length - 2; i++) {
-      var xend = (points[i].x + points[i + 1].x) / 2;
-      var yend = (points[i].y + points[i + 1].y) / 2;
+
+    for (let i = 1; i < points.length - 2; i++) {
+      const xend = (points[i].x + points[i + 1].x) / 2;
+      const yend = (points[i].y + points[i + 1].y) / 2;
       ctx_curve.quadraticCurveTo(points[i].x, points[i].y, xend, yend);
-      if (draw_points) {
-        ctx_curve.fillRect(points[i].x, points[i].y, 4, 4);
-        ctx_curve.fillRect(points[i + 1].x, points[i + 1].y, 4, 4);
+    }
+
+    const i = points.length - 2;
+    ctx_curve.quadraticCurveTo(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
+
+    ctx_curve.stroke();
+
+    if (draw_points) {
+      ctx_curve.fillStyle = turquoise;
+      for (let p of points) {
+        ctx_curve.beginPath();
+        ctx_curve.arc(p.x, p.y, 4, 0, Math.PI * 2);
+        ctx_curve.fill();
       }
     }
-    ctx_curve.quadraticCurveTo(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
-    if (draw_points) {
-      ctx_curve.fillRect(points[i + 1].x, points[i + 1].y, 4, 4);
-    }
-    ctx_curve.stroke();
   }
 
   function _getQBezierValue(t, p1, p2, p3) {

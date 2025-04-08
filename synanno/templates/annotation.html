@@ -15,71 +15,87 @@
 
 {% block content %}
 <div class="container-fluid content-row">
-  <div class="legend col-form-label pt-1 pb-2">
-    <div class="legend-item"><strong>Legend:</strong></div>
-    <div class="legend-item">
-      <span class="color-block" style="background-color: #abebc6"></span>correct
-    </div>
-    <div class="legend-item">
-      <span class="color-block" style="background-color: #f08080"></span>incorrect
-    </div>
-    <div class="legend-item">
-      <span class="color-block" style="background-color: #d7dbdd"></span>unsure
-    </div>
-    <div class="legend-item">
-      <span class="color-block" style="background-color: #00ff00; border-radius: 40%;"></span>Pre-Synapse
-    </div>
-    <div class="legend-item">
-      <span class="color-block" style="background-color: #0000ff; border-radius: 40%;"></span>Post-Synapse
+  <div class="d-flex flex-column justify-content-between">
+    <div class="legend">
+      <div class="legend-item"><strong>Legend:</strong></div>
+      <div class="legend-item">
+        <span class="color-block" style="background-color: #abebc6"></span>correct
+      </div>
+      <div class="legend-item">
+        <span class="color-block" style="background-color: #f08080"></span>incorrect
+      </div>
+      <div class="legend-item">
+        <span class="color-block" style="background-color: #d7dbdd"></span>unsure
+      </div>
+      <div class="legend-item">
+        🟢 Pre-Synapse
+      </div>
+      <div class="legend-item">
+        🔵 Post-Synapse
+      </div>
+
+      <div class="btn-group btn-group-sm ms-auto" role="group" aria-label="Label opacity controls">
+        <span class="me-2 mt-1">Label opacity:</span>
+        <button id="dec-opacity-grid" type="button" class="btn btn-secondary rounded-start" onclick="dec_opacity_grid()">-</button>
+        <span id="value-opacity-grid" type="button" class="btn btn-light" value="{{grid_opacity or '0.5'}}">{{grid_opacity or '0.5'}}</span>
+        <button id="inc-opacity-grid" type="button" class="btn btn-secondary" onclick="add_opacity_grid()">+</button>
+      </div>
     </div>
 
-    <div class="btn-group btn-group-sm ms-auto" role="group" aria-label="Basic example">
-      <span style="margin-right: 8px; margin-top: 2px">Label opacity: </span>
-      <button id="dec-opacity-grid" type="button" class="btn btn-secondary rounded-start" onclick="dec_opacity_grid()">-</button>
-      <span id="value-opacity-grid" type="button" class="btn btn-light" value="{{grid_opacity or '0.5'}}">{{grid_opacity or '0.5'}}</span>
-      <button id="inc-opacity-grid" type="button" class="btn btn-secondary" onclick="add_opacity_grid()">+</button>
+
+    <div class="row justify-content-center card-group flex-grow-1" id="card-group-container">
+      <!-- Placeholder for annotation_image_tiles -->
+    </div>
+
+    <!-- Page Navigation and Error Button -->
+    <div class="d-flex flex-column align-items-center">
+      <!-- Page Navigation -->
+      <div class="position-absolute" style="bottom: 0.5rem; z-index: 1000;">
+
+      <nav aria-label="Page navigation">
+        <ul class="pagination">
+          <!-- Previous Page Button -->
+          <li class="page-item {% if page <= 1 %}disabled{% endif %}"  id="prev-page">
+            <a class="page-link btn btn-secondary nav-anno"
+               href="{{ url_for('annotation.annotation_page', page=page-1) }}">
+              <i class="bi bi-arrow-left"></i>
+            </a>
+          </li>
+
+          <!-- Page Number -->
+          <li class="page-info" style="padding: 0.375rem 0.75rem">{{ page }} / {{ n_pages }}</li>
+
+          <!-- Next Page Button -->
+          <li class="page-item {% if page >= n_pages %}disabled{% endif %}" id="next-page">
+            <a class="page-link btn btn-secondary nav-anno"
+               href="{{ url_for('annotation.annotation_page', page=page+1) }}">
+              <i class="bi bi-arrow-right"></i>
+            </a>
+          </li>
+        </ul>
+      </nav>
+      </div>
+
+      <!-- Error Processing Button -->
+      <div class="position-absolute" style="bottom: 1.5rem; right: 2.5rem; z-index: 1000;">
+        <a class="btn btn-secondary" href="{{ url_for('categorize.categorize') }}">Error Processing</a>
+      </div>
     </div>
   </div>
-
-  <div class="row justify-content-center card-group" id="card-group-container">
-    <!-- Placeholder for annotation_image_tiles -->
-
-  </div>
-
-  <!-- Page Navigation -->
-  <nav aria-label="Page navigation" class="position-fixed bottom-0 start-50 translate-middle-x mb-2" style="z-index: 1050;">
-    <ul class="pagination justify-content-center">
-      <!-- Previous Page Button -->
-    <li class="page-item {% if page <= 1 %}disabled{% endif %}" id="prev-page">
-      <a type="button" class="page-link btn btn-secondary nav-anno" href="{{ url_for('annotation.annotation_page', page=page-1) }}">
-        <i class="bi bi-arrow-left"></i>
-      </a>
-    </li>
-
-    <!-- Page Number -->
-    <li class="page-info" style="padding: 0.375rem 0.75rem">{{ page }} / {{ n_pages }}</li>
-
-    <!-- Next Page Button -->
-    <li class="page-item {% if page >= n_pages %}disabled{% endif %}" id="next-page">
-      <a type="button" class="page-link btn btn-secondary nav-anno" href="{{ url_for('annotation.annotation_page', page=page+1) }}">
-        <i class="bi bi-arrow-right"></i>
-      </a>
-    </li>
-    </ul>
-  </nav>
-
-<!-- Error Processing Button Across Pages -->
-<div class="position-fixed bottom-0 end-0 m-4" style="z-index: 1050;">
-  <a class="btn btn-secondary" href="{{ url_for('categorize.categorize') }}">Error Processing</a>
 </div>
 
 <!-- Load the SharkViewer -->
-<script type="text/javascript" src="{{ url_for('static', filename='SharkViewer/three.min.js') }}"></script>
-<script type="module" src="{{ url_for('static', filename='viewer.js') }}" data-neuron-ready="{{ neuronReady }}" data-neuron-sections="{{ neuronSections }}" data-synapse-point-cloud="{{ synapsePointCloud }}", data-active-neuron-section="{{ activeNeuronSection }}" data-active-synapse-ids="{{ activeSynapseIDs }}"></script>
-
-<script type="module" src="{{ url_for('static', filename='minimap.js') }}" data-neuron-ready="{{ neuronReady }}"></script>
-
-<script type="module" src="{{ url_for('static', filename='annotation.js') }}" data-current-page="{{ page }}" data-total-pages="{{ n_pages }}"></script>
-
+<script src="{{ url_for('static', filename='SharkViewer/three.min.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='viewer.js') }}"
+  data-neuron-ready="{{ neuronReady }}"
+  data-neuron-sections="{{ neuronSections }}"
+  data-synapse-point-cloud="{{ synapsePointCloud }}"
+  data-active-neuron-section="{{ activeNeuronSection }}"
+  data-active-synapse-ids="{{ activeSynapseIDs }}"></script>
+<script type="module" src="{{ url_for('static', filename='minimap.js') }}"
+  data-neuron-ready="{{ neuronReady }}"></script>
+<script type="module" src="{{ url_for('static', filename='annotation.js') }}"
+  data-current-page="{{ page }}"
+  data-total-pages="{{ n_pages }}"></script>
 <script type="module" src="{{ url_for('static', filename='pull_ng_coordinates.js') }}"></script>
 {% endblock %}

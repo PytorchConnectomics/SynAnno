@@ -1,8 +1,7 @@
 {% extends "templatebase.html" %} {% block help_content %}
 <p class="text-muted">
   The export annotations view lets you download the JSON file containing
-  instance metadata by clicking `Download JSON`, redraw masks with the `Revise
-  Dataset` workflow by clicking `Redraw Masks`, or start a new process by
+  instance metadata by clicking `Download JSON`, redraw masks with the `Error Correction` workflow by clicking `Error Correction`, or start a new process by
   clicking `Start New Process`.
 </p>
 {% endblock %} {% block content %}
@@ -24,7 +23,7 @@
     type="button"
     class="btn btn-secondary ml-2"
     href="{{ url_for('manual_annotate.draw')}}"
-    >Redraw Masks</a
+    >Error Correction</a
   >
   <a
     id="resetButton"

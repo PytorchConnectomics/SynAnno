@@ -27,15 +27,15 @@
 {% block content %}
 <div class="container-fluid vh-100 w-75">
   <div class="pt-5 text-center">
-    <h2 class="mb-2">Welcome to SynAnno Annotation Tool</h2>
+    <h2 class="mb-2">Welcome to SynAnno</h2>
     <p>
-      Choose your workflow: annotate a newly acquired dataset or proofread existing annotations.
+      Choose your workflow: Proofread a newly acquired dataset or correct existing masks and markers.
     </p>
   </div>
   <div class="row justify-content-center h-50">
     <div class="col my-auto">
       <div class="card text-center border-primary">
-        <h4 class="card-title">Revise Dataset</h4>
+        <h4 class="card-title">Error Correction</h4>
         <div class="card-body">
           <a class="btn" href="{{ url_for('open_data.open_data_task', task='draw') }}">
             <h2><i class="fa fa-object-group fa-5x" style="color: rgb(80, 80, 80)"></i></h2>
@@ -45,7 +45,7 @@
     </div>
     <div class="col my-auto">
       <div class="card text-center border-primary">
-        <h4 class="card-title">Proofread Annotations</h4>
+        <h4 class="card-title">Error Detection</h4>
         <div class="card-body">
           <a class="btn" href="{{ url_for('open_data.open_data_task', task='annotate') }}">
             <h2><i class="fa fa-arrows fa-5x" style="color: rgb(80, 80, 80)"></i></h2>

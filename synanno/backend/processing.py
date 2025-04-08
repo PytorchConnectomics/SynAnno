@@ -787,22 +787,24 @@ def calculate_number_of_pages(n_images: int) -> int:
 
     Args:
         n_images: Total number of images.
-        per_page: Number of images per page.
+        tiles_per_page: Number of images per page.
 
     Returns:
         Number of pages.
     """
-    number_pages = n_images // current_app.per_page
-    if n_images % current_app.per_page != 0:
+    number_pages = n_images // current_app.tiles_per_page
+    if n_images % current_app.tiles_per_page != 0:
         number_pages += 1
 
     current_app.synapse_data["page"] = -1  # Initialize pages to -1
 
     # assign pages to synapses
-    for i, start_idx in enumerate(range(0, n_images, current_app.per_page), start=1):
+    for i, start_idx in enumerate(
+        range(0, n_images, current_app.tiles_per_page), start=1
+    ):
         current_app.synapse_data.loc[
             current_app.synapse_data.iloc[
-                start_idx : start_idx + current_app.per_page  # noqa: E203
+                start_idx : start_idx + current_app.tiles_per_page  # noqa: E203
             ].index,
             "page",
         ] = i
@@ -816,7 +818,7 @@ def calculate_number_of_pages_for_neuron_section_based_loading():
 
     This function:
     - Groups synapses by `section_index`.
-    - Assigns page numbers within each section based on `current_app.per_page`.
+    - Assigns page numbers within each section based on `current_app.tiles_per_page`.
     - Adds an extra empty page per section.
 
     Returns:
@@ -839,11 +841,11 @@ def calculate_number_of_pages_for_neuron_section_based_loading():
 
             # Assign pages to synapses within the section
             for i, start_idx in enumerate(
-                range(0, total_synapses, current_app.per_page), start=1
+                range(0, total_synapses, current_app.tiles_per_page), start=1
             ):
                 current_app.synapse_data.loc[
                     synapse_group.iloc[
-                        start_idx : start_idx + current_app.per_page  # noqa: E203
+                        start_idx : start_idx + current_app.tiles_per_page  # noqa: E203
                     ].index,
                     "page",
                 ] = (
@@ -856,7 +858,7 @@ def calculate_number_of_pages_for_neuron_section_based_loading():
                 )
 
             # Increment by the number of pages needed
-            number_of_pages += int(np.ceil(total_synapses / current_app.per_page))
+            number_of_pages += int(np.ceil(total_synapses / current_app.tiles_per_page))
 
         # Add one empty page for the section
         number_of_pages += 1

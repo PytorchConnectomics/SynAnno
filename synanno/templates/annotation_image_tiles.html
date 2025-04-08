@@ -1,19 +1,33 @@
-    {% for image in images %}
-      <div class="annotate-item mb-3">
-        <div id="id{{image.Image_Index}}" class="card border-0 p-2 {{ image.Label }}">
+{% set total_images = images|length %}
+{% if total_images > 12 %}
+  {% set width = '16.5%' %}
+{% elif total_images > 6 %}
+  {% set width = '24%' %}
+{% else %}
+  {% set width = '33%' %}
+{% endif %}
+
+{% for image in images %}
+      <div class="annotate-item" style=" max-width: {{width}};">
+        <div id="id{{image.Image_Index}}" class="card border-0 p-2 m-1 {{ image.Label }}">
           <div id="main-image" style="position: relative">
             <!-- In case of a FN we depict we use the source image also as the target to act as placholder -->
             {% if fn_page != "true" %}
             <img id="imgTarget-{{image.Image_Index}}" class="img_annotate" src="{{ url_for('file_access.get_target_image', image_index=image.Image_Index, slice_id=image.Middle_Slice)}}" style="position: absolute; opacity: {{grid_opacity if grid_opacity else '0.5'}};" data-current-slice="{{image.Middle_Slice}}"/>
             {% endif %}
             <img id="imgSource-{{image.Image_Index}}" class="img_annotate" src="{{ url_for('file_access.get_source_image', image_index=image.Image_Index, slice_id=image.Middle_Slice)}}" style="position: initial" data-current-slice="{{image.Middle_Slice}}"/>
+
+              <!-- Metadata overlay -->
+              <div class="metadata-overlay" style="color: #FF5733;">
+                ID: {{ image.Image_Index }}<br>
+              </div>
           </div>
           <a id="id-a-{{image.Image_Index}}" class="stretched-link image-card-btn" page="{{page}}" data_id="{{ image.Image_Index }}" label="{{ image.Label }}"></a>
         </div>
       </div>
     {% endfor %}
     {% if fn_page == "true" %}
-    <div class="annotate-item mb-3">
+    <div class="annotate-item" style="max-width: {{width}};">
       <div id="add_new_instance" class="card border-0 p-2 incorrect">
         <div id="main-image" style="position: relative">
           <img

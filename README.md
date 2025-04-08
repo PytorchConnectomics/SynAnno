@@ -22,14 +22,10 @@ SynAnno is a tool designed for proofreading and correcting synaptic annotations 
   - [Open Data](#open-data)
   - [Error Detection](#error-detection)
   - [Error Categorization](#error-categorization)
-  - [Export Annotations](#export-annotations)
   - [Error Correction](#error-correction)
-  - [Export Masks](#export-masks)
 - [Setup](#setup)
   - [Docker](#docker)
-  - [Environment](#environment)
-    - [Setting Up SynAnno with `pyenv` and `pipenv` on macOS](#setting-up-synanno-with-pyenv-and-pipenv-on-macos)
-    - [Start up SynAnno](#start-up-synanno)
+  - [Local Installation](#local-installation)
 - [Example Data](#example-data-h01)
 - [Contributing](#contributing)
 
@@ -46,20 +42,22 @@ We classify synapses as pre-synaptic or post-synaptic. A pre-synaptic neuron sen
 
 ### Mask Layout
 
-SynAnno's mask layout adheres to the H01 dataset standards, using a monochrome segmentation mask to highlight the synaptic cleft. In the proofreading view, pre-synaptic coordinate markers are indicated by a green dot, and post-synaptic coordinate indicated by a blue dot. These markers are presented in bright colors on their specific slice and in muted shades on related slices for easy reference. In the drawing mode, users have the flexibility to place pre-/post-synaptic ID markers on any slices independently, making it possible to accommodate synapses with varying orientations in the Neuroglancer view. Users can redraw mismatches by setting an adjustable number of spline points. The corrected segmentation mask can be downloaded directly, while the pre-/post-synaptic markers are stored in a pandas DataFrame along with the rest of the dataset and instance metadata, available for download as a JSON file.
+SynAnno's mask layout adheres to the H01 dataset standards, using a monochrome segmentation mask to highlight the synaptic cleft. In the proofreading view, pre-synaptic coordinate markers are indicated by a green dot, and post-synaptic coordinates are indicated by a blue dot. These markers are presented in bright colors on their specific slice and in muted shades on related slices for easy reference. In the drawing mode, users have the flexibility to place pre-/post-synaptic ID markers on any slices independently, making it possible to accommodate synapses with varying orientations in the Neuroglancer view. Users can redraw mismatches by setting an adjustable number of spline points. The corrected segmentation mask can be downloaded directly, while the pre-/post-synaptic markers are stored in a pandas DataFrame along with the rest of the dataset and instance metadata, available for download as a JSON file.
 
 ### Shark Viewer
+
 [SharkViewer](https://github.com/JaneliaSciComp/SharkViewer) is a lightweight 3D neuron skeleton renderer integrated into SynAnno to help users maintain spatial awareness. SynAnno uses SharkViewer to display the neuron structure and its compartments, overlaid with synapse positions and proofreading progress. The viewer supports zooming, rotating, and highlighting compartments, providing an intuitive overview of the neuron's topology and review status.
 
 ### Neuroglancer Integration
 
-SynAnno integrates [Neuroglancer](https://github.com/google/neuroglancer) directly into its interface. Neuroglancer is a powerful tool for 3D visualization of large-scale neuroimaging data. This integration allows users to effortlessly transition to a 3D view from any instance in the proofreading or drawing views. When an instance is selected, the embedded Neuroglancer opens at the exact location, providing an enhanced view of that specific instance. This functionality is particularly helpful during proofreading, enabling users to closely examine complex cases and make more informed decisions. In the drawing view, and after reviewing a compartment in the Error Detection view, users can use Neuroglancer to search for and add false negatives. They can navigate through the dataset with ease, mark false negatives with a single click, and then return to SynAnno to draw segmentation masks, set pre-/post-synaptic coordinate markers, or more accurately assess and correct erroneous cases by editing existing masks and markers.
+SynAnno integrates [Neuroglancer](https://github.com/google/neuroglancer) directly into its interface. Neuroglancer is a powerful tool for 3D visualization of large-scale neuroimaging data. This integration allows users to effortlessly transition to a 3D view from any instance in the proofreading or drawing views. When an instance is selected, the embedded Neuroglancer opens at the exact location, providing an enhanced view of that specific instance. This functionality is particularly helpful during proofreading, enabling users to closely examine complex cases and make more informed decisions. In the drawing view and after reviewing a compartment in the Error Detection view, users can use Neuroglancer to search for and add false negatives. They can navigate through the dataset with ease, mark false negatives with a single click, and then return to SynAnno to draw segmentation masks, set pre-/post-synaptic coordinate markers, or more accurately assess and correct erroneous cases by editing existing masks and markers.
 
 ### Cloud Volume
 
 Leveraging [CloudVolume](https://github.com/seung-lab/cloud-volume), SynAnno efficiently handles vast datasets, such as the H01 1.4-petabyte volume, by employing on-demand, page-wise loading of instance-specific subvolumes. Users can seamlessly access synapses associated with specific pre- and/or post-synaptic markers or within designated subvolumes, allowing for the referencing of an unlimited number of neurons. SynAnno only retains metadata for each page and image data for instances marked as erroneous, optimizing memory usage. This targeted data retention enables quick reloading of problematic instances for further analysis and correction in the categorization and drawing views.
 
 ### NetworkX and Navis
+
 SynAnno uses [NetworkX](https://networkx.org/documentation/stable/index.html#) and [Navis](https://navis-org.github.io/navis/) to manage and analyze neuron skeletons. After downloading skeletons from CloudVolume, SynAnno builds a graph-based representation using NetworkX to enable deterministic depth-first traversal and biologically meaningful compartmentalization. Navis provides additional utilities for skeleton manipulation, pruning, and structural integrity checks. These libraries underpin the neuron-centric proofreading workflow by enabling traversal, compartment mapping, and synapse-skeleton association.
 
 ### Materialization Table
@@ -197,7 +195,7 @@ If you marked instances as false positives, you'll be asked if they should be di
 
 [![Delete FPS][7]][7]
 
-### Export Annotations
+### Export Categorizations
 
 - Workflow: Proofreading
 - URL: http://127.0.0.1:5000/export_annotate
@@ -263,7 +261,7 @@ The instance will automatically be labeled as a **false negative** and added to 
 After correcting all segmentation masks and assigning pre- and post-synaptic coordinate markers, click the `Submit and Finish` button to proceed to the final **Export Masks** view.
 
 
-### Export Masks
+### Export Annotations
 
 In this view, you can download the JSON file containing the instances' metadata by clicking `Download JSON`, or download the segmentation masks as a numpy array or image by clicking `Save Masks`. The instance ID, bounding box, and slice number are encoded in the file names. If you want to start a new process, click `Start New Process` to return to the landing page.
 

@@ -1,11 +1,12 @@
 # SynAnno
 
+SynAnno is a tool designed for interactive guided proofreading and correction of synaptic annotations from electron microscopy (EM) volumes.
+
 ## Live Demo
+
 A demo is available [here](http://16.170.214.77/reset).
 
 ## Table of Contents
-
-SynAnno is a tool designed for proofreading and correcting synaptic annotations from electron microscopy (EM) volumes.
 
 - [Key Components and Subjects](#key-components-and-subjects)
   - [H01](#h01)

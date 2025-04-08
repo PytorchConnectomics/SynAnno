@@ -1,26 +1,22 @@
 # SynAnno
 
 ## Live Demo
-A demo is available [here](http://16.170.214.77/reset)
+A demo is available [here](http://16.170.214.77/reset).
 
 ## Table of Contents
 
-SynAnno is a tool designed for proofreading and correcting synaptic annotations from electron microscopy (EM) volumes - specifically the [H01](https://h01-release.storage.googleapis.com/landing.html) dataset. SynAnno is aimed for integration with CAVE (Connectome Annotation Versioning Engine).
+SynAnno is a tool designed for proofreading and correcting synaptic annotations from electron microscopy (EM) volumes.
 
 - [Key Components and Subjects](#key-components-and-subjects)
   - [H01](#h01)
-  - [Direction of information flow](#direction-of-information-flow)
-  - [CAVE (Connectome Annotation Versioning Engine)](#cave-connectome-annotation-versioning-engine)
+  - [Direction of Information Flow](#direction-of-information-flow)
+  - [Mask Layout](#mask-layout)
+  - [Shark Viewer](#shark-viewer)
   - [Neuroglancer Integration](#neuroglancer-integration)
   - [Cloud Volume](#cloud-volume)
-  - [Mask Layout](#mask-layout)
+  - [NetworkX and Navis](#networkx-and-navis)
   - [Materialization Table](#materialization-table)
 - [Core Functionalities](#core-functionalities)
-- [Setup](#setup)
-  - [Docker](#docker)
-  - [Environment](#environment)
-    - [Setting Up SynAnno with `pyenv` and `pipenv` on macOS](#setting-up-synanno-with-pyenv-and-pipenv-on-macos)
-    - [Start up SynAnno](#start-up-synanno)
 - [Navigating SynAnno](#navigating-synanno)
   - [Landing Page](#landing-page)
   - [Open Data](#open-data)
@@ -29,75 +25,249 @@ SynAnno is a tool designed for proofreading and correcting synaptic annotations 
   - [Export Annotations](#export-annotations)
   - [Error Correction](#error-correction)
   - [Export Masks](#export-masks)
+- [Setup](#setup)
+  - [Docker](#docker)
+  - [Environment](#environment)
+    - [Setting Up SynAnno with `pyenv` and `pipenv` on macOS](#setting-up-synanno-with-pyenv-and-pipenv-on-macos)
+    - [Start up SynAnno](#start-up-synanno)
+- [Example Data](#example-data-h01)
 - [Contributing](#contributing)
 
 ## Key Components and Subjects
 
 ### H01
 
-Harvard's Lichtman laboratory and Google's Connectomics team released the [H01](https://h01-release.storage.googleapis.com/landing.html) dataset, a 1.4 petabyte view of human brain tissue via nanoscale EM. It covers a volume of ~1mm³, featuring tens of thousands of neurons, millions of neuron fragments, 183 million annotated synapses, and 100 proofread cells.
+The current version of the tool features the [H01](https://h01-release.storage.googleapis.com/landing.html) dataset.
+Harvard's Lichtman laboratory and Google's Connectomics team released the H01 dataset, a 1.4-petabyte view of human brain tissue via nanoscale EM. It covers a volume of ~1mm³, featuring tens of thousands of neurons, millions of neuron fragments, 183 million annotated synapses, and 100 proofread cells.
 
-### Direction of information flow
+### Direction of Information Flow
 
-We classify synapses as pre-synaptic (information senders) or post-synaptic (information receivers). A pre-synaptic neuron sends neurotransmitter signals across the synaptic cleft to the post-synaptic neuron, which receives these signals and processes the information. While the segmentation masks highlight the synaptic clefts between neurons, the pre-/post-synaptic IDs are coordinates placed into the associated neurons, identifying the specific sender and receiver. Identifying these key elements is crucial for creating accurate structural and functional neural maps. SynAnno assists in proofreading, correcting, and identifying these segmentation masks and synaptic IDs.
-
-### CAVE (Connectome Annotation Versioning Engine)
-[CAVE](https://www.biorxiv.org/content/10.1101/2023.07.26.550598v1) is a computational infrastructure to host petabyte connectomes for distributed proofreading and dynamic spatial annotation. Soon, we will provide support to use SynAnno together with CAVE-hosted datasets.
-
-
-### Neuroglancer Integration
-
-SynAnno integrates [Neuroglancer](https://github.com/google/neuroglancer) directly into its interface. Neuroglancer is a powerful tool for 3D visualization of large-scale neuroimaging data. This integration allows users to effortlessly transition to a 3D view from any instance in the proofreading or drawing views. When an instance is selected, the embedded Neuroglancer opens at the exact location, providing an enhanced view of the specific instance. This functionality is particularly helpful during proofreading, enabling users to closely examine complex cases and make more informed decisions. In the drawing view, users can navigate through the dataset with ease, mark false negatives with a single click, and then return to SynAnno to draw segmentation masks, set pre-/post-synaptic coordinate IDs, or more accurately assess and correct erroneous cases when editing existing masks and IDs.
-
-### Cloud Volume
-
-Leveraging [CloudVolume](https://github.com/seung-lab/cloud-volume), SynAnno efficiently handles vast datasets, such as the H01 1.4 petabyte volume, by employing on-demand, page-wise loading of instance-specific subvolumes. Users can seamlessly access synapses associated with specific pre and/or post-synaptic IDs or within designated subvolumes, allowing for the referencing of an unlimited number of neurons. SynAnno only retains metadata for each page and image data for instances marked as erroneous, optimizing memory usage. This targeted data retention enables quick reloading of problematic instances for further analysis and correction in the categorization and drawing views.
+We classify synapses as pre-synaptic or post-synaptic. A pre-synaptic neuron sends neurotransmitter signals across the synaptic cleft to the post-synaptic neuron, which receives these signals and processes the information. While the segmentation masks highlight the synaptic clefts between neurons, the pre-/post-synaptic markers are coordinates placed into the associated neurons, identifying the specific sender and receiver. Identifying these key elements is crucial for creating accurate structural and functional wiring diagrams. SynAnno assists in proofreading, correcting, and identifying these segmentation masks and synaptic markers.
 
 ### Mask Layout
 
-SynAnno's mask layout adheres to the H01 dataset standards, using a monochrome segmentation mask to highlight the synaptic cleft. In the proofreading view, pre-synaptic coordinate IDs are marked by a green dot, and post-synaptic coordinate IDs by a blue dot, with these markers presented in bright colors on their specific slice and in muted shades on related slices for easy reference. In the drawing mode, users have the flexibility to place pre-/post-synaptic ID markers on any slices independently, making it possible to accommodate synapses with varying orientations in the Neuroglancer view. The user can redraw mismatches by setting an adjustable number of spline points. Users can download the corrected segmentation mask directly, while pre-/post-synaptic IDs are stored in a pandas DataFrame, available for download as a JSON file.
+SynAnno's mask layout adheres to the H01 dataset standards, using a monochrome segmentation mask to highlight the synaptic cleft. In the proofreading view, pre-synaptic coordinate markers are indicated by a green dot, and post-synaptic coordinate indicated by a blue dot. These markers are presented in bright colors on their specific slice and in muted shades on related slices for easy reference. In the drawing mode, users have the flexibility to place pre-/post-synaptic ID markers on any slices independently, making it possible to accommodate synapses with varying orientations in the Neuroglancer view. Users can redraw mismatches by setting an adjustable number of spline points. The corrected segmentation mask can be downloaded directly, while the pre-/post-synaptic markers are stored in a pandas DataFrame along with the rest of the dataset and instance metadata, available for download as a JSON file.
+
+### Shark Viewer
+[SharkViewer](https://github.com/JaneliaSciComp/SharkViewer) is a lightweight 3D neuron skeleton renderer integrated into SynAnno to help users maintain spatial awareness. SynAnno uses SharkViewer to display the neuron structure and its compartments, overlaid with synapse positions and proofreading progress. The viewer supports zooming, rotating, and highlighting compartments, providing an intuitive overview of the neuron's topology and review status.
+
+### Neuroglancer Integration
+
+SynAnno integrates [Neuroglancer](https://github.com/google/neuroglancer) directly into its interface. Neuroglancer is a powerful tool for 3D visualization of large-scale neuroimaging data. This integration allows users to effortlessly transition to a 3D view from any instance in the proofreading or drawing views. When an instance is selected, the embedded Neuroglancer opens at the exact location, providing an enhanced view of that specific instance. This functionality is particularly helpful during proofreading, enabling users to closely examine complex cases and make more informed decisions. In the drawing view, and after reviewing a compartment in the Error Detection view, users can use Neuroglancer to search for and add false negatives. They can navigate through the dataset with ease, mark false negatives with a single click, and then return to SynAnno to draw segmentation masks, set pre-/post-synaptic coordinate markers, or more accurately assess and correct erroneous cases by editing existing masks and markers.
+
+### Cloud Volume
+
+Leveraging [CloudVolume](https://github.com/seung-lab/cloud-volume), SynAnno efficiently handles vast datasets, such as the H01 1.4-petabyte volume, by employing on-demand, page-wise loading of instance-specific subvolumes. Users can seamlessly access synapses associated with specific pre- and/or post-synaptic markers or within designated subvolumes, allowing for the referencing of an unlimited number of neurons. SynAnno only retains metadata for each page and image data for instances marked as erroneous, optimizing memory usage. This targeted data retention enables quick reloading of problematic instances for further analysis and correction in the categorization and drawing views.
+
+### NetworkX and Navis
+SynAnno uses [NetworkX](https://networkx.org/documentation/stable/index.html#) and [Navis](https://navis-org.github.io/navis/) to manage and analyze neuron skeletons. After downloading skeletons from CloudVolume, SynAnno builds a graph-based representation using NetworkX to enable deterministic depth-first traversal and biologically meaningful compartmentalization. Navis provides additional utilities for skeleton manipulation, pruning, and structural integrity checks. These libraries underpin the neuron-centric proofreading workflow by enabling traversal, compartment mapping, and synapse-skeleton association.
 
 ### Materialization Table
 
 The Materialization Table functions as a database that links annotations to segmentation IDs within large-scale neuroimaging datasets. It regularly updates based on the bound spatial points of the annotations and the underlying segment IDs, creating a systematic connection between annotations and IDs. This enables efficient querying for specific annotations or IDs, providing essential information for tracking connectivity in the datasets.
 
-In SynAnno, the Materialization Table is simply a reference for determining which instances to load. SynAnno queries the table with the provided pre-/post-synaptic IDs or subvolume coordinates and loads the relevant instances based on the retrieved information. This approach streamlines the loading process, making it efficient and straightforward to access the required data.
+In SynAnno, the Materialization Table is simply a reference for determining which instances to load. SynAnno queries the table with the provided pre-/post-synaptic markers or subvolume coordinates and loads the relevant instances based on the retrieved information. This approach streamlines the loading process, making it efficient and straightforward to access the required data.
 
 ## Core Functionalities
 
-1. **Proofreading Annotated Data**:
+1. **Neuron-Centric Proofreading**
+   - Structured traversal of neurons using a depth-first path, rooted at the soma or central node.
+   - Proofreading of all synapses associated with a selected neuron, one compartment at a time.
+   - Interactive 3D skeleton viewer to maintain spatial orientation and track proofreading progress.
 
-   - View individual data instances, their associated segmentation masks and pre-/post-synaptic coordinate IDs.
-   - Mark segmentation masks and pre-/post-synaptic coordinate IDs that appear to be erroneous and Provide errors descriptions.
+2. **Error Detection and Categorization**
+   - Review automatically predicted synapse masks in a scrollable tile grid.
+   - Label instances as correct, incorrect, or unsure.
+   - Assign detailed error types (e.g., merged mask, missing marker, wrong direction).
 
-2. **Segmentation Mask Corrections**:
+3. **Error Correction and Annotation**
+   - Manually redraw segmentation masks using spline-based interpolation.
+   - Auto-complete masks using a 3D U-Net, optionally guided by manual inputs.
+   - Place or revise pre- and post-synaptic markers.
+   - Add previously missed false negatives directly through Neuroglancer and annotate them.
 
-   - Delete false positives.
-   - Add missed FN by browsing and marking them via Neuroglancer.
-   - Redraw mismatches using spline interpolation with intuitive control points.
-   - Reset pre-/post-synaptic coordinate IDs.
+4. **Integrated Visualization and Context Switching**
+   - Synapse progress and labels are mirrored in a 3D skeleton mini-map using SharkViewer.
+   - Embedded Neuroglancer views launch at instance-specific coordinates.
 
-3. **Cloud and Dataset Compatibility**:
+5. **Flexible Data Access and Management**
+   - On-demand, page-wise loading via CloudVolume for efficient memory usage.
+   - Compatible with Neuroglancer’s precomputed format.
+   - Support for neuron-centric or volume-centric selection and review.
+   - Seamless transition between proofreading and revision workflows using a shared metadata JSON.
 
-   - Full integration of [Neuroglancer's "precomputed" dateformat](https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/README.md).
-   - Neuron-centric data loading: Instance based loading via pre-/post-synaptic IDs.
-   - View-centric data loading: Load all instance with in a given sub-volume range.
-   - Handle shapes and resolutions mismatches between source and target volumes.
-   - Support for arbitrary coordinate system (e.g., xyz, zyx).
+6. **Export and Collaboration**
+   - Export segmentation masks and pre/post marker metadata.
+   - Download JSON summaries of proofreading sessions for later restoration.
 
-4. **Advanced Instance Management**:
+## Navigating SynAnno
 
-   - 2D slice-wise navigation through all instances source and target slices.
-   - Instantly view instances in Neuroglancer for 3D analysis.
+Note: If you get stuck, you can always click the home button in the top right corner to return to the landing page, which resets the backend state. Alternatively, you can go directly to http://127.0.0.1:5000/reset.
 
-5. **Efficient Data Handling**:
+### Landing Page
 
-   - On-demand loading of instances using [CloudVolume](https://github.com/seung-lab/cloud-volume), suitable for large datasets.
-   - Reduce loading time for multiple instances through multi-threading.
-   - Centralize data management with a unified Pandas dataframe.
+- URL: http://127.0.0.1:5000/
 
-6. **Future Features**
-   - Depth-wise auto-segmentation via custom seed segmentation masks (see issue [#70](https://github.com/PytorchConnectomics/SynAnno/issues/70)).
+On the landing page you can choose between two workflows: "Error Correction" and "Error Detection". The former allows you to redraw segmentation masks, assign pre-/post-synaptic markers, and add missed false negatives. The latter allows you to review existing segmentations and pre-/post-synaptic markers, mark incorrect instances, and assign error descriptions to those instances. After categorizing all erroneous instances in the "Error Detection" workflow, you can automatically proceed with the "Error Correction" workflow.
+
+[![Landing Page][1]][1]
+
+Each page has three buttons: "Home", "Question Mark", and "Menu". The first returns you to the landing page. The second provides an explanation of the current view and its functionality. The third provides general information and contact details.
+
+### Open Data
+
+- URL: http://127.0.0.1:5000/open_data
+
+This view is identical for both workflows. You'll be prompted to provide a source bucket and a target bucket (both in Neuroglancer's precomputed format), a URL to a materialization table, optionally a bucket secrets file (defaults to `~/.cloudvolume/secrets`), and optionally a JSON file containing instance metadata. The JSON file can be used to save and restore sessions or to start an "Error Correction" workflow using information from a previous "Error Detection" session. If you want to follow the "Neuron-Centric" proofreading workflow, you must also provide a neuropil segmentation bucket in Neuroglancer's precomputed format.
+
+Opening the "Volume Parameters" tab, you will have two different options for the manner in which to select your instances, "View Centric" and "Neuron Centric".
+
+If you choose the 'Neuron Centric' approach with all required parameters filled in, you will see a button prompting you to "Choose a Neuron".
+
+[![View Centric Open Data][2]][2]
+
+Clicking this button will open up a Neuroglancer view with your source, target, and neuropil layers displayed. Hover your mouse over the desired neuron and press the **`n` key** to save your choice. After Neuroglancer window is closed, the app will remember which neuron you selected.
+
+[![Neuron Centric][13]][13]
+
+If you choose the "Volume-Centric" approach, you'll need to specify the coordinate layout of a subvolume that adheres to the referenced precomputed datasets, as well as the source and target volume resolutions (in nanometers). If you do not specify coordinates, all instances from the metadata table will be loaded page-wise.
+
+After providing the required information, click 'Submit' to prepare the data for the first page or revision. Then, click "Start Data Proofread"/"Start Drawing" to begin proofreading or revision.
+
+#### SharkViewer
+
+Once you've selected a neuron and submitted the form using the "Neuron-Centric" approach, SynAnno automatically fetches the neuron's skeleton and maps all associated synapse instances onto it.
+
+[![SharkViewer][15]][15]
+
+In this view:
+- **The neuron skeleton** is visualized with color-coded compartments derived from a depth-first traversal rooted at the soma or central node.
+- **Synapse instances** are displayed as spheres positioned along the skeleton.
+- A **legend** is displayed alongside the viewer, listing each neuron compartment and allowing direct navigation by clicking on a section.
+
+### Error Detection
+
+- Workflow: Proofreading
+- URL: http://127.0.0.1:5000/annotation
+
+Clicking `Start Data Proofread` directs you to a grid view of instances. Instance status is indicated by color: correct (green), incorrect (red), unsure (yellow). Clicking on an instance changes its status: once for incorrect, twice for unsure, three times for correct.
+
+[![Grid View][3]][3]
+
+To inspect an instance's mask, right-click the instance to enlarge the patch and navigate through slices.
+
+[![Instance View][4]][4]
+
+Click `View in NG` to view the instance in Neuroglancer.
+
+[![NG View][5]][5]
+
+#### Adding False Negatives
+
+At the end of each neuron compartment review in the **Error Detection** view, SynAnno prompts you to check for potential false negatives—synapses that were missed by the automated segmentation.
+
+[![Add FN Detection Button][17]][17]
+
+Clicking this button will:
+- Open a Neuroglancer view centered on the currently reviewed neuron compartment.
+- Allow you to navigate through the EM volume and inspect areas along the neurite where synapses might be missing.
+- To mark a candidate false negative, place your cursor at the suspected location and press the **`c` key**. A yellow marker will appear.
+- Upon closing Neuroglancer, a review dialog will open where you can confirm or adjust the bounding box around the selected region.
+
+Once confirmed:
+- The new instance will be cropped and added to the list of synapse tiles.
+- It will automatically be labeled as a **false negative** and routed to the **Error Correction** view for segmentation and marker annotation.
+
+[![Add FN Detection][16]][16]
+
+This structured addition of false negatives ensures complete compartment-level coverage and supports the recovery of missing synaptic annotations with minimal disruption to the proofreading workflow.
+
+After evaluating the segmentation masks, click `->` to load and evaluate the page. When done, click `Error Processing` to proceed to the Error Categorization view.
+
+### Error Categorization
+
+- Workflow: Proofreading
+- URL: http://127.0.0.1:5000/categorize
+
+Clicking `Error Processing` brings you to the error categorization view. Here, you specify errors for instances marked as `incorrect` or `unsure`. Scroll downward to see all cards. Right-click to enlarge the patch, navigate through slices, or open Neuroglancer. When done, click `Submit and Finish`. Additionally, users can now edit or revise instance labels directly within this view.
+
+[![Categorize][6]][6]
+
+If you marked instances as false positives, you'll be asked if they should be discarded.
+
+[![Delete FPS][7]][7]
+
+### Export Annotations
+
+- Workflow: Proofreading
+- URL: http://127.0.0.1:5000/export_annotate
+
+After clicking `Submit and finish`, you can download the JSON file containing instance metadata by clicking `Download JSON`, redraw masks with the `Error Correction` workflow by clicking `Redraw Masks`, or start a new process by clicking `Start New Process`.
+
+[![Export Annotations][8]][8]
+
+### Error Correction
+
+- Revision Workflow
+- URL: http://127.0.0.1:5000/draw
+
+The **Error Correction** view is where users refine synaptic annotations by correcting segmentation masks, adjusting pre-/post-synaptic markers, and adding missed false negatives.
+
+You can access this view in two ways:
+- By clicking `Start Drawing` from the **Open Data** view after choosing the **Error Correction** workflow on the landing page.
+- By selecting `Redraw Masks` after finishing the **Error Categorization** view in the **Proofreading Workflow**.
+
+If you arrive from the Proofreading Workflow, you’ll see only the instances marked as `incorrect` or `unsure` during review and categorization. If you start from the Revision Workflow and load a JSON file, SynAnno will load all relevant instances either within the specified sub-volume or associated with the referenced neuron. If no JSON file is provided, SynAnno assumes all existing instances are `correct`, and only new false negatives can be added.
+
+[![Draw][9]][9]
+
+---
+
+#### Drawing Segmentation Masks
+
+Selecting a any instance and clicking `Draw Mask` opens a dedicated mask editing view:
+
+- Scroll through slices using the mouse wheel.
+- Draw a segmentation mask on any slice using spline interpolation with intuitive control points.
+- Click `Fill` to generate the mask, or use `Revise` to erase and redraw portions of it.
+- Click `Save` to store your mask for that slice.
+
+You can edit as many slices as necessary to cover the full 3D extent of the synapse.
+
+To set synaptic polarity:
+- Select a slice, click either `Pre-Synaptic CRD` or `Post-Synaptic CRD`, then click the desired location to place the marker.
+- Markers can be placed on arbitrary slices and adjusted as needed.
+
+If additional context is needed, click `View in NG` to open the current instance in Neuroglancer.
+
+Once the window is closed, the most recently edited slice and its custom mask will appear in the instance overview.
+
+[![Draw Instance][10]][10]
+
+---
+
+#### Adding False Negatives
+
+To annotate synapses that were missed by the model:
+- Click the `Add New Instance` button to open a Neuroglancer view centered on the currently active neuron compartment.
+- Navigate to the suspected synapse location and press the **`c` key** to place a yellow marker.
+- Upon exiting Neuroglancer, a review module will appear where you can adjust the bounding box and slice range.
+- Click `Save` to confirm and crop the new instance.
+
+The instance will automatically be labeled as a **false negative** and added to your list of editable tiles for segmentation and marker placement.
+
+[![Add FN][11]][11]
+
+---
+
+After correcting all segmentation masks and assigning pre- and post-synaptic coordinate markers, click the `Submit and Finish` button to proceed to the final **Export Masks** view.
+
+
+### Export Masks
+
+In this view, you can download the JSON file containing the instances' metadata by clicking `Download JSON`, or download the segmentation masks as a numpy array or image by clicking `Save Masks`. The instance ID, bounding box, and slice number are encoded in the file names. If you want to start a new process, click `Start New Process` to return to the landing page.
+
+[![Export Masks][12]][12]
 
 ## Setup
 
@@ -224,107 +394,7 @@ python run.py
 # the app is accessible at http://127.0.0.1/5000/
 ```
 
-## Navigating SynAnno
-
-### Landing Page
-
-- URL: http://127.0.0.1:5000/
-
-On the landing page you can choose between two workflows: "Error Correction" and "Error Detection". The former allows you to redraw segmentation masks, assign pre-/post-synaptic IDs, and add missed false negatives. The latter allows you to review existing segmentations and pre-/post-synaptic IDs, mark incorrect instances, and assign error descriptions to those instances. After categorizing all erroneous instances in the "Error Detection" workflow, you can automatically proceed with the "Error Correction" workflow.
-
-Each page has three buttons: "Home", "Question Mark", and "Menu". The first returns you to the landing page. The second provides an explanation of the current view and its functionality. The third provides general information and contact details.
-
-[![Landing Page][1]][1]
-
-### Open Data
-
-- URL: http://127.0.0.1:5000/open_data
-
-This view is identical for both workflows. You'll be prompted to provide a source bucket and target bucket (both in Neuroglancer's precomputed format), a URL to a materialization table, bucket secrets (defaults to ~/.cloudvolume/secrets), and optionally a JSON file containing instance metadata. The JSON file can be used to save and restore sessions or start a "Error Correction" workflow with information from a "Error Detection" workflow. If you wish to use "View-Centric" neuron selection in a "Error Detection" workflow, you must also provide a neuropil segmentation bucket in Neuroglancer's precomputed format as well.
-
-Opening the "Volume Parameters" tab, you will have two different options for the manner in which to select your instances, "View Centric" and "Neuron Centric".
-
-If you choose the 'View Centric' approach with all required parameters filled in, you will see a button prompting you to "Choose a Neuron".
-
-[![View Centric Open Data][2]][2]
-
-Clicking this button will open up a Neuroglancer view with your source, target, and neuropil layers displayed. Hover your mouse over the desired neuron and press the 'n' key to save your choice. After Neuroglancer window is closed, the app will remember which neuron you selected.
-
-[![Embedded Neuroglancer][13]][13]
-
-If you choose the 'Neuron Centric' approach. You'll need to specify the coordinate layout of the referenced precomputed datasets, desired range of ids, the source volume resolution (in nm), the target volume resolution (in nm), and instance crop size (in pixels).
-
-[![Embedded Neuroglancer][14]][14]
-
-After providing the required information, click 'Submit' to prepare the data for the first page or revision. Then, click "Start Data Proofread"/"Start Drawing" to begin proofreading or revision.
-
-### Error Detection
-
-- Workflow: Proofreading
-- URL: http://127.0.0.1:5000/annotation
-
-Clicking `Start Data Proofread` directs you to a grid view of instances. Instance status is indicated by color: correct (green), incorrect (red), unsure (yellow). Clicking on an instance changes its status: once for incorrect, twice for unsure, three times for correct.
-
-[![Grid View][3]][3]
-
-To inspect an instance's mask, right-click the instance to enlarge the patch and navigate through slices.
-
-[![Instance View][4]][4]
-
-Click `View in NG` to view the instance in Neuroglancer.
-
-[![NG View][5]][5]
-
-After evaluating the segmentation masks, click `->` to load and evaluate the page. When done, click `Error Processing` on the last proofreading page.
-
-### Error Categorization
-
-- Workflow: Proofreading
-- URL: http://127.0.0.1:5000/categorize
-
-Clicking `Error Processing` brings you to the error categorization view. Here, you specify errors for instances marked as `incorrect` or `unsure`. Scroll sideways to see all cards. Right-click to enlarge the patch, navigate through slices, or open Neuroglancer. When done, click `Submit and Finish`.
-
-[![Categorize][6]][6]
-
-If you marked instances as false positives, you'll be asked if they should be discarded.
-
-[![Delete FPS][7]][7]
-
-### Export Annotations
-
-- Workflow: Proofreading
-- URL: http://127.0.0.1:5000/export_annotate
-
-After clicking `Submit and finish`, you can download the JSON file containing instance metadata by clicking `Download JSON`, redraw masks with the `Error Correction` workflow by clicking `Redraw Masks`, or start a new process by clicking `Start New Process`.
-
-[![Export Annotations][8]][8]
-
-### Error Correction
-
-- Revision Workflow
-- http://127.0.0.1:5000/draw
-
-Clicking `Start Drawing` from the Open Data view, after choosing the Revision Workflow on the Landing Page, or selecting `Redraw Masks` in the Export Annotations view, will take you to the Draw view. In this view, you can create segmentation masks, set pre-/post-synaptic IDs, and add missed false negatives. If you arrived here from the Proofreading Workflow, you'll see instances marked as `incorrect` or `unsure` during previous proofreading, along with their associated error labels assigned during categorization. If you arrived from the Revision Workflow, you'll see all instances associated with the given pre-/post-synaptic IDs or within the specified sub-volume range that have `incorrect` or `unsure` labels in the provided JSON file. If you don't provide the JSON file, you can only add missed false negatives, as the tool assumes an initial label of `correct` for all instances.
-
-[![Draw][9]][9]
-
-Selecting an instance and clicking `Draw Mask` will open a view specific to that instance. In this view, you can scroll through all slices of the instance, draw masks for as many slices as you like, and set the pre- and post-synaptic coordinate ID markers on any chosen slice. Clicking the `Draw Mask` button allows you to create a mask using spline interpolation with intuitive control points. After positioning all control points, click the `Fill` button to generate the mask. You can modify or erase parts of the drawn mask by clicking the `Revise` button, which acts like an eraser. Once satisfied with the mask, click `Save` to save it for that slice. To set the pre- and post-synaptic coordinate ID markers, select the appropriate slice, click the `Pre-Synaptic CRD` or `Post-Synaptic CRD` button, and then click the relevant coordinate location. At any time, you can click `View in NG` to open the instance in Neuroglancer for a better view of marker placement or mask drawing. Upon closing the instance view, you will see the slice and its custom mask displayed in the sideways-scrollable overview for which you drew the custom mask last.
-
-[![Draw Instance][10]][10]
-
-To add previously missed false negatives, click the `Add New Instance` button to open Neuroglancer. Navigate to the location of the missed false negative, position your cursor at the relevant location, and press the `c` key on your keyboard to set a yellow marker. After marking the location, click the `Review` button to open a module displaying the chosen location's coordinates and the slice depth for the instance's bounding box. Confirm the settings by clicking `Save`, or manually adjust the values before saving. This adds the missed false negative to the list of instances available for segmentation mask drawing.
-
-[![Add FN][11]][11]
-
-After completing the segmentation masks and setting the pre and post-synaptic coordinate ID markers for all instances, click the `Submit and Finish` button to proceed to the final view.
-
-### Export Masks
-
-In this view, you can download the JSON file containing the instances' metadata by clicking `Download JSON`, or download the segmentation masks as a numpy array or image by clicking `Save Masks`. The instance ID, bounding box, and slice number are encoded in the file names. If you want to start a new process, click `Start New Process` to return to the landing page.
-
-[![Export Masks][12]][12]
-
-## Example Data [(H01)](https://h01-release.storage.googleapis.com/landing.html)
+## Example Data
 
 To obtain some sample data from the [H01](https://h01-release.storage.googleapis.com/landing.html) dataset to use in a SynAnno materialization table, run the following on the command line:
 
@@ -348,6 +418,7 @@ The file stored at [PATH_TO_STORE_MATERIALIZATION TABLE] is a valid materializat
 - target: gs://h01-release/data/20210729/c3/synapses/whole_ei_onlyvol
 - neuropil: gs://h01-release/data/20210729/c3/synapses/whole_ei_onlyvol
 - materialization: [PATH_TO_STORE_MATERIALIZATION TABLE]
+
 
 ## Contributing
 
@@ -379,5 +450,7 @@ Now, whenever you try to commit changes to your repository, pre-commit will auto
 [10]: ./doc/images/draw_instance_view.png
 [11]: ./doc/images/add_fn_view.png
 [12]: ./doc/images/export_masks.png
-[13]: ./doc/images/embedded_neuroglancer.png
-[14]: ./doc/images/neuron_centric_open_data.png
+[13]: ./doc/images/neuron_centric_ng.png
+[15]: ./doc/images/shark_viewer.png
+[16]: ./doc/images/add_fn_detection.png
+[17]: ./doc/images/add_fn_button_detection.png

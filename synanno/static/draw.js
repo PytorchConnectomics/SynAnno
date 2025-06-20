@@ -475,6 +475,17 @@ $(document).ready(() => {
     }
   }
 
+  // Bind hotkeys to buttons
+  $(document).on("keydown", (event) => {
+    const hotkey = event.key.toLowerCase();
+    const $button = $(`[data-hotkey="${hotkey}"]`);
+
+    if ($button.length && !$button.prop("disabled")) {
+      event.preventDefault();
+      $button.trigger("click");
+    }
+  });
+
   $("canvas.curveCanvas").mousemove((event) => {
     if (split_mask) {
       if ((mousePosition.x != event.clientX || mousePosition.y != event.clientY) && event.buttons == 1) {

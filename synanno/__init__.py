@@ -182,6 +182,7 @@ def register_routes(app):
     from synanno.routes.annotation import blueprint as annotation_blueprint
     from synanno.routes.auto_annotate import blueprint as auto_annotate_blueprint
     from synanno.routes.categorize import blueprint as categorize_blueprint
+    from synanno.routes.demo import blueprint as demo_blueprint
     from synanno.routes.false_negatives import blueprint as fn_blueprint
     from synanno.routes.file_access import blueprint as file_access_blueprint
     from synanno.routes.finish import blueprint as finish_blueprint
@@ -199,6 +200,7 @@ def register_routes(app):
     app.register_blueprint(manual_annotate_blueprint)
     app.register_blueprint(auto_annotate_blueprint)
     app.register_blueprint(fn_blueprint)
+    app.register_blueprint(demo_blueprint)
 
 
 def setup_context_processors(app):

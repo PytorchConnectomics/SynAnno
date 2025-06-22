@@ -1,0 +1,27 @@
+{% extends "templatebase.html" %}
+
+{% block help_content %}
+<h1 class="mt-5 text-center text-white">Resetting Data and Loading Demo...</h1>
+<p class="text-center text-white">Please wait while the demo data is being initialized.</p>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center" style="height: 100vh;">
+    <div id="loading-bar">
+        <div>
+            <p class="text-white">Resetting Data and Loading Demo...</p>
+            <div class="progress">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    // Clear session storage and redirect to the next route
+    sessionStorage.clear();
+    console.log('Session storage cleared.');
+    setTimeout(() => {
+        window.location.href = "{{ next_route }}";
+    }, 2000);
+</script>
+{% endblock %}

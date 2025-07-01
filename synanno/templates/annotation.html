@@ -40,6 +40,20 @@
         <span id="value-opacity-grid" type="button" class="btn btn-light" value="{{grid_opacity or '0.5'}}">{{grid_opacity or '0.5'}}</span>
         <button id="inc-opacity-grid" type="button" class="btn btn-secondary" onclick="add_opacity_grid()">+</button>
       </div>
+
+      <div class="legend-item">
+        <button
+          id="toggle-label-opacity"
+          type="button"
+          class="btn btn-secondary"
+          onclick="toggleAllSources();"
+          data-hotkey="q"
+          title="Toggle Label Opacity"
+          hidden
+        >
+          Toggle Label Opacity
+        </button>
+      </div>
     </div>
 
 
@@ -78,7 +92,7 @@
 
       <!-- Error Processing Button -->
       <div class="position-absolute" style="bottom: 1.5rem; right: 2.5rem; z-index: 1000;">
-        <a class="btn btn-secondary" href="{{ url_for('categorize.categorize') }}">Error Processing</a>
+        <a class="btn btn-secondary" href="{{ url_for('categorize.categorize') }}">Error Categorization</a>
       </div>
     </div>
   </div>

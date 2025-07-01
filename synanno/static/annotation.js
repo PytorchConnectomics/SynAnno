@@ -3,6 +3,22 @@ let currentRequestController = new AbortController();
 $(document).ready(() => {
   const currentPage = $("script[src*='annotation.js']").data("current-page");
   reloadImages(currentPage);
+
+  // Bind hotkeys for label opacity and toggle-label button
+  $(document).on("keydown", (event) => {
+    const hotkey = event.key.toLowerCase();
+    const $button = $(`[data-hotkey="${hotkey}"]`);
+
+    if ($button.length && !$button.prop("disabled")) {
+      event.preventDefault();
+      $button.trigger("click");
+    }
+  });
+
+  window.check_gt = function () {
+    $imgTarget.toggle();
+    $toggleLabel.toggleClass("btn-secondary");
+  };
 });
 
 $(document).on("shown.bs.modal", "#drawModalFN", () => {
@@ -11,7 +27,7 @@ $(document).on("shown.bs.modal", "#drawModalFN", () => {
 
 const handleSaveBboxClick = async () => {
   const currentPage = $("script[src*='annotation.js']").data("current-page");
-  $('#loading-bar').css('display', 'flex');
+  $("#loading-bar").css("display", "flex");
 
   $(".text-white").text("Saving new instance...");
 
@@ -21,7 +37,7 @@ const handleSaveBboxClick = async () => {
       z1: $("#d_z1").val(),
       z2: $("#d_z2").val(),
       my: $("#m_y").val(),
-      mx: $("#m_x").val()
+      mx: $("#m_x").val(),
     });
 
     $("#drawModalFNSave, #drawModalFN").modal("hide");
@@ -29,7 +45,7 @@ const handleSaveBboxClick = async () => {
   } catch (error) {
     console.error("Error saving bbox:", error);
   }
-  $('#loading-bar').css('display', 'none');
+  $("#loading-bar").css("display", "none");
 };
 
 const reloadImages = async (currentPage) => {
@@ -97,6 +113,16 @@ const hideCardGroupLoadingBar = () => {
 };
 
 const toggleNavigationButtons = (disable) => {
-  $("#prev-page, #next-page").toggleClass("disabled", disable)
-    .find("a").attr("aria-disabled", disable ? "true" : null);
+  $("#prev-page, #next-page")
+    .toggleClass("disabled", disable)
+    .find("a")
+    .attr("aria-disabled", disable ? "true" : null);
+};
+
+window.toggleAllSources = function () {
+  const $allImgSources = $("[id^='imgTarget-']");
+  $allImgSources.each((_, img) => {
+    const $img = $(img);
+    $img.toggle();
+  });
 };

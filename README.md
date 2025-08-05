@@ -4,9 +4,9 @@ SynAnno is a tool designed for interactive guided proofreading and correction of
 
 ## Live Demo
 
-A simplified version of the app, starting directly in the Error Categorization view, is available [here](http://16.170.214.77/demo).
+A simplified version of the app, starting directly in the Error Categorization view, is available [here](http://54.210.88.222/demo).
 
-For the full functionality and configuration options of SynAnno, try the complete version [here](http://16.170.214.77/reset).
+For the full functionality and configuration options of SynAnno, try the complete version [here](http://54.210.88.222/reset).
 
 ## Table of Contents
 

@@ -1,0 +1,8 @@
+Title: SynAnno: Interactive Guided Proofreading of Synaptic Annotations
+Authors: Leander Lauenburg, Jakob Troidl, Adam Gohain, Zudi Lin, Hanspeter Pfister, Donglai Wei
+Operating System: macOS 12.0+ (Monterey or later)
+Repository: https://github.com/PytorchConnectomics/SynAnno
+License: MIT
+Setup: Docker-based; see setup_synanno.sh for install and run instructions
+Interactive: Yes
+Justification: SynAnno is an interactive proofreading tool that supports user-guided correction workflows. Scripted reproduction is not possible because human interaction is essential to navigate neurons and validate synapses. A screen recording is provided to demonstrate how a key figure from the paper was generated.

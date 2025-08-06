@@ -5,4 +5,4 @@ Repository: https://github.com/PytorchConnectomics/SynAnno
 License: MIT
 Setup: Docker-based; see setup_synanno.sh for install and run instructions
 Interactive: Yes
-Justification: SynAnno is an interactive proofreading tool that supports user-guided correction workflows. Scripted reproduction is not possible because human interaction is essential to navigate neurons and validate synapses. A screen recording is provided to demonstrate how a key figure from the paper was generated.
+Justification: SynAnno is an interactive proofreading tool designed for user-guided correction of synaptic annotations. Scripted reproduction is not feasible, as human interaction is essential for navigating neurons and validating synapses. A screen recording is provided to demonstrate the core functionality corresponding to the published demo.

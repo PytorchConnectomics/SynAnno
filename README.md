@@ -3,7 +3,7 @@
 SynAnno is a tool designed for interactive guided proofreading and correction of synaptic annotations from electron microscopy (EM) volumes.
 
 <video width="640" height="360" controls>
-  <source src="./doc/images/vis25a-sub1718-i7.mp4" type="video/mp4">
+  <source src="doc/images/vis25a-sub1718-i7.mp4" type="video/mp4">
   Your browser does not support the video tag.
 </video>
 

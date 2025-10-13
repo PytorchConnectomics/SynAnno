@@ -18,7 +18,7 @@ For the full functionality and configuration options of SynAnno, try the complet
 
 **Accepted at IEEE VIS 2025** | **Preprint:** [bioRxiv](https://www.biorxiv.org/content/10.1101/2025.08.09.669342v1.full.pdf)
 
-## Replicability Stamp <img src="./replicabilitystamp/replicibility_logo.png" alt="Replicability Stamp" width="40" style="margin-left: 10px; vertical-align: middle;">
+## Replicability Stamp <img src="./replicabilitystamp/replicibility_logo.png" alt="Replicability Stamp" width="40">
 
 SynAnno has received the [Replicability Stamp](https://www.replicabilitystamp.org/index.html#https-github-com-pytorchconnectomics-synanno) from the Graphics Replicability Stamp Initiative (GRSI), recognizing the reproducibility of our results and our commitment to open science.
 
@@ -26,6 +26,8 @@ SynAnno has received the [Replicability Stamp](https://www.replicabilitystamp.or
 
 ## Table of Contents
 
+- [Publication](#publication)
+- [Replicability Stamp](#replicability-stamp)
 - [Key Components and Subjects](#key-components-and-subjects)
   - [H01](#h01)
   - [Direction of Information Flow](#direction-of-information-flow)
@@ -43,9 +45,11 @@ SynAnno has received the [Replicability Stamp](https://www.replicabilitystamp.or
   - [Error Categorization](#error-categorization)
   - [Error Correction](#error-correction)
 - [Setup](#setup)
-  - [Docker](#docker)
-  - [Local Installation](#local-installation)
-- [Example Data](#example-data-h01)
+  - [Quick Start (Automated Setup)](#quick-start-automated-setup)
+  - [Manual Setup](#manual-setup)
+    - [Docker](#docker)
+    - [Local Installation](#local-installation)
+- [Example Data](#example-data)
 - [Contributing](#contributing)
 
 ## Key Components and Subjects
@@ -288,9 +292,31 @@ In this view, you can download the JSON file containing the instances' metadata 
 
 ## Setup
 
+### Quick Start (Automated Setup)
+
+For the fastest way to try SynAnno, use our automated setup script from the replicability stamp submission:
+
+```bash
+curl -O https://raw.githubusercontent.com/PytorchConnectomics/SynAnno/main/replicabilitystamp/setup_synanno.sh
+bash setup_synanno.sh
+```
+
+This script will:
+- Clone the SynAnno repository
+- Build the Docker image automatically
+- Run the application on port 80
+- Open your browser to the demo at `http://localhost/demo`
+
+To clean up afterwards:
+```bash
+bash setup_synanno.sh cleanup
+```
+
+### Manual Setup
+
 Download SynAnno and unzip it into a folder of your choice. For the following we assume you've unzipped the folder under `/home/user/SynAnno`. You can either run SynAnno in a Docker container or set up a local environment.
 
-### Docker
+#### Docker
 
 Repository includes a Dockerfile that enables you to build and run the application in a Docker container to isolate it from your local setup. It ensures a consistent environment across different machines, simplifying deployment and avoiding potential configuration issues.
 
@@ -387,7 +413,7 @@ Why Use `uv`?
    source .venv/bin/activate
    ```
 
-5. Install Dependencies:
+5. **Install Dependencies:**
 
    ```bash
    uv pip install -e ."[seg,dev]"
@@ -404,7 +430,7 @@ SynAnno can be configured via environment variables or the `.env` file.
 
 ### Start up SynAnno
 
-From with in the repository (e.g. `/home/user/SynAnno`) start SynAnno using the following command:
+From within the repository (e.g. `/home/user/SynAnno`) start SynAnno using the following command:
 
 ```python
 python run.py

@@ -18,7 +18,7 @@ For the full functionality and configuration options of SynAnno, try the complet
 
 **Accepted at IEEE VIS 2025** | **Preprint:** [bioRxiv](https://www.biorxiv.org/content/10.1101/2025.08.09.669342v1.full.pdf)
 
-## Replicability Stamp <img src="./replicabilitystamp/replicibility_logo.png" alt="Replicability Stamp" width="40">
+## Replicability Stamp [![Replicability Stamp][14]][14]
 
 SynAnno has received the [Replicability Stamp](https://www.replicabilitystamp.org/index.html#https-github-com-pytorchconnectomics-synanno) from the Graphics Replicability Stamp Initiative (GRSI), recognizing the reproducibility of our results and our commitment to open science.
 
@@ -494,6 +494,7 @@ Now, whenever you try to commit changes to your repository, pre-commit will auto
 [11]: ./doc/images/add_fn_view.png
 [12]: ./doc/images/export_masks.png
 [13]: ./doc/images/neuron_centric_ng.png
+[14]: ./replicabilitystamp/replicibility_logo.png
 [15]: ./doc/images/shark_viewer.png
 [16]: ./doc/images/add_fn_detection.png
 [17]: ./doc/images/add_fn_button_detection.png

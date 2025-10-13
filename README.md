@@ -8,6 +8,22 @@ A simplified version of the app, starting directly in the Error Categorization v
 
 For the full functionality and configuration options of SynAnno, try the complete version [here](http://54.210.88.222/reset).
 
+---
+
+## Publication
+
+**SynAnno: Interactive Guided Proofreading of Synaptic Annotations**
+
+*Leander Lauenburg, Jakob Troidl, Adam Gohain, Zudi Lin, Hanspeter Pfister, Donglai Wei*
+
+**Accepted at IEEE VIS 2025** | **Preprint:** [bioRxiv](https://www.biorxiv.org/content/10.1101/2025.08.09.669342v1.full.pdf)
+
+## Replicability Stamp <img src="./replicabilitystamp/replicibility_logo.png" alt="Replicability Stamp" width="40" style="margin-left: 10px; vertical-align: middle;">
+
+SynAnno has received the [Replicability Stamp](https://www.replicabilitystamp.org/index.html#https-github-com-pytorchconnectomics-synanno) from the Graphics Replicability Stamp Initiative (GRSI), recognizing the reproducibility of our results and our commitment to open science.
+
+---
+
 ## Table of Contents
 
 - [Key Components and Subjects](#key-components-and-subjects)

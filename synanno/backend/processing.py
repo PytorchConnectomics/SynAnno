@@ -119,7 +119,8 @@ def calculate_crop_pad(
     c11, c21, c31 = max(c11o, c11m), max(c21o, c21m), max(c31o, c31m)
     c12, c22, c32 = min(c12o, c12m), min(c22o, c22m), min(c32o, c32m)
 
-    assert c11 < c12 and c21 < c22 and c31 < c32, "Invalid bounding box."
+    if not (c11 < c12 and c21 < c22 and c31 < c32):
+        raise ValueError("Invalid bounding box.")
 
     pad = [
         [c11 - c11o, c12o - c12],

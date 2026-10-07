@@ -264,3 +264,22 @@ def test_file_routes_serve_only_in_memory_data(make_app, path):
     response = make_app().test_client().get(path)
     assert response.status_code in (204, 404)
     assert b"root:" not in response.data
+
+
+# 10. Input validation without asserts
+
+
+def test_invalid_bbox_raises_value_error():
+    from synanno.backend.processing import calculate_crop_pad
+
+    with pytest.raises(ValueError):
+        calculate_crop_pad([10, 5, 0, 10, 0, 10], (100, 100, 100))
+
+
+def test_fn_save_rejects_bad_input(make_app):
+    client = make_app().test_client()
+    # missing fields
+    assert client.post("/ng_bbox_fn_save", data={}).status_code == 400
+    # z2 below z1 and no loaded volume
+    form = {"z1": "10", "z2": "2", "my": "5", "mx": "5", "currentPage": "1"}
+    assert client.post("/ng_bbox_fn_save", data=form).status_code == 400

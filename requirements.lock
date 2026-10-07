@@ -1,7 +1,7 @@
 # Exact package set of the deployed image (synanno/uwsgi:rollback-2026-10,
 # sha256:b8793d31...), captured with pip freeze on Python 3.11.13 (arm64).
 # The app itself is installed separately (pip install --no-deps -e .).
-# torch comes from https://download.pytorch.org/whl/cpu (see Dockerfile_uwsgi).
+# torch and torchvision come from https://download.pytorch.org/whl/cpu (see Dockerfile_uwsgi).
 # flask-cors was dropped together with CORS support; tornado was raised from
 # 6.5.1 to 6.5.10 for HTTP-parsing DoS fixes (it serves the public NG port).
 atomicwrites==1.4.1

@@ -31,9 +31,14 @@ COPY synanno /app/synanno
 COPY run_production.py /app/
 COPY h01/h01_104_materialization.csv /app/h01/h01_104_materialization.csv
 
-# Install the locked Python dependencies (incl. CPU-only torch and uWSGI), then the app
-RUN python -m pip install --no-cache-dir --no-deps -r requirements.lock \
-    --extra-index-url https://download.pytorch.org/whl/cpu
+# Install the locked Python dependencies, then the app. torch/torchvision come only
+# from the CPU-only PyTorch index; everything else comes only from PyPI.
+RUN grep -E '^(torch|torchvision)==' requirements.lock > /tmp/torch.lock \
+    && grep -vE '^(torch|torchvision)==' requirements.lock > /tmp/pypi.lock \
+    && python -m pip install --no-cache-dir --no-deps -r /tmp/torch.lock \
+        --index-url https://download.pytorch.org/whl/cpu \
+    && python -m pip install --no-cache-dir --no-deps -r /tmp/pypi.lock \
+    && rm /tmp/torch.lock /tmp/pypi.lock
 RUN python -m pip install --no-cache-dir --no-deps -e .
 
 # Copy uWSGI configuration

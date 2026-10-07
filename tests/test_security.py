@@ -233,3 +233,16 @@ def test_os_module_not_exposed_to_templates(make_app):
     with app.test_request_context("/"):
         assert render_template_string("{{ os }}") == ""
         assert render_template_string("{{ os is defined }}") == "False"
+
+
+# 8. XSS: jQuery
+
+
+def test_pages_use_vendored_jquery(make_app):
+    app = make_app()
+    html = app.test_client().get("/").get_data(as_text=True)
+    assert "/static/vendor/jquery-3.7.1.min.js" in html
+    assert "jquery-2.1.3" not in html and "code.jquery.com" not in html
+    vendored = os.path.join(app.static_folder, "vendor", "jquery-3.7.1.min.js")
+    with open(vendored) as f:
+        assert "jQuery v3.7.1" in f.readline()

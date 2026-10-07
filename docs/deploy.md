@@ -92,3 +92,18 @@ aws ec2 associate-address --region us-east-1 \
 
 The task definition does not need to change: it names the Elastic IP, not the
 instance. Run `scripts/smoke_test.sh http://54.164.194.68` afterwards.
+
+## Shell access (SSH)
+
+Port 22 is closed: the security group `synanno-web-app` (`sg-04b8cdbbac3180074`) only
+allows ports 80 and 9015. Nothing in the deployment needs SSH. If you need a shell on
+the instance, open port 22 for your own IP only, and close it again afterwards:
+
+```bash
+MY_IP=$(curl -s https://checkip.amazonaws.com)
+aws ec2 authorize-security-group-ingress --region us-east-1 \
+  --group-id sg-04b8cdbbac3180074 --protocol tcp --port 22 --cidr "$MY_IP/32"
+ssh -i synanno-us-east-1.pem ec2-user@54.164.194.68
+aws ec2 revoke-security-group-ingress --region us-east-1 \
+  --group-id sg-04b8cdbbac3180074 --protocol tcp --port 22 --cidr "$MY_IP/32"
+```

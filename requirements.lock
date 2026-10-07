@@ -4,6 +4,7 @@
 # torch comes from https://download.pytorch.org/whl/cpu (see Dockerfile_uwsgi).
 # flask-cors was dropped together with CORS support; tornado was raised from
 # 6.5.1 to 6.5.10 for HTTP-parsing DoS fixes (it serves the public NG port).
+atomicwrites==1.4.1
 attrs==25.3.0
 blinker==1.9.0
 boto3==1.40.2

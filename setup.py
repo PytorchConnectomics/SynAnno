@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="SynAnno",
-    version="0.1.0",
+    version="1.0.1",
     description="A package for annotation processing and cloud volume handling.",
     author="Leander Lauenburg",
     author_email="leander.lauenburg@gmail.com",

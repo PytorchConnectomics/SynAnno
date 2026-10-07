@@ -1,5 +1,6 @@
 """Regression tests for the security fixes (public demo hardening)."""
 
+import base64
 import io
 import logging
 import os
@@ -283,3 +284,37 @@ def test_fn_save_rejects_bad_input(make_app):
     # z2 below z1 and no loaded volume
     form = {"z1": "10", "z2": "2", "my": "5", "mx": "5", "currentPage": "1"}
     assert client.post("/ng_bbox_fn_save", data=form).status_code == 400
+
+
+# 11. Reachable dependency vulnerabilities
+
+
+def _encoded(fmt):
+    from PIL import Image
+
+    buffer = io.BytesIO()
+    Image.new("RGBA", (4, 4)).save(buffer, format=fmt)
+    return "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode()
+
+
+def test_canvas_decoding_accepts_only_png(make_app):
+    from PIL import UnidentifiedImageError
+
+    from synanno.routes.manual_annotate import decode_image
+
+    assert decode_image(_encoded("PNG")).format == "PNG"
+    for fmt in ("GIF", "TIFF", "BMP"):
+        with pytest.raises(UnidentifiedImageError):
+            decode_image(_encoded(fmt))
+
+    client = make_app().test_client()
+    form = {"imageBase64": _encoded("TIFF"), "page": "1", "data_id": "0"}
+    assert client.post("/save_canvas", data=form).status_code == 400
+
+
+def test_locked_tornado_has_dos_fixes():
+    lock = os.path.join(os.path.dirname(os.path.dirname(__file__)), "requirements.lock")
+    with open(lock) as f:
+        pins = dict(line.strip().split("==") for line in f if "==" in line)
+    major, minor, patch = (int(x) for x in pins["tornado"].split("."))
+    assert (major, minor, patch) >= (6, 5, 9)

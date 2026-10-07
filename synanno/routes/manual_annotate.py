@@ -5,8 +5,8 @@ import re
 from io import BytesIO
 
 import numpy as np
-from flask import Blueprint, current_app, jsonify, render_template, request
-from PIL import Image
+from flask import Blueprint, abort, current_app, jsonify, render_template, request
+from PIL import Image, UnidentifiedImageError
 
 from synanno.backend.processing import process_instance, update_slice_number
 from synanno.backend.utils import img_to_png_bytes, png_bytes_to_pil_img
@@ -37,9 +37,12 @@ def get_instance_data(page: int, index: int) -> dict:
 
 
 def decode_image(image_base64: str) -> Image:
-    """Decode base64 image data."""
+    """Decode base64 image data.
+
+    The canvas always sends PNG, so other formats (and their decoders) are refused.
+    """
     image_data = re.sub("^data:image/.+;base64,", "", image_base64)
-    return Image.open(BytesIO(base64.b64decode(image_data)))
+    return Image.open(BytesIO(base64.b64decode(image_data)), formats=["PNG"])
 
 
 def resize_image(image: Image, crop_axes: tuple) -> Image:
@@ -75,7 +78,10 @@ def save_canvas() -> dict:
         Passes the instance specific session information as JSON to draw.js
     """
     coordinate_order = list(current_app.coordinate_order.keys())
-    image = decode_image(request.form["imageBase64"])
+    try:
+        image = decode_image(request.form["imageBase64"])
+    except (KeyError, ValueError, UnidentifiedImageError):
+        abort(400, "Expected a PNG image.")
     page = int(request.form["page"])
     index = int(request.form["data_id"])
     viewed_instance_slice = int(request.form["viewedInstanceSlice"])

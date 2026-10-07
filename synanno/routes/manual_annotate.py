@@ -36,13 +36,21 @@ def get_instance_data(page: int, index: int) -> dict:
     ).to_dict("records")[0]
 
 
+# Upper bound for drawn canvases; the canvas is a few hundred pixels wide
+MAX_CANVAS_SIDE = 4096
+
+
 def decode_image(image_base64: str) -> Image:
     """Decode base64 image data.
 
-    The canvas always sends PNG, so other formats (and their decoders) are refused.
+    The canvas always sends PNG, so other formats (and their decoders) are refused,
+    and oversized images are rejected before their pixels are decoded.
     """
     image_data = re.sub("^data:image/.+;base64,", "", image_base64)
-    return Image.open(BytesIO(base64.b64decode(image_data)), formats=["PNG"])
+    image = Image.open(BytesIO(base64.b64decode(image_data)), formats=["PNG"])
+    if max(image.size) > MAX_CANVAS_SIDE:
+        raise ValueError(f"Canvas image too large: {image.size}")
+    return image
 
 
 def resize_image(image: Image, crop_axes: tuple) -> Image:

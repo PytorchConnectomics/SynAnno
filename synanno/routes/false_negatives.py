@@ -54,6 +54,7 @@ def ng_bbox_fn_save() -> dict:
         the upper and the lower z bound of the instance as JSON to draw_module.js
     """
     coordinate_order = list(current_app.coordinate_order.keys())
+    previous_center = (current_app.cz, current_app.cy, current_app.cx)
     try:
         cz1, cz2, current_app.cz, current_app.cy, current_app.cx = (
             get_corrected_coordinates(request)
@@ -66,6 +67,8 @@ def ng_bbox_fn_save() -> dict:
 
         crop_bbox, img_padding = calculate_crop_pad(bbox, current_app.vol_dim_scaled)
     except (KeyError, ValueError):
+        # leave the shared state as it was before the invalid request
+        current_app.cz, current_app.cy, current_app.cx = previous_center
         abort(400, "Invalid bounding box.")
     crop_box_dict = map_bbox_to_dict(crop_bbox, coordinate_order)
 

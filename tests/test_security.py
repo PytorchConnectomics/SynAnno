@@ -178,21 +178,24 @@ def test_fn_save_rejects_invalid_bbox(make_app):
     with pytest.raises(ValueError):  # not an assert, so it survives python -O
         calculate_crop_pad([10, 5, 0, 10, 0, 10], (100, 100, 100))
 
-    client = make_app().test_client()
+    app = make_app()
+    client = app.test_client()
+    center = (app.cz, app.cy, app.cx)
     assert client.post("/ng_bbox_fn_save", data={}).status_code == 400
     form = {"z1": "10", "z2": "2", "my": "5", "mx": "5", "currentPage": "1"}
     assert client.post("/ng_bbox_fn_save", data=form).status_code == 400
+    assert (app.cz, app.cy, app.cx) == center  # shared state left untouched
 
 
-def _encoded(fmt):
+def _encoded(fmt, size=(4, 4)):
     from PIL import Image
 
     buffer = io.BytesIO()
-    Image.new("RGBA", (4, 4)).save(buffer, format=fmt)
+    Image.new("1", size).save(buffer, format=fmt)
     return "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode()
 
 
-def test_canvas_upload_accepts_only_png(make_app):
+def test_canvas_upload_accepts_only_small_png(make_app):
     from PIL import UnidentifiedImageError
 
     from synanno.routes.manual_annotate import decode_image
@@ -200,7 +203,12 @@ def test_canvas_upload_accepts_only_png(make_app):
     assert decode_image(_encoded("PNG")).format == "PNG"
     with pytest.raises(UnidentifiedImageError):
         decode_image(_encoded("TIFF"))
+    with pytest.raises(ValueError):
+        decode_image(_encoded("PNG", size=(5000, 1)))
 
     client = make_app().test_client()
-    form = {"imageBase64": _encoded("TIFF"), "page": "1", "data_id": "0"}
-    assert client.post("/save_canvas", data=form).status_code == 400
+    form = {"page": "1", "data_id": "0", "viewedInstanceSlice": "0"}
+    form["canvas_type"] = "curve"
+    for image in (_encoded("TIFF"), _encoded("PNG", size=(5000, 1))):
+        response = client.post("/save_canvas", data=dict(form, imageBase64=image))
+        assert response.status_code == 400

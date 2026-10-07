@@ -1,10 +1,19 @@
 import json
 import logging
+import os
+from urllib.parse import urlparse
 
 import numpy as np
 import pandas as pd
-from flask import Blueprint, current_app, flash, jsonify, render_template, request
-from flask_cors import cross_origin
+from flask import (
+    Blueprint,
+    abort,
+    current_app,
+    flash,
+    jsonify,
+    render_template,
+    request,
+)
 from werkzeug.datastructures import MultiDict
 
 import synanno.backend.ng_util as ng_util
@@ -38,6 +47,51 @@ logger = logging.getLogger(__name__)
 
 # Define a Blueprint for opendata routes
 blueprint = Blueprint("open_data", __name__)
+
+# The only cloud volumes the public demo may load (the public H01 release)
+DEMO_SOURCE_URL = "gs://h01-release/data/20210601/4nm_raw"
+DEMO_TARGET_URL = "gs://h01-release/data/20210729/c3/synapses/whole_ei_onlyvol"
+DEMO_NEUROPIL_URL = "gs://h01-release/data/20210601/proofread_104"
+DEMO_VOLUME_URLS = (DEMO_SOURCE_URL, DEMO_TARGET_URL, DEMO_NEUROPIL_URL)
+
+
+def is_demo_volume_set(source_url, target_url, neuropil_url) -> bool:
+    """Check that the requested volumes are exactly the public H01 release."""
+    return (source_url, target_url, neuropil_url) == DEMO_VOLUME_URLS
+
+
+def resolve_materialization_path(materialization_path: str):
+    """Validate a user-supplied materialization location.
+
+    In public demo mode only the bundled H01 table is accepted. Otherwise local
+    paths must lie inside one of the configured data directories, and remote
+    tables must be http(s) URLs.
+
+    Args:
+        materialization_path: Path or URL provided by the user.
+
+    Returns:
+        The path or URL to read, or None if the location is not allowed.
+    """
+    parsed = urlparse(materialization_path)
+    if parsed.scheme in ("http", "https"):
+        if current_app.config["PUBLIC_DEMO"] or not parsed.netloc:
+            return None
+        return materialization_path
+    if parsed.scheme not in ("", "file"):
+        return None
+
+    path = os.path.realpath(
+        parsed.path if parsed.scheme == "file" else materialization_path
+    )
+    if current_app.config["PUBLIC_DEMO"]:
+        if path == current_app.config["BUNDLED_MATERIALIZATION"]:
+            return path
+        return None
+    for data_dir in current_app.config["DATA_DIRS"]:
+        if os.path.commonpath([path, data_dir]) == data_dir:
+            return path
+    return None
 
 
 @blueprint.route("/open_data", defaults={"task": "annotate"})
@@ -372,6 +426,16 @@ def upload_file():
     Returns:
         Renders the open-data view, with additional buttons enabled
     """
+    if current_app.config["PUBLIC_DEMO"] and (
+        request.files.get("secrets_file")
+        or not is_demo_volume_set(
+            request.form.get("source_url"),
+            request.form.get("target_url"),
+            request.form.get("neuropil_url"),
+        )
+    ):
+        abort(403, "The public demo only serves the H01 release.")
+
     current_app.view_style = request.form.get("view_style")
 
     current_app.tiles_per_page = int(request.form.get("tiles_per_page"))
@@ -514,7 +578,6 @@ def set_data(task: str = "annotate"):
 
 
 @blueprint.route("/get_instance", methods=["POST"])
-@cross_origin()
 def get_instance():
     """Serves one of two Ajax calls from annotation.js, passing instance specific info
 
@@ -570,7 +633,6 @@ def get_instance():
 
 
 @blueprint.route("/neuro", methods=["POST"])
-@cross_origin()
 def neuro():
     """Serves an Ajax request from annotation.js or draw_module.js, shifting the view
     focus with in the running NG instance and passing the link for the instance to the
@@ -691,6 +753,11 @@ def launch_neuroglancer():
     target_url = request.args.get("target_url")
     neuropil_url = request.args.get("neuropil_url")
 
+    if current_app.config["PUBLIC_DEMO"] and not is_demo_volume_set(
+        source_url, target_url, neuropil_url
+    ):
+        abort(403, "The public demo only serves the H01 release.")
+
     if not hasattr(current_app, "ng_viewer") or current_app.ng_viewer is None:
         ng_util.setup_ng(
             app=current_app._get_current_object(),
@@ -708,13 +775,21 @@ def launch_neuroglancer():
 
 @blueprint.route("/load_materialization", methods=["POST"])
 def load_materialization():
-    materialization_path = request.json.get("materialization_url")
+    payload = request.get_json(silent=True)
+    materialization_path = (
+        payload.get("materialization_url") if isinstance(payload, dict) else None
+    )
 
-    if materialization_path is None or materialization_path == "":
+    if not isinstance(materialization_path, str) or materialization_path == "":
         return jsonify({"error": "Materialization path is missing."}), 400
+
+    # Validate before the cache check so a bad path is always rejected
+    path = resolve_materialization_path(materialization_path)
+    if path is None:
+        return jsonify({"error": "Materialization location is not allowed."}), 400
+
     try:
         logger.info("Loading the materialization table...")
-        path = materialization_path.replace("file://", "")
         # check if current_app.synapse_data is empty dictionary
         if not hasattr(current_app, "synapse_data") or not current_app.synapse_data:
             current_app.synapse_data = pd.read_csv(path)
@@ -726,7 +801,7 @@ def load_materialization():
 
     except Exception as e:
         logger.info(f"Failed to load materialization table: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Failed to load the materialization table."}), 500
 
 
 @blueprint.route("/get_neuron_id", methods=["GET"])

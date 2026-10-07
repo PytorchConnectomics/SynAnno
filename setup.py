@@ -11,7 +11,6 @@ setup(
     install_requires=[
         "numpy<2",
         "flask>=2.3.2",
-        "flask-cors>=4.0.0",
         "flask-session>=0.5.0",
         "cloud-volume",
         "navis==1.10.0",

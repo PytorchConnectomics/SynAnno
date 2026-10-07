@@ -2,7 +2,6 @@ import datetime
 import json
 
 from flask import Blueprint, current_app, render_template, request
-from flask_cors import cross_origin
 
 # Define a Blueprint for categorize routes
 blueprint = Blueprint("categorize", __name__)
@@ -53,7 +52,6 @@ def start_categorization_timer():
 
 
 @blueprint.route("/pass_flags", methods=["GET", "POST"])
-@cross_origin()
 def pass_flags():
     """Serves an Ajax request from categorize.js, retrieving the new error tags from the
     frontend and updating metadata data frame.

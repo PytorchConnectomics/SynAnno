@@ -6,7 +6,6 @@ from io import BytesIO
 
 import numpy as np
 from flask import Blueprint, current_app, jsonify, render_template, request
-from flask_cors import cross_origin
 from PIL import Image
 
 from synanno.backend.processing import process_instance, update_slice_number
@@ -129,7 +128,6 @@ def load_missing_slices() -> dict:
 
 
 @blueprint.route("/save_pre_post_coordinates", methods=["POST"])
-@cross_origin()
 def save_pre_post_coordinates() -> tuple:
     """Save the pre or post coordinates."""
     coordinate_order = get_coordinate_order()

@@ -1,16 +1,19 @@
 import logging
 import os
+import secrets
 import threading
 from collections import defaultdict
 from threading import Lock
 
 import pandas as pd
 from flask import Flask
-from flask_cors import CORS
 from flask_session import Session
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Repository root (in the Docker image: /app)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def create_app():
@@ -25,9 +28,6 @@ def create_app():
     with app.app_context():
         register_routes(app)
 
-    # Set up context processor
-    setup_context_processors(app)
-
     # attach a lock for the data frame access to the app instance
     app.df_metadata_lock = Lock()
 
@@ -36,12 +36,17 @@ def create_app():
 
 def configure_app(app):
     """Configure the Flask app with required settings."""
-    # Enable CORS
-    CORS(app)
-    app.config["DEBUG_APP"] = bool(os.getenv("DEBUG_APP", "True") == "True")
-    app.config["CORS_HEADERS"] = "Content-Type"
+    app.config["DEBUG_APP"] = bool(os.getenv("DEBUG_APP", "False") == "True")
+
+    # Public demo mode: restricts data sources to the bundled H01 release
+    app.config["PUBLIC_DEMO"] = os.getenv("SYNANNO_PUBLIC_DEMO", "0") == "1"
 
     # Secret key and session settings
+    secret_key = os.getenv("SECRET_KEY")
+    if not secret_key:
+        logger.warning("SECRET_KEY is not set; generated a random key for this run.")
+        secret_key = secrets.token_hex(32)
+    app.config["SECRET_KEY"] = secret_key
     app.config["SESSION_PERMANENT"] = bool(os.getenv("DEBUG_APP", "False") == "True")
     app.config["SESSION_TYPE"] = "filesystem"
     app.config["SESSION_FILE_DIR"] = "/tmp/flask_session"
@@ -56,6 +61,17 @@ def configure_app(app):
         PORT=int(os.getenv("APP_PORT", 80)),
         NG_IP=os.getenv("PUBLIC_DNS_SYNANNO", "0.0.0.0"),
         NG_PORT=os.getenv("NG_PORT", "9015"),
+        # Directories /load_materialization may read from when not in demo mode
+        DATA_DIRS=[
+            os.path.realpath(d)
+            for d in os.getenv(
+                "SYNANNO_DATA_DIRS", os.path.join(BASE_DIR, "h01")
+            ).split(os.pathsep)
+            if d
+        ],
+        BUNDLED_MATERIALIZATION=os.path.realpath(
+            os.path.join(BASE_DIR, "h01", "h01_104_materialization.csv")
+        ),
     )
 
     # Initialize global variables
@@ -201,11 +217,3 @@ def register_routes(app):
     app.register_blueprint(auto_annotate_blueprint)
     app.register_blueprint(fn_blueprint)
     app.register_blueprint(demo_blueprint)
-
-
-def setup_context_processors(app):
-    """Set up context processors for the app."""
-
-    @app.context_processor
-    def handle_context():
-        return dict(os=os)  # noqa: C408

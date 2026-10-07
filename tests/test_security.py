@@ -246,3 +246,21 @@ def test_pages_use_vendored_jquery(make_app):
     vendored = os.path.join(app.static_folder, "vendor", "jquery-3.7.1.min.js")
     with open(vendored) as f:
         assert "jQuery v3.7.1" in f.readline()
+
+
+# 9. File routes
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/get_source_image/..%2F..%2Fetc%2Fpasswd/0",
+        "/get_target_image/0/..%2F..%2Fetc%2Fpasswd",
+        "/get_curve_image/../../etc/passwd/0",
+        "/get_source_image/%2Fetc%2Fpasswd/0",
+    ],
+)
+def test_file_routes_serve_only_in_memory_data(make_app, path):
+    response = make_app().test_client().get(path)
+    assert response.status_code in (204, 404)
+    assert b"root:" not in response.data

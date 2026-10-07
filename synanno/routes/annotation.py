@@ -12,9 +12,6 @@ from typing import Dict
 # flask util functions
 from flask import Blueprint, current_app, jsonify, render_template, request
 
-# flask ajax requests
-from flask_cors import cross_origin
-
 # for type hinting
 from jinja2 import Template
 
@@ -72,13 +69,11 @@ def annotation(page: int = 1) -> Template:
 
 
 @blueprint.route("/loading_bar_image_tiles", methods=["GET"])
-@cross_origin()
 def loading_bar_image_tiles() -> Template:
     return render_template("loading_bar_image_tiles.html")
 
 
 @blueprint.route("/is_metadata_locked", methods=["GET"])
-@cross_origin()
 def is_metadata_locked():
     """Check if retrieve_instance_metadata is currently running."""
     is_locked = current_app.retrieve_instance_metadata_lock.locked()
@@ -87,7 +82,6 @@ def is_metadata_locked():
 
 @blueprint.route("/update_image_tiles/<int:page>", endpoint="update_image_tiles_page")
 @blueprint.route("/update_image_tiles", methods=["POST"])
-@cross_origin()
 def update_images(page: int = 1):
     """Fetch updated image data and load the data for the current page."""
 
@@ -129,7 +123,6 @@ def update_images(page: int = 1):
 
 
 @blueprint.route("/set_grid_opacity", methods=["POST"])
-@cross_origin()
 def set_grid_opacity() -> tuple[str, int, Dict[str, str]]:
     """Serves and Ajax request from annotation.js updating the grid's opacity value
 
@@ -147,7 +140,6 @@ def set_grid_opacity() -> tuple[str, int, Dict[str, str]]:
 
 
 @blueprint.route("/update-card", methods=["POST"])
-@cross_origin()
 def update_card() -> Dict[str, object]:
     """Updates the label of an instance - switch between correct, incorrect to unsure
 

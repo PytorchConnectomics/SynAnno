@@ -66,7 +66,7 @@ $(document).ready(() => {
         if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
           $(new Image())
           .attr("src", "/get_circle_pre_image/" + data_id + "/" + middle_slice)
-          .load(function () {
+          .on("load", function () {
             $(canvas_target_image_circle_pre).attr("src", this.src);
           });
         $(canvas_target_image_circle_pre).removeClass("d-none");
@@ -84,7 +84,7 @@ $(document).ready(() => {
         if (xhr.status === 200) {  // Only execute if status is 200 (image exists)
           $(new Image())
           .attr("src", "/get_circle_post_image/" + data_id + "/" + middle_slice)
-          .load(function () {
+          .on("load", function () {
             $(canvas_target_image_circle_post).attr("src", this.src);
           });
         $(canvas_target_image_circle_post).removeClass("d-none");

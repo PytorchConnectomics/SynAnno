@@ -3,8 +3,7 @@ import io
 import numpy as np
 import pandas as pd
 from cloudvolume import Bbox
-from flask import Blueprint, current_app, jsonify, request
-from flask_cors import cross_origin
+from flask import Blueprint, abort, current_app, jsonify, request
 from PIL import Image
 
 from synanno.backend.processing import calculate_crop_pad
@@ -14,7 +13,6 @@ blueprint = Blueprint("false_negatives", __name__)
 
 
 @blueprint.route("/ng_bbox_fn", methods=["POST"])
-@cross_origin()
 def ng_bbox_fn() -> dict:
     """Serves an Ajax request by draw_module.js, passing the coordinates of the center
     point of a newly marked FN to the front end, enabling the front end to depict the
@@ -46,7 +44,6 @@ def ng_bbox_fn() -> dict:
 
 
 @blueprint.route("/ng_bbox_fn_save", methods=["POST"])
-@cross_origin()
 def ng_bbox_fn_save() -> dict:
     """Serves an Ajax request by draw_module.js, that passes the manual updated/
     corrected bb coordinates to this backend function. Additionally, the
@@ -57,16 +54,22 @@ def ng_bbox_fn_save() -> dict:
         the upper and the lower z bound of the instance as JSON to draw_module.js
     """
     coordinate_order = list(current_app.coordinate_order.keys())
-    cz1, cz2, current_app.cz, current_app.cy, current_app.cx = (
-        get_corrected_coordinates(request)
-    )
+    previous_center = (current_app.cz, current_app.cy, current_app.cx)
+    try:
+        cz1, cz2, current_app.cz, current_app.cy, current_app.cx = (
+            get_corrected_coordinates(request)
+        )
 
-    item = create_new_item(request)
+        item = create_new_item(request)
 
-    bbox = define_bbox(cz1, cz2, coordinate_order)
-    item["Original_Bbox"] = scale_bbox(bbox, coordinate_order)
+        bbox = define_bbox(cz1, cz2, coordinate_order)
+        item["Original_Bbox"] = scale_bbox(bbox, coordinate_order)
 
-    crop_bbox, img_padding = calculate_crop_pad(bbox, current_app.vol_dim_scaled)
+        crop_bbox, img_padding = calculate_crop_pad(bbox, current_app.vol_dim_scaled)
+    except (KeyError, ValueError):
+        # leave the shared state as it was before the invalid request
+        current_app.cz, current_app.cy, current_app.cx = previous_center
+        abort(400, "Invalid bounding box.")
     crop_box_dict = map_bbox_to_dict(crop_bbox, coordinate_order)
 
     bound = create_bbox_bound(crop_box_dict, coordinate_order)

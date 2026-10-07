@@ -2,7 +2,6 @@ import io
 import logging
 
 from flask import Blueprint, Response, current_app, request, send_file
-from flask_cors import cross_origin
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,7 +21,6 @@ def get_swc():
 
 
 @blueprint.route("/source_and_target_exist/<image_index>/<slice_id>", methods=["GET"])
-@cross_origin()
 def source_and_target_exist(image_index, slice_id):
     """Valide that both source and target images are available."""
     image_index = str(image_index)
@@ -39,7 +37,6 @@ def source_and_target_exist(image_index, slice_id):
 
 
 @blueprint.route("/source_img_exists/<image_index>/<slice_id>", methods=["GET"])
-@cross_origin()
 def source_img_exists(image_index, slice_id):
     """Serves EM images from memory."""
     image_index = str(image_index)
@@ -53,7 +50,6 @@ def source_img_exists(image_index, slice_id):
 
 
 @blueprint.route("/get_source_image/<image_index>/<slice_id>", methods=["GET", "HEAD"])
-@cross_origin()
 def get_source_image(image_index, slice_id):
     """Serves EM images from memory."""
     image_index = str(image_index)
@@ -74,7 +70,6 @@ def get_source_image(image_index, slice_id):
 
 
 @blueprint.route("/get_target_image/<image_index>/<slice_id>", methods=["GET", "HEAD"])
-@cross_origin()
 def get_target_image(image_index, slice_id):
     """Serves synapse segmentation images from memory."""
     image_index = str(image_index)
@@ -94,7 +89,6 @@ def get_target_image(image_index, slice_id):
     return "Image not found", 404
 
 
-@cross_origin()
 @blueprint.route("/get_curve_image/<image_index>/<slice_id>", methods=["GET", "HEAD"])
 def get_curve_image(image_index, slice_id):
     """Serves curve images from memory."""
@@ -116,7 +110,6 @@ def get_curve_image(image_index, slice_id):
     return "Image not found", 404
 
 
-@cross_origin()
 @blueprint.route(
     "/get_auto_curve_image/<image_index>/<slice_id>", methods=["GET", "HEAD"]
 )
@@ -142,7 +135,6 @@ def get_auto_curve_image(image_index, slice_id):
     return "Image not found", 404
 
 
-@cross_origin()
 @blueprint.route(
     "/get_circle_pre_image/<image_index>/<slice_id>", methods=["GET", "HEAD"]
 )
@@ -168,7 +160,6 @@ def get_circle_pre_image(image_index, slice_id):
     return "Image not found", 404
 
 
-@cross_origin()
 @blueprint.route(
     "/get_circle_post_image/<image_index>/<slice_id>", methods=["GET", "HEAD"]
 )

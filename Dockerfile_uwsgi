@@ -1,4 +1,4 @@
-FROM python:3.11
+FROM python:3.11.13-bookworm
 
 # Metadata
 LABEL Name="SynAnno" Version="1.0.0"
@@ -6,8 +6,8 @@ LABEL Name="SynAnno" Version="1.0.0"
 # Set working directory
 WORKDIR /app
 
-# Upgrade pip
-RUN python -m pip install --no-cache-dir --upgrade pip
+# Pin pip to the version in the previous deployed image
+RUN python -m pip install --no-cache-dir pip==25.2
 
 # Install system dependencies for PyQt5
 RUN apt-get update && apt-get install -y \
@@ -26,16 +26,20 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 RUN cargo --version
 
 # Copy application code
-COPY setup.py /app/
+COPY setup.py requirements.lock /app/
 COPY synanno /app/synanno
 COPY run_production.py /app/
 COPY h01/h01_104_materialization.csv /app/h01/h01_104_materialization.csv
 
-# Install Python dependencies
-RUN python -m pip install uv
-RUN uv pip install --system --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
-RUN uv pip install --system --no-cache-dir torchsummary tqdm -e .
-RUN python -m pip install --no-cache-dir uwsgi
+# Install the locked Python dependencies, then the app. torch/torchvision come only
+# from the CPU-only PyTorch index; everything else comes only from PyPI.
+RUN grep -E '^(torch|torchvision)==' requirements.lock > /tmp/torch.lock \
+    && grep -vE '^(torch|torchvision)==' requirements.lock > /tmp/pypi.lock \
+    && python -m pip install --no-cache-dir --no-deps -r /tmp/torch.lock \
+        --index-url https://download.pytorch.org/whl/cpu \
+    && python -m pip install --no-cache-dir --no-deps -r /tmp/pypi.lock \
+    && rm /tmp/torch.lock /tmp/pypi.lock
+RUN python -m pip install --no-cache-dir --no-deps -e .
 
 # Copy uWSGI configuration
 COPY uwsgi.ini /app

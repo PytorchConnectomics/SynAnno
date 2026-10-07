@@ -1,4 +1,5 @@
 import logging
+import os
 
 from dotenv import load_dotenv
 
@@ -14,4 +15,9 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    app.run(host=app.config["IP"], port=app.config["PORT"], debug=True)
+    # The dev server binds to localhost and runs without the debugger unless asked
+    app.run(
+        host=os.getenv("APP_IP", "127.0.0.1"),
+        port=app.config["PORT"],
+        debug=os.getenv("FLASK_DEBUG", "0") == "1",
+    )

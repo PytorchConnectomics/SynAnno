@@ -133,6 +133,35 @@ def test_demo_rejects_custom_buckets(make_app):
     assert client.get("/launch_neuroglancer", query_string=query).status_code == 403
 
 
+# 3. Guessable Neuroglancer URLs
+
+
+def test_neuroglancer_token_is_unguessable(make_app, monkeypatch):
+    import synanno.backend.ng_util as ng_util
+
+    tokens = []
+
+    class Stop(Exception):
+        pass
+
+    def fake_viewer(token):
+        tokens.append(token)
+        raise Stop
+
+    monkeypatch.setattr(ng_util.neuroglancer, "set_server_bind_address", lambda **_: 0)
+    monkeypatch.setattr(ng_util.neuroglancer, "Viewer", fake_viewer)
+    app = make_app()
+    for _ in range(2):
+        with pytest.raises(Stop):
+            ng_util.setup_ng(
+                app, "precomputed://a", "precomputed://b", "precomputed://c"
+            )
+
+    assert len(tokens[0]) >= 43  # 32 random bytes, base64url encoded
+    assert tokens[0] != tokens[1]
+    assert "/" not in tokens[0]
+
+
 # 4. CORS
 
 

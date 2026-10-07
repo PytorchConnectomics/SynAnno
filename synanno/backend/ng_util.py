@@ -1,5 +1,5 @@
 import logging
-from random import randint
+import secrets
 from typing import Union
 
 import neuroglancer
@@ -144,8 +144,8 @@ def setup_ng(
         neuropil: Neuropil segmentation volume when undergoing view-centric
                 analysis
     """
-    # generate a version number
-    app.ng_version = str(randint(0, 3200))
+    # unguessable viewer token; it is the only access control on the NG port
+    app.ng_version = secrets.token_urlsafe(32)
 
     # setup a Tornado web server and create viewer instance
     neuroglancer.set_server_bind_address(
